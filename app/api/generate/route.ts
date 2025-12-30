@@ -32,6 +32,26 @@ export async function POST(req: NextRequest) {
         tokens,
         latency,
       });
+    } else if (provider === 'openrouter') {
+      const openai = new OpenAI({
+        apiKey,
+        baseURL: 'https://openrouter.ai/api/v1',
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: model,
+        messages: [{ role: 'user', content: prompt }],
+      });
+
+      const latency = Date.now() - startTime;
+      const content = completion.choices[0]?.message?.content || '';
+      const tokens = completion.usage?.total_tokens || 0;
+
+      return NextResponse.json({
+        content,
+        tokens,
+        latency,
+      });
     } else if (provider === 'anthropic') {
       const anthropic = new Anthropic({ apiKey });
 

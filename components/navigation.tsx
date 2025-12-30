@@ -1,30 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { loadApiKeys } from '@/lib/storage';
 
 export default function Navigation() {
-  const [hasKeys, setHasKeys] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const keys = loadApiKeys();
-    const hasAnyKey = !!(keys.openai || keys.anthropic);
-    setHasKeys(hasAnyKey);
-    setIsLoading(false);
-  }, []);
-
-  // Don't render anything while checking
-  if (isLoading) {
-    return null;
-  }
-
-  // Don't show nav if no keys configured
-  if (!hasKeys) {
-    return null;
-  }
-
   return (
     <nav className="border-b border-gray-200 bg-white">
       <div className="w-[80%] mx-auto px-4 sm:px-6 lg:px-8">
@@ -40,10 +18,16 @@ export default function Navigation() {
               Eval
             </Link>
             <Link
-              href="/history"
+              href="/faq"
               className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
             >
-              History
+              FAQ
+            </Link>
+            <Link
+              href="/about"
+              className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              About
             </Link>
             <Link
               href="/settings"

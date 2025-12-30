@@ -1,10 +1,11 @@
 export interface ApiKeys {
   openai?: string;
   anthropic?: string;
+  openrouter?: string;
 }
 
 export interface ModelConfig {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'openrouter';
   model: string;
   label: string;
 }

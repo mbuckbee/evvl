@@ -85,6 +85,34 @@ export default function SettingsPage() {
           </p>
         </div>
 
+        <div>
+          <label
+            htmlFor="openrouter"
+            className="block text-sm font-semibold text-gray-700 mb-2"
+          >
+            OpenRouter API Key
+          </label>
+          <input
+            id="openrouter"
+            type="password"
+            value={keys.openrouter || ''}
+            onChange={(e) => setKeys({ ...keys, openrouter: e.target.value })}
+            placeholder="sk-or-..."
+            className="input"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            Get your API key from{' '}
+            <a
+              href="https://openrouter.ai/keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline"
+            >
+              openrouter.ai
+            </a>
+          </p>
+        </div>
+
         <div className="flex gap-3 pt-6">
           <button
             onClick={handleSave}
@@ -100,11 +128,11 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
             <strong>Privacy Note:</strong> Your API keys are stored locally in
             your browser&apos;s localStorage and are never sent to our servers. They
-            are only used to make direct API calls to OpenAI and Anthropic.
+            are only used to make direct API calls to OpenAI, Anthropic, and OpenRouter.
           </p>
         </div>
       </div>
