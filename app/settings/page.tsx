@@ -1,0 +1,113 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { saveApiKeys, loadApiKeys, clearApiKeys } from '@/lib/storage';
+import { ApiKeys } from '@/lib/types';
+
+export default function SettingsPage() {
+  const [keys, setKeys] = useState<ApiKeys>({});
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    const loaded = loadApiKeys();
+    setKeys(loaded);
+  }, []);
+
+  const handleSave = () => {
+    saveApiKeys(keys);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleClear = () => {
+    clearApiKeys();
+    setKeys({});
+  };
+
+  return (
+    <div className="w-[80%] mx-auto px-4 py-12">
+      <h1 className="text-4xl font-bold mb-10 text-gray-900">Settings</h1>
+
+      <div className="card p-8 space-y-6">
+        <div>
+          <label
+            htmlFor="openai"
+            className="block text-sm font-semibold text-gray-700 mb-2"
+          >
+            OpenAI API Key
+          </label>
+          <input
+            id="openai"
+            type="password"
+            value={keys.openai || ''}
+            onChange={(e) => setKeys({ ...keys, openai: e.target.value })}
+            placeholder="sk-..."
+            className="input"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            Get your API key from{' '}
+            <a
+              href="https://platform.openai.com/api-keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline"
+            >
+              platform.openai.com
+            </a>
+          </p>
+        </div>
+
+        <div>
+          <label
+            htmlFor="anthropic"
+            className="block text-sm font-semibold text-gray-700 mb-2"
+          >
+            Anthropic API Key
+          </label>
+          <input
+            id="anthropic"
+            type="password"
+            value={keys.anthropic || ''}
+            onChange={(e) => setKeys({ ...keys, anthropic: e.target.value })}
+            placeholder="sk-ant-..."
+            className="input"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            Get your API key from{' '}
+            <a
+              href="https://console.anthropic.com/settings/keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline"
+            >
+              console.anthropic.com
+            </a>
+          </p>
+        </div>
+
+        <div className="flex gap-3 pt-6">
+          <button
+            onClick={handleSave}
+            className="btn-primary"
+          >
+            {saved ? 'Saved!' : 'Save Keys'}
+          </button>
+          <button
+            onClick={handleClear}
+            className="btn-secondary"
+          >
+            Clear All
+          </button>
+        </div>
+
+        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-800">
+            <strong>Privacy Note:</strong> Your API keys are stored locally in
+            your browser&apos;s localStorage and are never sent to our servers. They
+            are only used to make direct API calls to OpenAI and Anthropic.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
