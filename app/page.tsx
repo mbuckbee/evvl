@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { loadApiKeys, loadColumns, saveColumns, loadEvalHistory, ColumnConfig } from '@/lib/storage';
+import { loadApiKeys, loadColumns, saveColumns, loadEvalHistory, saveEvalResult, ColumnConfig } from '@/lib/storage';
 import { ApiKeys, AIOutput } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig, ModelOption } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels } from '@/lib/fetch-models';
@@ -28,6 +28,7 @@ export default function Home() {
   const [outputs, setOutputs] = useState<Record<string, AIOutput>>({});
   const [providers, setProviders] = useState<ProviderConfig[]>(PROVIDERS);
   const [loadingColumns, setLoadingColumns] = useState<Set<string>>(new Set());
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
     // Load saved columns from localStorage after mount
@@ -64,15 +65,30 @@ export default function Home() {
         });
 
         setProviders(updatedProviders);
+
+        // Update any columns that have a provider but no model (empty string)
+        setColumns(prevColumns => prevColumns.map(col => {
+          if (col.provider && !col.model) {
+            const providerConfig = updatedProviders.find(p => p.key === col.provider);
+            const firstModel = providerConfig?.models[0]?.value;
+            if (firstModel) {
+              return { ...col, model: firstModel };
+            }
+          }
+          return col;
+        }));
       }
     }
 
     loadModels();
+    hasLoadedRef.current = true;
   }, []);
 
-  // Save columns to localStorage whenever they change
+  // Save columns to localStorage whenever they change (but not on initial mount)
   useEffect(() => {
-    saveColumns(columns);
+    if (hasLoadedRef.current) {
+      saveColumns(columns);
+    }
   }, [columns]);
 
   const removeColumn = (id: string) => {
@@ -169,6 +185,13 @@ export default function Home() {
 
     setColumns(updatedColumns);
 
+    // Clear old output for this column to avoid showing stale data/errors
+    setOutputs(prev => {
+      const newOutputs = { ...prev };
+      delete newOutputs[id];
+      return newOutputs;
+    });
+
     // Auto-generate if there's a prompt
     if (prompt.trim()) {
       generateForColumn(id, provider, model);
@@ -264,6 +287,16 @@ export default function Home() {
 
     setOutputs(newOutputs);
     setGenerating(false);
+
+    // Save to eval history so prompt persists
+    const evalResult = {
+      id: uuidv4(),
+      prompt,
+      outputs: Object.values(newOutputs),
+      ratings: [],
+      timestamp: Date.now(),
+    };
+    saveEvalResult(evalResult);
   };
 
   return (

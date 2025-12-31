@@ -7,9 +7,14 @@
 // RETIRED models are filtered out in fetch-models.ts and won't appear here
 const ANTHROPIC_MODEL_MAP: Record<string, string> = {
   // Claude 4.5 series (current generation - Dec 2025)
+  // With dashes (our config format)
   'anthropic/claude-opus-4-5': 'claude-opus-4-5-20251101',
   'anthropic/claude-sonnet-4-5': 'claude-sonnet-4-5-20250929',
   'anthropic/claude-haiku-4-5': 'claude-haiku-4-5-20251001',
+  // With dots (OpenRouter format)
+  'anthropic/claude-opus-4.5': 'claude-opus-4-5-20251101',
+  'anthropic/claude-sonnet-4.5': 'claude-sonnet-4-5-20250929',
+  'anthropic/claude-haiku-4.5': 'claude-haiku-4-5-20251001',
 
   // Already-dated Claude 4.5 models (if OpenRouter returns these)
   'anthropic/claude-opus-4-5-20251101': 'claude-opus-4-5-20251101',
@@ -19,6 +24,7 @@ const ANTHROPIC_MODEL_MAP: Record<string, string> = {
   // Claude 4.x models (active)
   'anthropic/claude-opus-4': 'claude-opus-4-20250514',
   'anthropic/claude-opus-4-1': 'claude-opus-4-1-20250805',
+  'anthropic/claude-opus-4.1': 'claude-opus-4-1-20250805',
   'anthropic/claude-sonnet-4': 'claude-sonnet-4-20250514',
   'anthropic/claude-opus-4-20250514': 'claude-opus-4-20250514',
   'anthropic/claude-opus-4-1-20250805': 'claude-opus-4-1-20250805',
@@ -35,6 +41,7 @@ const ANTHROPIC_MODEL_MAP: Record<string, string> = {
   'anthropic/claude-3-5-haiku-20241022': 'claude-3-5-haiku-20241022',
   'anthropic/claude-3.7-sonnet': 'claude-3-7-sonnet-20250219',
   'anthropic/claude-3-7-sonnet-20250219': 'claude-3-7-sonnet-20250219',
+  'anthropic/claude-3.7-sonnet-20250219': 'claude-3-7-sonnet-20250219',
 };
 
 /**
