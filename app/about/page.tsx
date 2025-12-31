@@ -103,7 +103,7 @@ export default function AboutPage() {
             respond to the same input.
           </p>
           <p className="text-gray-700">
-            Whether you're evaluating which AI model works best for your use case, testing prompt variations,
+            Whether you&apos;re evaluating which AI model works best for your use case, testing prompt variations,
             or just curious about how different models approach the same question, Evvl makes it easy to
             compare and contrast their outputs.
           </p>
@@ -120,7 +120,7 @@ export default function AboutPage() {
               <strong>Enter a prompt:</strong> Type the prompt you want to test on the main Eval page.
             </li>
             <li>
-              <strong>Generate outputs:</strong> Click "Generate Outputs" to send your prompt to all
+              <strong>Generate outputs:</strong> Click &ldquo;Generate Outputs&rdquo; to send your prompt to all
               configured AI providers simultaneously.
             </li>
             <li>
@@ -133,7 +133,7 @@ export default function AboutPage() {
         <section className="card p-8">
           <h2 className="text-2xl font-bold mb-4 text-gray-900">Privacy First</h2>
           <p className="text-gray-700 mb-4">
-            Evvl takes your privacy seriously. Here's what makes it different:
+            Evvl takes your privacy seriously. Here&apos;s what makes it different:
           </p>
           <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
             <li>
@@ -146,7 +146,7 @@ export default function AboutPage() {
               debugging, but no personal or sensitive data.
             </li>
             <li>
-              <strong>No tracking:</strong> We don't track your usage, collect analytics, or store
+              <strong>No tracking:</strong> We don&apos;t track your usage, collect analytics, or store
               any information about your prompts or results.
             </li>
             <li>

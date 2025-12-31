@@ -5,15 +5,20 @@ import * as storage from '@/lib/storage';
 
 // Mock Next.js components
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
+  const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
     return <a href={href}>{children}</a>;
   };
+  MockLink.displayName = 'Link';
+  return MockLink;
 });
 
 jest.mock('next/image', () => {
-  return ({ src, alt }: { src: string; alt: string }) => {
+  const MockImage = ({ src, alt }: { src: string; alt: string }) => {
+    // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
     return <img src={src} alt={alt} />;
   };
+  MockImage.displayName = 'Image';
+  return MockImage;
 });
 
 // Mock the storage module
