@@ -73,21 +73,21 @@ describe('SettingsPage', () => {
     });
   });
 
-  it('should show "Saved!" message after saving', async () => {
+  it('should show success message after saving', async () => {
     const user = userEvent.setup();
     render(<SettingsPage />);
 
     const saveButton = screen.getByText('Save Keys');
     await user.click(saveButton);
 
-    expect(screen.getByText('Saved!')).toBeInTheDocument();
+    expect(screen.getByText('API keys saved successfully!')).toBeInTheDocument();
 
     // Wait for the message to disappear
     await waitFor(
       () => {
-        expect(screen.queryByText('Saved!')).not.toBeInTheDocument();
+        expect(screen.queryByText('API keys saved successfully!')).not.toBeInTheDocument();
       },
-      { timeout: 2500 }
+      { timeout: 3500 }
     );
   });
 

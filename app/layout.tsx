@@ -15,9 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={GeistSans.className}>
-      <body>
+      <body className="h-screen flex flex-col">
         <Navigation />
-        <main>{children}</main>
+        <main className="flex-1 overflow-hidden">{children}</main>
       </body>
     </html>
   );

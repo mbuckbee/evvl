@@ -1,8 +1,18 @@
 'use client';
 
+import Link from 'next/link';
+
 export default function AboutPage() {
   return (
     <div className="w-[80%] mx-auto px-4 py-12">
+      <div className="mb-6">
+        <Link
+          href="/"
+          className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-1"
+        >
+          <span>←</span> Back to Eval
+        </Link>
+      </div>
       <div className="mb-10">
         <h1 className="text-4xl font-bold mb-3 text-gray-900">About Evvl</h1>
         <p className="text-lg text-gray-600">
