@@ -25,7 +25,7 @@ export default function PrivacyPage() {
           <h2 className="text-2xl font-bold mb-3 text-gray-900">Our Commitment to Privacy</h2>
           <p className="text-gray-700">
             At Evvl, we take your privacy seriously. This Privacy Policy explains how we handle your data when you
-            use our service. The short version: <strong>we don't store any of your personal data, and API keys are
+            use our service. The short version: <strong>we don&apos;t store any of your personal data, and API keys are
             automatically redacted from all logs.</strong>
           </p>
         </section>
@@ -67,7 +67,7 @@ export default function PrivacyPage() {
           <p className="text-gray-700 mb-3">
             When you generate AI outputs, your browser sends requests to our server, which then forwards them to
             the AI providers (OpenAI, Anthropic, and OpenRouter). This proxy setup is necessary because OpenAI
-            doesn't support direct browser calls due to CORS restrictions.
+            doesn&apos;t support direct browser calls due to CORS restrictions.
           </p>
           <p className="text-gray-700 mb-3">
             <strong>Important: We do not store your API keys, prompts, or responses.</strong> Your API keys are
@@ -93,7 +93,7 @@ export default function PrivacyPage() {
           </p>
           <p className="text-gray-700">
             We do not use advertising networks or any other third-party tracking tools. You can learn more about
-            Plausible's privacy practices at{' '}
+            Plausible&apos;s privacy practices at{' '}
             <a href="https://plausible.io/privacy" className="text-blue-600 hover:text-blue-700" target="_blank" rel="noopener noreferrer">
               plausible.io/privacy
             </a>.
@@ -107,21 +107,21 @@ export default function PrivacyPage() {
           </p>
           <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4 mt-3">
             <li>The security of your device</li>
-            <li>Your browser's built-in security features</li>
+            <li>Your browser&apos;s built-in security features</li>
             <li>Your management of your API keys</li>
           </ul>
           <p className="text-gray-700 mt-3">
             We recommend keeping your API keys secure and not sharing them with others. If you believe your API
-            keys have been compromised, revoke them immediately through the respective provider's dashboard.
+            keys have been compromised, revoke them immediately through the respective provider&apos;s dashboard.
           </p>
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold mb-3 text-gray-900">Children's Privacy</h2>
+          <h2 className="text-2xl font-bold mb-3 text-gray-900">Children&apos;s Privacy</h2>
           <p className="text-gray-700">
             Evvl is not directed to children under 13. We do not knowingly collect information from children.
-            Since we don't collect any data at all, this is not a concern, but parents should supervise their
-            children's use of AI services.
+            Since we don&apos;t collect any data at all, this is not a concern, but parents should supervise their
+            children&apos;s use of AI services.
           </p>
         </section>
 
@@ -129,7 +129,7 @@ export default function PrivacyPage() {
           <h2 className="text-2xl font-bold mb-3 text-gray-900">Changes to Privacy Policy</h2>
           <p className="text-gray-700">
             We may update this Privacy Policy from time to time. Any changes will be posted on this page with
-            an updated "Last updated" date. Your continued use of Evvl after any changes constitutes your
+            an updated &ldquo;Last updated&rdquo; date. Your continued use of Evvl after any changes constitutes your
             acceptance of the updated policy.
           </p>
         </section>

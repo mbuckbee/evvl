@@ -3,23 +3,33 @@ import Navigation from '../navigation';
 
 // Mock Next.js Link component
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
+  const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
     return <a href={href}>{children}</a>;
   };
+  MockLink.displayName = 'Link';
+  return MockLink;
+});
+
+// Mock Next.js Image component
+jest.mock('next/image', () => {
+  const MockImage = (props: any) => {
+    // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+    return <img {...props} />;
+  };
+  MockImage.displayName = 'Image';
+  return MockImage;
 });
 
 describe('Navigation', () => {
   it('should render the Evvl logo', () => {
     render(<Navigation />);
-    const logo = screen.getByText('Evvl');
+    const logo = screen.getByAltText('Evvl');
     expect(logo).toBeInTheDocument();
   });
 
   it('should render all navigation links', () => {
     render(<Navigation />);
 
-    expect(screen.getByText('Eval')).toBeInTheDocument();
-    expect(screen.getByText('FAQ')).toBeInTheDocument();
     expect(screen.getByText('About')).toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
@@ -27,13 +37,9 @@ describe('Navigation', () => {
   it('should have correct href attributes for links', () => {
     render(<Navigation />);
 
-    const evalLink = screen.getByText('Eval').closest('a');
-    const faqLink = screen.getByText('FAQ').closest('a');
     const aboutLink = screen.getByText('About').closest('a');
     const settingsLink = screen.getByText('Settings').closest('a');
 
-    expect(evalLink).toHaveAttribute('href', '/');
-    expect(faqLink).toHaveAttribute('href', '/faq');
     expect(aboutLink).toHaveAttribute('href', '/about');
     expect(settingsLink).toHaveAttribute('href', '/settings');
   });
@@ -41,7 +47,7 @@ describe('Navigation', () => {
   it('should render logo link to homepage', () => {
     render(<Navigation />);
 
-    const logoLink = screen.getByText('Evvl').closest('a');
+    const logoLink = screen.getByAltText('Evvl').closest('a');
     expect(logoLink).toHaveAttribute('href', '/');
   });
 

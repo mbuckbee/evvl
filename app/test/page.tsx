@@ -32,6 +32,7 @@ function TestPageContent() {
     }
 
     testApiKey();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider, apiKey]);
 
   const testApiKey = async () => {
