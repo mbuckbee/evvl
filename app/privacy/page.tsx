@@ -85,10 +85,18 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold mb-3 text-gray-900">Cookies and Tracking</h2>
+          <h2 className="text-2xl font-bold mb-3 text-gray-900">Analytics and Tracking</h2>
+          <p className="text-gray-700 mb-3">
+            We use Plausible Analytics, a privacy-friendly analytics service, to understand how visitors use Evvl.
+            Plausible does not use cookies and does not collect any personal information. It only tracks anonymous
+            page views and basic usage statistics.
+          </p>
           <p className="text-gray-700">
-            Evvl does not use cookies for tracking purposes. We do not use analytics services, advertising networks,
-            or any third-party tracking tools. Your usage of Evvl is completely private.
+            We do not use advertising networks or any other third-party tracking tools. You can learn more about
+            Plausible's privacy practices at{' '}
+            <a href="https://plausible.io/privacy" className="text-blue-600 hover:text-blue-700" target="_blank" rel="noopener noreferrer">
+              plausible.io/privacy
+            </a>.
           </p>
         </section>
 
