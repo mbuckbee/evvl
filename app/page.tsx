@@ -34,7 +34,16 @@ export default function Home() {
     // Load saved columns from localStorage after mount
     const saved = loadColumns();
     if (saved && saved.length > 0) {
-      setColumns(saved);
+      // Keep columns as-is from localStorage, no forced normalization
+      const loadedColumns = [...saved];
+
+      // Always ensure there's a placeholder "Add Comparison" column at the end
+      const hasPlaceholder = loadedColumns.some(col => !col.provider && !col.isConfiguring);
+      if (!hasPlaceholder) {
+        loadedColumns.push({ id: uuidv4(), isConfiguring: false });
+      }
+
+      setColumns(loadedColumns);
     }
 
     setApiKeys(loadApiKeys());
@@ -72,7 +81,7 @@ export default function Home() {
             const providerConfig = updatedProviders.find(p => p.key === col.provider);
             const firstModel = providerConfig?.models[0]?.value;
             if (firstModel) {
-              return { ...col, model: firstModel };
+              return { ...col, model: firstModel, isConfiguring: false };
             }
           }
           return col;
@@ -81,7 +90,11 @@ export default function Home() {
     }
 
     loadModels();
-    hasLoadedRef.current = true;
+
+    // CRITICAL: Only enable saving after a delay to ensure state has updated
+    setTimeout(() => {
+      hasLoadedRef.current = true;
+    }, 100);
   }, []);
 
   // Save columns to localStorage whenever they change (but not on initial mount)
@@ -210,6 +223,11 @@ export default function Home() {
     ));
   };
 
+  const clearPromptAndResponses = () => {
+    setPrompt('');
+    setOutputs({});
+  };
+
   const generateOutputs = async () => {
     if (!prompt.trim()) return;
 
@@ -304,9 +322,18 @@ export default function Home() {
       {/* Prompt Section - Fixed at top */}
       <div className="w-[80%] mx-auto px-4 py-12 flex-shrink-0">
         <div className="mb-4">
-          <label htmlFor="prompt" className="block text-sm font-semibold text-gray-700 mb-2">
-            Enter Prompt Here
-          </label>
+          <div className="flex justify-between items-center mb-2">
+            <label htmlFor="prompt" className="text-sm font-semibold text-gray-700">
+              Enter Prompt Here
+            </label>
+            <button
+              onClick={clearPromptAndResponses}
+              disabled={generating}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Clear Prompt and Responses
+            </button>
+          </div>
           <textarea
             id="prompt"
             value={prompt}
@@ -371,13 +398,21 @@ function ColumnComponent({ column, apiKeys, output, generating, providers, onCon
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const providerDropdownRef = useRef<HTMLDivElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const previousConfiguringRef = useRef(column.isConfiguring);
 
+  // Only sync from column props when entering configuration mode, not continuously
   useEffect(() => {
-    if (column.provider && column.model) {
+    const wasNotConfiguring = !previousConfiguringRef.current;
+    const isNowConfiguring = column.isConfiguring;
+
+    // Only reset selected values when entering configuration mode
+    if (wasNotConfiguring && isNowConfiguring && column.provider && column.model) {
       setSelectedProvider(column.provider);
       setSelectedModel(column.model);
     }
-  }, [column.provider, column.model]);
+
+    previousConfiguringRef.current = column.isConfiguring;
+  }, [column.isConfiguring, column.provider, column.model]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

@@ -37,10 +37,11 @@ export default function FAQPage() {
       question: "What data is sent to your servers?",
       answer: (
         <p className="text-gray-700">
-          <strong>None.</strong> Your API keys, prompts, and evaluation results are never sent
-          to our servers. All data is stored locally in your browser&apos;s localStorage. When you
-          generate outputs, your browser makes direct API calls to OpenAI, Anthropic, and OpenRouter using
-          your own API keys. We never see or store any of your data.
+          Your API requests (including keys, prompts, and model selections) are routed through our servers
+          to reach OpenAI, Anthropic, and OpenRouter. However, <strong>API keys are automatically redacted
+          from all logs, and prompts/responses are never logged.</strong> We maintain basic operational logs
+          (provider, model, error types) for debugging only. No personal or sensitive data is stored. All your
+          evaluation results and history are stored only in your browser&apos;s localStorage.
         </p>
       )
     },
@@ -71,15 +72,6 @@ export default function FAQPage() {
           Yes. You need your own API keys from OpenAI, Anthropic, and/or OpenRouter, and you&apos;ll be
           charged by those providers based on your usage. Evvl itself is free to use -
           you only pay for the API calls made to the AI providers.
-        </p>
-      )
-    },
-    {
-      question: "Can I export my evaluation results?",
-      answer: (
-        <p className="text-gray-700">
-          Yes! From the History page, you can export any evaluation to JSON or CSV format.
-          This is useful for sharing results, creating reports, or importing into other tools.
         </p>
       )
     }

@@ -194,9 +194,9 @@ export default function SettingsPage() {
 
         <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
-            <strong>Privacy Note:</strong> Your API keys are stored locally in
-            your browser&apos;s localStorage and are never sent to our servers. They
-            are only used to make direct API calls to OpenAI, Anthropic, and OpenRouter.
+            <strong>Privacy Note:</strong> Your API keys are stored locally in your browser&apos;s localStorage.
+            When you generate outputs, your keys are sent through our server to reach the AI providers, but
+            they are automatically redacted from all server logs and never stored in any database.
           </p>
         </div>
       </div>

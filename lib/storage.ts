@@ -77,7 +77,12 @@ export interface ColumnConfig {
 
 export function saveColumns(columns: ColumnConfig[]): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(COLUMNS_KEY, JSON.stringify(columns));
+    // Normalize columns before saving - ensure configured columns are not in configuring mode
+    const normalizedColumns = columns.map(col => ({
+      ...col,
+      isConfiguring: col.provider && col.model ? false : col.isConfiguring
+    }));
+    localStorage.setItem(COLUMNS_KEY, JSON.stringify(normalizedColumns));
   }
 }
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import Navigation from "@/components/navigation";
+import Footer from "@/components/footer";
 
 export const metadata: Metadata = {
   title: "Evvl - AI Output Evaluation",
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body className="h-screen flex flex-col">
         <Navigation />
         <main className="flex-1 overflow-hidden">{children}</main>
+        <Footer />
       </body>
     </html>
   );
