@@ -482,7 +482,7 @@ function ColumnComponent({ column, apiKeys, output, generating, providers, onCon
       {/* Column Header */}
       {!column.isConfiguring && column.provider && providerConfig ? (
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-start gap-2">
             <Image src={providerConfig.logo} alt={providerConfig.name} width={24} height={24} />
             <div>
               <h3 className="text-base font-bold text-gray-900">{providerConfig.name}</h3>

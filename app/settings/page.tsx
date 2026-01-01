@@ -27,7 +27,7 @@ export default function SettingsPage() {
     setKeys({});
   };
 
-  const handleTest = (provider: 'openai' | 'anthropic' | 'openrouter') => {
+  const handleTest = (provider: 'openai' | 'anthropic' | 'openrouter' | 'gemini') => {
     // Save keys first
     saveApiKeys(keys);
     // Navigate to test page
@@ -152,6 +152,44 @@ export default function SettingsPage() {
               className="text-blue-500 hover:underline"
             >
               openrouter.ai
+            </a>
+          </p>
+        </div>
+
+        <div>
+          <label
+            htmlFor="gemini"
+            className="block text-sm font-semibold text-gray-700 mb-2"
+          >
+            Google Gemini API Key
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="gemini"
+              type="text"
+              value={keys.gemini || ''}
+              onChange={(e) => setKeys({ ...keys, gemini: e.target.value })}
+              placeholder="AIza..."
+              className="input"
+            />
+            {keys.gemini && (
+              <button
+                onClick={() => handleTest('gemini')}
+                className="px-4 py-2.5 bg-green-600 text-white rounded-lg font-medium shadow-sm hover:bg-green-700 transition-all duration-200 whitespace-nowrap"
+              >
+                Test
+              </button>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Get your API key from{' '}
+            <a
+              href="https://aistudio.google.com/app/apikey"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline"
+            >
+              aistudio.google.com
             </a>
           </p>
         </div>
