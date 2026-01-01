@@ -13,6 +13,7 @@
     "fetch-models": "node scripts/fetch-models.js"
   },
   "dependencies": {
+    "@vercel/analytics": "^1.6.1",
     "geist": "^1.5.1",
     "lucide-react": "^0.462.0",
     "next": "^14.2.0",

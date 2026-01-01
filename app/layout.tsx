@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
@@ -23,6 +24,7 @@ export default function RootLayout({
         <Navigation />
         <main className="flex-1 overflow-hidden">{children}</main>
         <Footer />
+        <Analytics />
 
         {/* Privacy-friendly analytics by Plausible - Production only */}
         {isProduction && (
