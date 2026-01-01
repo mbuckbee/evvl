@@ -49,8 +49,8 @@ export const PROVIDERS: ProviderConfig[] = [
     name: 'Gemini',
     logo: '/logos/gemini.svg',
     settingsUrl: 'https://aistudio.google.com/app/apikey',
-    testModel: 'gemini-1.5-flash',
-    models: [], // Populated dynamically
+    testModel: 'google/gemini-flash-1.5',
+    models: [], // Populated dynamically from OpenRouter API
   },
 ];
 

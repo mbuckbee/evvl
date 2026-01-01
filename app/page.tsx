@@ -58,12 +58,12 @@ export default function Home() {
     // Load dynamic models from API (with 5-minute cache)
     async function loadModels() {
       const models = await fetchOpenRouterModels();
-      const geminiModels = getGeminiModels();
 
       if (models.length > 0) {
         const openaiModels = getOpenAIModels(models);
         const anthropicModels = getAnthropicModels(models);
         const openrouterModels = getPopularOpenRouterModels(models);
+        const geminiModels = getGeminiModels(models);
 
         const updatedProviders = PROVIDERS.map(provider => {
           if (provider.key === 'openai' && openaiModels.length > 0) {

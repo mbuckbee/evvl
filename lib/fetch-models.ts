@@ -141,16 +141,14 @@ export function getPopularOpenRouterModels(models: OpenRouterModel[]) {
 }
 
 /**
- * Get Google Gemini models
- * Static list of available Gemini models
+ * Get Google Gemini models from OpenRouter
+ * Sorted in descending order (newer versions first)
  */
-export function getGeminiModels() {
-  return [
-    { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Experimental)' },
-    { value: 'gemini-exp-1206', label: 'Gemini Experimental 1206' },
-    { value: 'gemini-exp-1121', label: 'Gemini Experimental 1121' },
-    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
-    { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash-8B' },
-  ];
+export function getGeminiModels(models: OpenRouterModel[]) {
+  return filterModelsByProvider(models, 'google')
+    .map(model => ({
+      value: model.id,
+      label: model.name.replace('Google: ', ''),
+    }))
+    .sort((a, b) => b.label.localeCompare(a.label));
 }

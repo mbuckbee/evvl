@@ -60,9 +60,9 @@ export function transformModelSlug(
     return modelSlug;
   }
 
-  // Gemini: pass through as-is (no transformation needed)
+  // Gemini: strip the "google/" prefix for direct API use
   if (provider === 'gemini') {
-    return modelSlug;
+    return modelSlug.replace(/^google\//, '');
   }
 
   // OpenAI: simply strip the "openai/" prefix
