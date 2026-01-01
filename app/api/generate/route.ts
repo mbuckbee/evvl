@@ -33,13 +33,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate provider
+    const validProviders = ['openai', 'anthropic', 'openrouter'];
+    if (!validProviders.includes(provider)) {
+      console.error(`[INVALID_PROVIDER] received provider=${provider}`);
+      return NextResponse.json(
+        { error: `Invalid provider: ${provider}` },
+        { status: 400 }
+      );
+    }
+
+    // Validate model is not empty/null
+    if (typeof model !== 'string' || model.trim().length === 0) {
+      console.error(`[INVALID_MODEL] provider=${provider} model="${model}"`);
+      return NextResponse.json(
+        { error: 'Model must be a non-empty string' },
+        { status: 400 }
+      );
+    }
+
     // Transform model slug for direct API calls
     const transformedModel = transformModelSlug(provider, model);
 
-    // Log transformation for debugging
+    // Log transformation for debugging and monitoring
     if (model !== transformedModel) {
-      console.log(`Model transformation: ${model} → ${transformedModel}`);
+      console.log(`[MODEL_TRANSFORM] ${provider}: ${model} → ${transformedModel}`);
     }
+
+    // Log all API requests for monitoring
+    console.log(`[API_REQUEST] provider=${provider} model=${transformedModel}`);
 
     const startTime = Date.now();
 
@@ -132,7 +154,7 @@ export async function POST(req: NextRequest) {
       }
     } catch (providerError: any) {
       // Handle provider-specific errors (model not found, etc.)
-      console.error(`${provider} API error:`, sanitizeError(providerError));
+      console.error(`[MODEL_ERROR] provider=${provider} model=${transformedModel}`, sanitizeError(providerError));
 
       // Model not found errors - check status code AND error message/type to be specific
       const isModelNotFound = (
@@ -152,6 +174,8 @@ export async function POST(req: NextRequest) {
         const providerName = provider === 'openai' ? 'OpenAI' :
                             provider === 'anthropic' ? 'Anthropic' :
                             provider.charAt(0).toUpperCase() + provider.slice(1);
+
+        console.error(`[MODEL_NOT_FOUND] provider=${provider} model=${transformedModel}`);
 
         return NextResponse.json(
           { error: `This model is not available through ${providerName}'s direct API. Try using the OpenRouter provider instead.` },
