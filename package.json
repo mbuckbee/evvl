@@ -13,6 +13,7 @@
     "fetch-models": "node scripts/fetch-models.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@vercel/analytics": "^1.6.1",
     "@vercel/kv": "^3.0.0",
     "@vercel/speed-insights": "^1.3.1",

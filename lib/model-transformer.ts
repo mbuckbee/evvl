@@ -52,11 +52,16 @@ const ANTHROPIC_MODEL_MAP: Record<string, string> = {
  * @returns Transformed model slug for direct API use
  */
 export function transformModelSlug(
-  provider: 'openai' | 'anthropic' | 'openrouter',
+  provider: 'openai' | 'anthropic' | 'openrouter' | 'gemini',
   modelSlug: string
 ): string {
   // OpenRouter: pass through as-is
   if (provider === 'openrouter') {
+    return modelSlug;
+  }
+
+  // Gemini: pass through as-is (no transformation needed)
+  if (provider === 'gemini') {
     return modelSlug;
   }
 

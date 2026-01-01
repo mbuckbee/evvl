@@ -12,8 +12,8 @@ export function saveApiKeys(keys: ApiKeys): void {
     const oldKeys = loadApiKeys();
 
     // Check each provider for changes
-    ['openai', 'anthropic', 'openrouter'].forEach((provider) => {
-      const providerKey = provider as 'openai' | 'anthropic' | 'openrouter';
+    ['openai', 'anthropic', 'openrouter', 'gemini'].forEach((provider) => {
+      const providerKey = provider as 'openai' | 'anthropic' | 'openrouter' | 'gemini';
       const hadKey = !!oldKeys[providerKey];
       const hasKey = !!keys[providerKey];
 
@@ -89,7 +89,7 @@ export function getEvalById(id: string): EvalResult | undefined {
 // Column Configurations
 export interface ColumnConfig {
   id: string;
-  provider?: 'openai' | 'anthropic' | 'openrouter';
+  provider?: 'openai' | 'anthropic' | 'openrouter' | 'gemini';
   model?: string;
   isConfiguring?: boolean;
 }

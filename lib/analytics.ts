@@ -14,7 +14,7 @@ export type AnalyticsEvent =
   | 'generation_error';
 
 export interface AnalyticsData {
-  provider?: 'openai' | 'anthropic' | 'openrouter';
+  provider?: 'openai' | 'anthropic' | 'openrouter' | 'gemini';
   model?: string;
   error_type?: string;
 }

@@ -5,14 +5,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { loadApiKeys, loadColumns, saveColumns, loadEvalHistory, saveEvalResult, ColumnConfig } from '@/lib/storage';
 import { ApiKeys, AIOutput } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig, ModelOption } from '@/lib/config';
-import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels } from '@/lib/fetch-models';
+import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
 import { trackEvent } from '@/lib/analytics';
 import Link from 'next/link';
 import Image from 'next/image';
 
 interface Column {
   id: string;
-  provider?: 'openai' | 'anthropic' | 'openrouter';
+  provider?: 'openai' | 'anthropic' | 'openrouter' | 'gemini';
   model?: string;
   isConfiguring?: boolean;
 }
@@ -58,6 +58,8 @@ export default function Home() {
     // Load dynamic models from API (with 5-minute cache)
     async function loadModels() {
       const models = await fetchOpenRouterModels();
+      const geminiModels = getGeminiModels();
+
       if (models.length > 0) {
         const openaiModels = getOpenAIModels(models);
         const anthropicModels = getAnthropicModels(models);
@@ -70,6 +72,8 @@ export default function Home() {
             return { ...provider, models: anthropicModels };
           } else if (provider.key === 'openrouter' && openrouterModels.length > 0) {
             return { ...provider, models: openrouterModels };
+          } else if (provider.key === 'gemini' && geminiModels.length > 0) {
+            return { ...provider, models: geminiModels };
           }
           return provider;
         });
@@ -117,7 +121,7 @@ export default function Home() {
     }
   };
 
-  const generateForColumn = async (columnId: string, columnProvider: 'openai' | 'anthropic' | 'openrouter', columnModel: string) => {
+  const generateForColumn = async (columnId: string, columnProvider: 'openai' | 'anthropic' | 'openrouter' | 'gemini', columnModel: string) => {
     if (!prompt.trim() || !apiKeys[columnProvider]) return;
 
     // Mark this column as loading
@@ -185,7 +189,7 @@ export default function Home() {
     }
   };
 
-  const configureColumn = (id: string, provider: 'openai' | 'anthropic' | 'openrouter', model: string) => {
+  const configureColumn = (id: string, provider: 'openai' | 'anthropic' | 'openrouter' | 'gemini', model: string) => {
     // Update the column configuration
     const updatedColumns = columns.map(col =>
       col.id === id ? { ...col, provider, model, isConfiguring: false } : col
@@ -395,14 +399,14 @@ interface ColumnComponentProps {
   output?: AIOutput;
   generating: boolean;
   providers: ProviderConfig[];
-  onConfigure: (id: string, provider: 'openai' | 'anthropic' | 'openrouter', model: string) => void;
+  onConfigure: (id: string, provider: 'openai' | 'anthropic' | 'openrouter' | 'gemini', model: string) => void;
   onToggleConfiguring: (id: string) => void;
   onStartConfiguring: (id: string) => void;
   onRemove: (id: string) => void;
 }
 
 function ColumnComponent({ column, apiKeys, output, generating, providers, onConfigure, onToggleConfiguring, onStartConfiguring, onRemove }: ColumnComponentProps) {
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic' | 'openrouter' | ''>(column.provider || '');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic' | 'openrouter' | 'gemini' | ''>(column.provider || '');
   const [selectedModel, setSelectedModel] = useState(column.model || '');
   const [providerDropdownOpen, setProviderDropdownOpen] = useState(false);
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
@@ -440,7 +444,7 @@ function ColumnComponent({ column, apiKeys, output, generating, providers, onCon
     }
   }, [providerDropdownOpen, modelDropdownOpen]);
 
-  const handleProviderChange = (provider: 'openai' | 'anthropic' | 'openrouter') => {
+  const handleProviderChange = (provider: 'openai' | 'anthropic' | 'openrouter' | 'gemini') => {
     setSelectedProvider(provider);
     const providerConfig = providers.find(p => p.key === provider);
     if (providerConfig) {

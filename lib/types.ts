@@ -2,10 +2,11 @@ export interface ApiKeys {
   openai?: string;
   anthropic?: string;
   openrouter?: string;
+  gemini?: string;
 }
 
 export interface ModelConfig {
-  provider: 'openai' | 'anthropic' | 'openrouter';
+  provider: 'openai' | 'anthropic' | 'openrouter' | 'gemini';
   model: string;
   label: string;
 }

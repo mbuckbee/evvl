@@ -19,7 +19,7 @@ function TestPageContent() {
   const provider = searchParams.get('provider');
   const apiKey = searchParams.get('key');
 
-  const providerConfig = getProvider(provider as 'openai' | 'anthropic' | 'openrouter');
+  const providerConfig = getProvider(provider as 'openai' | 'anthropic' | 'openrouter' | 'gemini');
   const providerName = providerConfig?.name || provider;
 
   useEffect(() => {
@@ -40,11 +40,11 @@ function TestPageContent() {
     setTesting(true);
 
     // Track that a key test was initiated
-    trackEvent('api_key_tested', { provider: provider as 'openai' | 'anthropic' | 'openrouter' });
+    trackEvent('api_key_tested', { provider: provider as 'openai' | 'anthropic' | 'openrouter' | 'gemini' });
 
     try {
       const { getTestModel } = await import('@/lib/config');
-      const model = getTestModel(provider as 'openai' | 'anthropic' | 'openrouter');
+      const model = getTestModel(provider as 'openai' | 'anthropic' | 'openrouter' | 'gemini');
 
       if (!model) {
         throw new Error('Unknown provider');
@@ -65,7 +65,7 @@ function TestPageContent() {
 
       if (response.ok) {
         // Track successful test
-        trackEvent('api_key_test_success', { provider: provider as 'openai' | 'anthropic' | 'openrouter' });
+        trackEvent('api_key_test_success', { provider: provider as 'openai' | 'anthropic' | 'openrouter' | 'gemini' });
 
         setResult({
           success: true,
@@ -74,7 +74,7 @@ function TestPageContent() {
         });
       } else {
         // Track failed test
-        trackEvent('api_key_test_failure', { provider: provider as 'openai' | 'anthropic' | 'openrouter' });
+        trackEvent('api_key_test_failure', { provider: provider as 'openai' | 'anthropic' | 'openrouter' | 'gemini' });
 
         setResult({
           success: false,
@@ -84,7 +84,7 @@ function TestPageContent() {
       }
     } catch (error: any) {
       // Track failed test
-      trackEvent('api_key_test_failure', { provider: provider as 'openai' | 'anthropic' | 'openrouter' });
+      trackEvent('api_key_test_failure', { provider: provider as 'openai' | 'anthropic' | 'openrouter' | 'gemini' });
 
       setResult({
         success: false,

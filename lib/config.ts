@@ -11,7 +11,7 @@ export interface ModelOption {
 }
 
 export interface ProviderConfig {
-  key: 'openai' | 'anthropic' | 'openrouter';
+  key: 'openai' | 'anthropic' | 'openrouter' | 'gemini';
   name: string;
   logo: string;
   models: ModelOption[];
@@ -44,26 +44,34 @@ export const PROVIDERS: ProviderConfig[] = [
     testModel: 'openai/gpt-3.5-turbo',
     models: [], // Populated dynamically from OpenRouter API
   },
+  {
+    key: 'gemini',
+    name: 'Gemini',
+    logo: '/logos/gemini.svg',
+    settingsUrl: 'https://aistudio.google.com/app/apikey',
+    testModel: 'gemini-1.5-flash',
+    models: [], // Populated dynamically
+  },
 ];
 
 /**
  * Get provider configuration by key
  */
-export function getProvider(key: 'openai' | 'anthropic' | 'openrouter'): ProviderConfig | undefined {
+export function getProvider(key: 'openai' | 'anthropic' | 'openrouter' | 'gemini'): ProviderConfig | undefined {
   return PROVIDERS.find(p => p.key === key);
 }
 
 /**
  * Get all provider keys
  */
-export function getProviderKeys(): ('openai' | 'anthropic' | 'openrouter')[] {
+export function getProviderKeys(): ('openai' | 'anthropic' | 'openrouter' | 'gemini')[] {
   return PROVIDERS.map(p => p.key);
 }
 
 /**
  * Get models for a specific provider
  */
-export function getModelsForProvider(key: 'openai' | 'anthropic' | 'openrouter'): ModelOption[] {
+export function getModelsForProvider(key: 'openai' | 'anthropic' | 'openrouter' | 'gemini'): ModelOption[] {
   const provider = getProvider(key);
   return provider?.models || [];
 }
@@ -72,7 +80,7 @@ export function getModelsForProvider(key: 'openai' | 'anthropic' | 'openrouter')
  * Get default model for a provider (first in the list)
  * Returns empty string if models haven't loaded yet - handled by page logic
  */
-export function getDefaultModel(key: 'openai' | 'anthropic' | 'openrouter'): string {
+export function getDefaultModel(key: 'openai' | 'anthropic' | 'openrouter' | 'gemini'): string {
   const models = getModelsForProvider(key);
   return models[0]?.value || '';
 }
@@ -80,7 +88,7 @@ export function getDefaultModel(key: 'openai' | 'anthropic' | 'openrouter'): str
 /**
  * Get test model for a provider
  */
-export function getTestModel(key: 'openai' | 'anthropic' | 'openrouter'): string {
+export function getTestModel(key: 'openai' | 'anthropic' | 'openrouter' | 'gemini'): string {
   const provider = getProvider(key);
   return provider?.testModel || getDefaultModel(key);
 }

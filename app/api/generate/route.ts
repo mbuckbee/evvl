@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { transformModelSlug } from '@/lib/model-transformer';
 
 // Sanitize error objects to remove API keys before logging
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate provider
-    const validProviders = ['openai', 'anthropic', 'openrouter'];
+    const validProviders = ['openai', 'anthropic', 'openrouter', 'gemini'];
     if (!validProviders.includes(provider)) {
       console.error(`[INVALID_PROVIDER] received provider=${provider}`);
       return NextResponse.json(
@@ -140,6 +141,24 @@ export async function POST(req: NextRequest) {
         const latency = Date.now() - startTime;
         const content = data.content[0]?.type === 'text' ? data.content[0].text : '';
         const tokens = (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0);
+
+        return NextResponse.json({
+          content,
+          tokens,
+          latency,
+        });
+      } else if (provider === 'gemini') {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: transformedModel });
+
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        const content = response.text();
+
+        const latency = Date.now() - startTime;
+
+        // Gemini doesn't provide token counts in the same way, approximate based on content
+        const tokens = Math.ceil((prompt.length + content.length) / 4);
 
         return NextResponse.json({
           content,
