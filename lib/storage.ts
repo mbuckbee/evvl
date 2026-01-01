@@ -1,4 +1,5 @@
 import { ApiKeys, EvalResult } from './types';
+import { trackEvent } from './analytics';
 
 const API_KEYS_KEY = 'evvl_api_keys';
 const EVAL_HISTORY_KEY = 'evvl_eval_history';
@@ -7,6 +8,24 @@ const COLUMNS_KEY = 'evvl_columns';
 // API Keys
 export function saveApiKeys(keys: ApiKeys): void {
   if (typeof window !== 'undefined') {
+    // Track what changed (added or removed)
+    const oldKeys = loadApiKeys();
+
+    // Check each provider for changes
+    ['openai', 'anthropic', 'openrouter'].forEach((provider) => {
+      const providerKey = provider as 'openai' | 'anthropic' | 'openrouter';
+      const hadKey = !!oldKeys[providerKey];
+      const hasKey = !!keys[providerKey];
+
+      if (!hadKey && hasKey) {
+        // Key was added
+        trackEvent('api_key_added', { provider: providerKey });
+      } else if (hadKey && !hasKey) {
+        // Key was removed
+        trackEvent('api_key_removed', { provider: providerKey });
+      }
+    });
+
     localStorage.setItem(API_KEYS_KEY, JSON.stringify(keys));
   }
 }

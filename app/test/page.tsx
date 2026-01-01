@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getProvider } from '@/lib/config';
+import { trackEvent } from '@/lib/analytics';
 
 function TestPageContent() {
   const searchParams = useSearchParams();
@@ -38,6 +39,9 @@ function TestPageContent() {
   const testApiKey = async () => {
     setTesting(true);
 
+    // Track that a key test was initiated
+    trackEvent('api_key_tested', { provider: provider as 'openai' | 'anthropic' | 'openrouter' });
+
     try {
       const { getTestModel } = await import('@/lib/config');
       const model = getTestModel(provider as 'openai' | 'anthropic' | 'openrouter');
@@ -60,12 +64,18 @@ function TestPageContent() {
       const data = await response.json();
 
       if (response.ok) {
+        // Track successful test
+        trackEvent('api_key_test_success', { provider: provider as 'openai' | 'anthropic' | 'openrouter' });
+
         setResult({
           success: true,
           message: 'API key is valid and working!',
           details: `Response: ${data.content.substring(0, 100)}${data.content.length > 100 ? '...' : ''}`,
         });
       } else {
+        // Track failed test
+        trackEvent('api_key_test_failure', { provider: provider as 'openai' | 'anthropic' | 'openrouter' });
+
         setResult({
           success: false,
           message: 'API key test failed',
@@ -73,6 +83,9 @@ function TestPageContent() {
         });
       }
     } catch (error: any) {
+      // Track failed test
+      trackEvent('api_key_test_failure', { provider: provider as 'openai' | 'anthropic' | 'openrouter' });
+
       setResult({
         success: false,
         message: 'Test failed',

@@ -6,6 +6,7 @@ import { loadApiKeys, loadColumns, saveColumns, loadEvalHistory, saveEvalResult,
 import { ApiKeys, AIOutput } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig, ModelOption } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels } from '@/lib/fetch-models';
+import { trackEvent } from '@/lib/analytics';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -260,6 +261,9 @@ export default function Home() {
         const data = await response.json();
 
         if (response.ok) {
+          // Track successful generation
+          trackEvent('generation_success', { provider, model });
+
           return {
             columnId: column.id,
             output: {
@@ -272,6 +276,9 @@ export default function Home() {
             }
           };
         } else {
+          // Track generation error
+          trackEvent('generation_error', { provider, model, error_type: 'api_error' });
+
           return {
             columnId: column.id,
             output: {
@@ -284,6 +291,9 @@ export default function Home() {
           };
         }
       } catch (error: any) {
+        // Track generation error
+        trackEvent('generation_error', { provider, model, error_type: 'network_error' });
+
         return {
           columnId: column.id,
           output: {
