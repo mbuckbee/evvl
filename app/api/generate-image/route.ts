@@ -55,9 +55,6 @@ export async function POST(req: NextRequest) {
       const genAI = new GoogleGenerativeAI(apiKey);
       const geminiModel = genAI.getGenerativeModel({
         model: transformedModel,
-        generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE'] as any,
-        },
       });
 
       const result = await geminiModel.generateContent(prompt);
