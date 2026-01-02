@@ -56,7 +56,6 @@ export async function POST(req: NextRequest) {
       const geminiModel = genAI.getGenerativeModel({
         model: transformedModel,
         generationConfig: {
-          // @ts-ignore - responseModalities is required for image generation but not in TypeScript types yet
           responseModalities: ['TEXT', 'IMAGE'],
         },
       });
