@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang="en" className={GeistSans.className}>
       <body className="h-screen flex flex-col">
         <Navigation />
-        <main className="flex-1 overflow-hidden">{children}</main>
+        <main className="flex-1 overflow-y-auto">{children}</main>
         <Footer />
         <Analytics />
         <SpeedInsights />

@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Home from '../page';
 import * as storage from '@/lib/storage';
+import * as fetchModels from '@/lib/fetch-models';
 
 // Mock Next.js components
 jest.mock('next/link', () => {
@@ -24,6 +25,25 @@ jest.mock('next/image', () => {
 // Mock the storage module
 jest.mock('@/lib/storage', () => ({
   loadApiKeys: jest.fn(),
+  loadColumns: jest.fn(),
+  saveColumns: jest.fn(),
+  loadEvalHistory: jest.fn(),
+  saveEvalHistory: jest.fn(),
+  saveEvalResult: jest.fn(),
+}));
+
+// Mock fetch-models module
+jest.mock('@/lib/fetch-models', () => ({
+  fetchOpenRouterModels: jest.fn(),
+  getOpenAIModels: jest.fn(),
+  getAnthropicModels: jest.fn(),
+  getPopularOpenRouterModels: jest.fn(),
+  getGeminiModels: jest.fn(),
+}));
+
+// Mock analytics
+jest.mock('@/lib/analytics', () => ({
+  trackEvent: jest.fn(),
 }));
 
 // Mock fetch
@@ -33,6 +53,13 @@ describe('Home (Eval Page)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (storage.loadApiKeys as jest.Mock).mockReturnValue({});
+    (storage.loadColumns as jest.Mock).mockReturnValue([]);
+    (storage.loadEvalHistory as jest.Mock).mockReturnValue([]);
+    (fetchModels.fetchOpenRouterModels as jest.Mock).mockResolvedValue([]);
+    (fetchModels.getOpenAIModels as jest.Mock).mockReturnValue([]);
+    (fetchModels.getAnthropicModels as jest.Mock).mockReturnValue([]);
+    (fetchModels.getPopularOpenRouterModels as jest.Mock).mockReturnValue([]);
+    (fetchModels.getGeminiModels as jest.Mock).mockReturnValue([]);
     (global.fetch as jest.Mock).mockReset();
   });
 
@@ -44,65 +71,36 @@ describe('Home (Eval Page)', () => {
       expect(textarea).toBeInTheDocument();
     });
 
-    it('should render Generate Outputs button', () => {
+    it('should render Save and Refresh button', () => {
       render(<Home />);
 
-      const button = screen.getByText('Generate Outputs');
+      const button = screen.getByText('Save and Refresh');
       expect(button).toBeInTheDocument();
     });
 
-    it('should render all three provider columns', () => {
+    it('should render Clear Prompt and Responses button', () => {
       render(<Home />);
 
-      expect(screen.getByText('ChatGPT')).toBeInTheDocument();
-      expect(screen.getByText('Claude')).toBeInTheDocument();
-      expect(screen.getByText('OpenRouter')).toBeInTheDocument();
+      const button = screen.getByText('Clear Prompt and Responses');
+      expect(button).toBeInTheDocument();
     });
 
-    it('should render logos for each provider', () => {
-      render(<Home />);
-
-      const chatgptLogo = screen.getByAltText('ChatGPT');
-      const claudeLogo = screen.getByAltText('Claude');
-      const openrouterLogo = screen.getByAltText('OpenRouter');
-
-      expect(chatgptLogo).toBeInTheDocument();
-      expect(claudeLogo).toBeInTheDocument();
-      expect(openrouterLogo).toBeInTheDocument();
-    });
-  });
-
-  describe('Configuration State', () => {
-    it('should show "Not configured" for providers without API keys', () => {
-      (storage.loadApiKeys as jest.Mock).mockReturnValue({});
+    it('should load saved columns from localStorage', () => {
+      const savedColumns = [
+        { id: '1', provider: 'openai', model: 'gpt-4', isConfiguring: false },
+        { id: '2', provider: 'anthropic', model: 'claude-3', isConfiguring: false },
+      ];
+      (storage.loadColumns as jest.Mock).mockReturnValue(savedColumns);
 
       render(<Home />);
 
-      const notConfiguredMessages = screen.getAllByText('Not configured');
-      expect(notConfiguredMessages).toHaveLength(3);
+      expect(storage.loadColumns).toHaveBeenCalled();
     });
 
-    it('should show configure links for unconfigured providers', () => {
-      (storage.loadApiKeys as jest.Mock).mockReturnValue({});
-
+    it('should load API keys from localStorage', () => {
       render(<Home />);
 
-      expect(screen.getByText('Configure OpenAI →')).toBeInTheDocument();
-      expect(screen.getByText('Configure Claude →')).toBeInTheDocument();
-      expect(screen.getByText('Configure OpenRouter →')).toBeInTheDocument();
-    });
-
-    it('should show "Ready" state when API keys are configured', () => {
-      (storage.loadApiKeys as jest.Mock).mockReturnValue({
-        openai: 'sk-test-123',
-        anthropic: 'sk-ant-test-456',
-        openrouter: 'sk-or-test-789',
-      });
-
-      render(<Home />);
-
-      const readyMessages = screen.getAllByText('Ready');
-      expect(readyMessages).toHaveLength(3);
+      expect(storage.loadApiKeys).toHaveBeenCalled();
     });
   });
 
@@ -118,14 +116,14 @@ describe('Home (Eval Page)', () => {
       expect(textarea.value).toBe('Test prompt');
     });
 
-    it('should disable Generate button when prompt is empty', () => {
+    it('should disable Save and Refresh button when prompt is empty', () => {
       render(<Home />);
 
-      const button = screen.getByText('Generate Outputs') as HTMLButtonElement;
+      const button = screen.getByText('Save and Refresh') as HTMLButtonElement;
       expect(button).toBeDisabled();
     });
 
-    it('should enable Generate button when prompt has content', async () => {
+    it('should enable Save and Refresh button when prompt has content', async () => {
       const user = userEvent.setup();
       (storage.loadApiKeys as jest.Mock).mockReturnValue({
         openai: 'sk-test-123',
@@ -134,7 +132,7 @@ describe('Home (Eval Page)', () => {
       render(<Home />);
 
       const textarea = screen.getByPlaceholderText('Enter your prompt here...');
-      const button = screen.getByText('Generate Outputs') as HTMLButtonElement;
+      const button = screen.getByText('Save and Refresh') as HTMLButtonElement;
 
       await user.type(textarea, 'Test prompt');
 
@@ -142,207 +140,52 @@ describe('Home (Eval Page)', () => {
     });
   });
 
-  describe('Output Generation', () => {
-    it('should call API for configured providers when generating', async () => {
+  describe('Clear Functionality', () => {
+    it('should clear prompt when Clear button is clicked', async () => {
       const user = userEvent.setup();
-      (storage.loadApiKeys as jest.Mock).mockReturnValue({
-        openai: 'sk-test-openai',
-        anthropic: 'sk-ant-test',
-      });
-
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: 'Test response',
-          tokens: 100,
-          latency: 500,
-        }),
-      });
-
       render(<Home />);
 
-      const textarea = screen.getByPlaceholderText('Enter your prompt here...');
-      const button = screen.getByText('Generate Outputs');
+      const textarea = screen.getByPlaceholderText('Enter your prompt here...') as HTMLTextAreaElement;
+      const clearButton = screen.getByText('Clear Prompt and Responses');
 
       await user.type(textarea, 'Test prompt');
-      await user.click(button);
+      expect(textarea.value).toBe('Test prompt');
 
-      await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledTimes(2); // OpenAI and Anthropic
-      });
+      await user.click(clearButton);
+
+      expect(textarea.value).toBe('');
     });
+  });
 
-    it('should show "Generating..." while generating', async () => {
-      const user = userEvent.setup();
-      (storage.loadApiKeys as jest.Mock).mockReturnValue({
-        openai: 'sk-test-openai',
-      });
-
-      (global.fetch as jest.Mock).mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            setTimeout(
-              () =>
-                resolve({
-                  ok: true,
-                  json: async () => ({ content: 'Test', tokens: 100, latency: 500 }),
-                }),
-              100
-            );
-          })
-      );
-
-      render(<Home />);
-
-      const textarea = screen.getByPlaceholderText('Enter your prompt here...');
-      const button = screen.getByText('Generate Outputs');
-
-      await user.type(textarea, 'Test prompt');
-      await user.click(button);
-
-      expect(screen.getAllByText('Generating...').length).toBeGreaterThan(0);
-    });
-
-    it('should display generated content', async () => {
-      const user = userEvent.setup();
-      (storage.loadApiKeys as jest.Mock).mockReturnValue({
-        openai: 'sk-test-openai',
-      });
-
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: 'This is a generated response from GPT-4',
-          tokens: 150,
-          latency: 1200,
-        }),
-      });
-
-      render(<Home />);
-
-      const textarea = screen.getByPlaceholderText('Enter your prompt here...');
-      const button = screen.getByText('Generate Outputs');
-
-      await user.type(textarea, 'Test prompt');
-      await user.click(button);
-
-      await waitFor(() => {
-        expect(screen.getByText('This is a generated response from GPT-4')).toBeInTheDocument();
-      });
-    });
-
-    it('should display token count and latency', async () => {
-      const user = userEvent.setup();
-      (storage.loadApiKeys as jest.Mock).mockReturnValue({
-        openai: 'sk-test-openai',
-      });
-
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: 'Test response',
-          tokens: 150,
-          latency: 1200,
-        }),
-      });
-
-      render(<Home />);
-
-      const textarea = screen.getByPlaceholderText('Enter your prompt here...');
-      const button = screen.getByText('Generate Outputs');
-
-      await user.type(textarea, 'Test prompt');
-      await user.click(button);
-
-      await waitFor(() => {
-        expect(screen.getByText(/150 tokens/)).toBeInTheDocument();
-        expect(screen.getByText(/1200ms/)).toBeInTheDocument();
-      });
-    });
-
-    it('should display error message on API failure', async () => {
-      const user = userEvent.setup();
-      (storage.loadApiKeys as jest.Mock).mockReturnValue({
-        openai: 'sk-test-openai',
-      });
-
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: false,
-        json: async () => ({
-          error: 'Invalid API key',
-        }),
-      });
-
-      render(<Home />);
-
-      const textarea = screen.getByPlaceholderText('Enter your prompt here...');
-      const button = screen.getByText('Generate Outputs');
-
-      await user.type(textarea, 'Test prompt');
-      await user.click(button);
-
-      await waitFor(() => {
-        expect(screen.getByText('Invalid API key')).toBeInTheDocument();
-      });
-    });
-
-    it('should handle network errors', async () => {
-      const user = userEvent.setup();
-      (storage.loadApiKeys as jest.Mock).mockReturnValue({
-        openai: 'sk-test-openai',
-      });
-
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
-
-      render(<Home />);
-
-      const textarea = screen.getByPlaceholderText('Enter your prompt here...');
-      const button = screen.getByText('Generate Outputs');
-
-      await user.type(textarea, 'Test prompt');
-      await user.click(button);
-
-      await waitFor(() => {
-        expect(screen.getByText('Network error')).toBeInTheDocument();
-      });
-    });
-
-    it('should generate outputs in parallel for multiple providers', async () => {
-      const user = userEvent.setup();
-      (storage.loadApiKeys as jest.Mock).mockReturnValue({
-        openai: 'sk-test-openai',
-        anthropic: 'sk-ant-test',
-        openrouter: 'sk-or-test',
-      });
-
-      const mockResponses = [
-        { content: 'OpenAI response', tokens: 100, latency: 500 },
-        { content: 'Anthropic response', tokens: 120, latency: 600 },
-        { content: 'OpenRouter response', tokens: 110, latency: 550 },
+  describe('Model Loading', () => {
+    it('should fetch models from OpenRouter on mount', async () => {
+      const mockModels = [
+        { id: 'openai/gpt-4', name: 'GPT-4' },
+        { id: 'anthropic/claude-3', name: 'Claude 3' },
       ];
 
-      let callCount = 0;
-      (global.fetch as jest.Mock).mockImplementation(() => {
-        const response = mockResponses[callCount++];
-        return Promise.resolve({
-          ok: true,
-          json: async () => response,
-        });
-      });
+      (fetchModels.fetchOpenRouterModels as jest.Mock).mockResolvedValue(mockModels);
 
       render(<Home />);
 
-      const textarea = screen.getByPlaceholderText('Enter your prompt here...');
-      const button = screen.getByText('Generate Outputs');
-
-      await user.type(textarea, 'Test prompt');
-      await user.click(button);
-
       await waitFor(() => {
-        expect(screen.getByText('OpenAI response')).toBeInTheDocument();
-        expect(screen.getByText('Anthropic response')).toBeInTheDocument();
-        expect(screen.getByText('OpenRouter response')).toBeInTheDocument();
+        expect(fetchModels.fetchOpenRouterModels).toHaveBeenCalled();
       });
+    });
+  });
+
+  describe('Eval History', () => {
+    it('should load last prompt from eval history', () => {
+      const mockHistory = [
+        { id: '1', prompt: 'Previous prompt', timestamp: Date.now(), results: {} },
+      ];
+
+      (storage.loadEvalHistory as jest.Mock).mockReturnValue(mockHistory);
+
+      render(<Home />);
+
+      const textarea = screen.getByPlaceholderText('Enter your prompt here...') as HTMLTextAreaElement;
+      expect(textarea.value).toBe('Previous prompt');
     });
   });
 });

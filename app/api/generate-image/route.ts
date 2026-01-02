@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { transformModelSlug } from '@/lib/model-transformer';
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,6 +46,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         imageUrl,
         revisedPrompt: revisedPrompt || prompt,
+        latency,
+      });
+    } else if (provider === 'gemini') {
+      // Transform model slug (e.g., google/gemini-3-pro-image-preview → gemini-3-pro-image-preview)
+      const transformedModel = transformModelSlug('gemini', model);
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const geminiModel = genAI.getGenerativeModel({
+        model: transformedModel,
+        generationConfig: {
+          responseModalities: ['TEXT', 'IMAGE'] as any,
+        },
+      });
+
+      const result = await geminiModel.generateContent(prompt);
+      const response = result.response;
+
+      const latency = Date.now() - startTime;
+
+      // Extract image data from response
+      // Gemini returns image data as inline data in the response parts
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      const imagePart = parts.find((part: any) => part.inlineData?.mimeType?.startsWith('image/'));
+
+      if (!imagePart || !imagePart.inlineData) {
+        throw new Error('No image data returned from Gemini');
+      }
+
+      // Convert base64 image data to data URL
+      const mimeType = imagePart.inlineData.mimeType || 'image/png';
+      const base64Data = imagePart.inlineData.data;
+      const imageUrl = `data:${mimeType};base64,${base64Data}`;
+
+      // Get text response if any (this would be the revised/enhanced prompt)
+      const textPart = parts.find((part: any) => part.text);
+      const revisedPrompt = textPart?.text || prompt;
+
+      return NextResponse.json({
+        imageUrl,
+        revisedPrompt,
         latency,
       });
     } else {

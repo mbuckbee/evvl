@@ -2,6 +2,33 @@
  * Transforms OpenRouter model slugs to formats expected by direct APIs
  */
 
+// Mapping table for Gemini models: OpenRouter slug → Direct API slug
+// Google's direct API uses different naming (gemini-X.Y-model vs google/gemini-model-X.Y)
+const GEMINI_MODEL_MAP: Record<string, string> = {
+  // Gemini 2.0 series (available as of Q1 2026)
+  'google/gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
+  'google/gemini-flash-2.0-exp': 'gemini-2.0-flash-exp',
+  'google/gemini-2.0-flash': 'gemini-2.0-flash',
+  'google/gemini-2.0-flash-lite': 'gemini-2.0-flash-lite',
+
+  // Gemini 2.5 series (stable models as of Q1 2026)
+  'google/gemini-2.5-pro': 'gemini-2.5-pro',
+  'google/gemini-2.5-flash': 'gemini-2.5-flash',
+  'google/gemini-2.5-flash-lite': 'gemini-2.5-flash-lite',
+  'google/gemini-2.5-flash-image': 'gemini-2.5-flash-image', // Image generation model (aka Nano Banana)
+
+  // Gemini 3.x series (preview/experimental as of Q1 2026)
+  'google/gemini-3-pro': 'gemini-3-pro',
+  'google/gemini-3-flash': 'gemini-3-flash',
+  'google/gemini-3-pro-image': 'gemini-3-pro-image-preview', // Image generation model
+  'google/gemini-3-pro-image-preview': 'gemini-3-pro-image-preview', // Image generation model
+  'google/gemini-3.0-pro': 'gemini-3-pro',
+  'google/gemini-3.0-flash': 'gemini-3-flash',
+
+  // Legacy Gemini Pro (deprecated but might still work)
+  'google/gemini-pro': 'gemini-pro',
+};
+
 // Mapping table for Anthropic models: OpenRouter slug → Direct API slug
 // NOTE: Includes ACTIVE and DEPRECATED models (deprecated still work until retirement date)
 // RETIRED models are filtered out in fetch-models.ts and won't appear here
@@ -60,9 +87,24 @@ export function transformModelSlug(
     return modelSlug;
   }
 
-  // Gemini: strip the "google/" prefix for direct API use
+  // Gemini: use mapping table for correct model names
   if (provider === 'gemini') {
-    return modelSlug.replace(/^google\//, '');
+    // Check mapping table first
+    const mappedModel = GEMINI_MODEL_MAP[modelSlug];
+    if (mappedModel) {
+      return mappedModel;
+    }
+
+    // If model doesn't have google/ prefix, it might already be in the correct format
+    if (!modelSlug.startsWith('google/')) {
+      return modelSlug;
+    }
+
+    // Unknown model - fail with clear error
+    throw new Error(
+      `Unknown Gemini model: ${modelSlug}. ` +
+      `Please add mapping to GEMINI_MODEL_MAP in lib/model-transformer.ts`
+    );
   }
 
   // OpenAI: simply strip the "openai/" prefix
@@ -97,7 +139,9 @@ export function transformModelSlug(
 /**
  * MAINTENANCE GUIDE:
  *
- * When Anthropic releases a new model or retires existing ones:
+ * When providers release new models or retire existing ones:
+ *
+ * ANTHROPIC:
  * 1. Check Anthropic's model deprecation page: https://platform.claude.com/docs/en/about-claude/model-deprecations
  * 2. For RETIRED models: Update the filter in lib/fetch-models.ts getAnthropicModels() to hide them
  * 3. For DEPRECATED models: Keep them visible (they still work until retirement date)
@@ -106,7 +150,14 @@ export function transformModelSlug(
  * 6. Add mapping to ANTHROPIC_MODEL_MAP above
  * 7. Test via Settings > Test API Key
  *
- * Model Status (as of Dec 2025):
+ * GEMINI:
+ * 1. Check Google's Gemini models: https://ai.google.dev/gemini-api/docs/models/gemini
+ * 2. For NEW models: Check OpenRouter's model ID (e.g., "google/gemini-2.0-flash")
+ * 3. Check Google's docs for the direct API model name (e.g., "gemini-2.0-flash-exp")
+ * 4. Add mapping to GEMINI_MODEL_MAP above
+ * 5. Test via Settings > Test API Key
+ *
+ * ANTHROPIC Model Status (as of Dec 2025):
  * Active:
  * - Claude 3 Haiku (claude-3-haiku-20240307)
  * - Claude 4 series (Opus 4, Opus 4.1, Sonnet 4)

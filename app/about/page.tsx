@@ -87,29 +87,38 @@ export default function AboutPage() {
           <span>←</span> Back to Eval
         </Link>
       </div>
-      <div className="mb-10">
-        <h1 className="text-4xl font-bold mb-3 text-gray-900">About Evvl</h1>
-        <p className="text-lg text-gray-600">
-          A privacy-first tool for comparing AI model outputs
-        </p>
-      </div>
 
-      <div className="max-w-3xl space-y-8">
-        <section className="card p-8">
-          <h2 className="text-2xl font-bold mb-4 text-gray-900">What is Evvl?</h2>
+      <div className="w-[80%] mx-auto space-y-12">
+        <section>
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">The Problem</h2>
           <p className="text-gray-700 mb-4">
-            Evvl is a simple, privacy-focused tool that lets you compare outputs from different AI models side by side.
-            Enter a single prompt, select which AI providers you want to use, and instantly see how different models
-            respond to the same input.
+            When you ask an AI model a question, it gives you an answer. But how do you know if it&apos;s a
+            <em> good</em> answer? In isolation, it&apos;s surprisingly difficult to evaluate the quality of an AI response.
+          </p>
+          <p className="text-gray-700 mb-4">
+            You might wonder: Is this the best response possible? Did the model miss important context? Would a
+            different model have given a better answer? Without a point of comparison, you&apos;re left guessing.
           </p>
           <p className="text-gray-700">
-            Whether you&apos;re evaluating which AI model works best for your use case, testing prompt variations,
-            or just curious about how different models approach the same question, Evvl makes it easy to
-            compare and contrast their outputs.
+            This is the fundamental challenge with evaluating AI outputs—you need context, and the best context
+            is seeing how different models tackle the same task.
           </p>
         </section>
 
-        <section className="card p-8">
+        <section>
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">The Solution</h2>
+          <p className="text-gray-700 mb-4">
+            Evvl lets you compare outputs from different AI models side by side. Enter a single prompt,
+            select multiple AI providers, and instantly see how different models respond to the same input.
+          </p>
+          <p className="text-gray-700">
+            By comparing responses, patterns emerge. You&apos;ll quickly notice which models excel at certain
+            tasks, which ones provide more detailed answers, and which ones better understand your specific needs.
+            This side-by-side comparison is the fastest way to build intuition about AI model capabilities.
+          </p>
+        </section>
+
+        <section>
           <h2 className="text-2xl font-bold mb-4 text-gray-900">How It Works</h2>
           <ol className="list-decimal list-inside space-y-3 text-gray-700">
             <li>
@@ -130,7 +139,7 @@ export default function AboutPage() {
           </ol>
         </section>
 
-        <section className="card p-8">
+        <section>
           <h2 className="text-2xl font-bold mb-4 text-gray-900">Privacy First</h2>
           <p className="text-gray-700 mb-4">
             Evvl takes your privacy seriously. Here&apos;s what makes it different:
@@ -156,7 +165,7 @@ export default function AboutPage() {
           </ul>
         </section>
 
-        <section className="card p-8">
+        <section>
           <h2 className="text-2xl font-bold mb-4 text-gray-900">Free to Use</h2>
           <p className="text-gray-700">
             Evvl itself is completely free to use. You only pay for the API calls made to the AI providers
@@ -169,10 +178,10 @@ export default function AboutPage() {
           <h2 className="text-2xl font-bold mb-6 text-gray-900">Frequently Asked Questions</h2>
           <div className="space-y-3">
             {faqItems.map((faq, index) => (
-              <div key={index} className="card overflow-hidden">
+              <div key={index} className="border-b border-gray-200 pb-4">
                 <button
                   onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
-                  className="w-full px-6 py-5 text-left flex justify-between items-center hover:bg-gray-50 transition-colors duration-200"
+                  className="w-full py-3 text-left flex justify-between items-center hover:text-gray-600 transition-colors duration-200"
                 >
                   <h3 className="text-base font-semibold text-gray-900">{faq.question}</h3>
                   <span className="text-gray-400 text-xl font-light ml-4 flex-shrink-0">
@@ -180,7 +189,7 @@ export default function AboutPage() {
                   </span>
                 </button>
                 {openFaqIndex === index && (
-                  <div className="px-6 pb-5 pt-1 border-t border-gray-100">
+                  <div className="pt-3">
                     {faq.answer}
                   </div>
                 )}

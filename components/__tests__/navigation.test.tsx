@@ -3,8 +3,8 @@ import Navigation from '../navigation';
 
 // Mock Next.js Link component
 jest.mock('next/link', () => {
-  const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
-    return <a href={href}>{children}</a>;
+  const MockLink = ({ children, href, onClick }: { children: React.ReactNode; href: string; onClick?: () => void }) => {
+    return <a href={href} onClick={onClick}>{children}</a>;
   };
   MockLink.displayName = 'Link';
   return MockLink;
@@ -21,6 +21,16 @@ jest.mock('next/image', () => {
 });
 
 describe('Navigation', () => {
+  beforeEach(() => {
+    // Mock localStorage
+    Storage.prototype.getItem = jest.fn(() => null);
+    Storage.prototype.setItem = jest.fn();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('should render the Evvl logo', () => {
     render(<Navigation />);
     const logo = screen.getByAltText('Evvl');
@@ -30,14 +40,14 @@ describe('Navigation', () => {
   it('should render all navigation links', () => {
     render(<Navigation />);
 
-    expect(screen.getByText('About')).toBeInTheDocument();
+    expect(screen.getByText('What is this?')).toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
   it('should have correct href attributes for links', () => {
     render(<Navigation />);
 
-    const aboutLink = screen.getByText('About').closest('a');
+    const aboutLink = screen.getByText('What is this?').closest('a');
     const settingsLink = screen.getByText('Settings').closest('a');
 
     expect(aboutLink).toHaveAttribute('href', '/about');

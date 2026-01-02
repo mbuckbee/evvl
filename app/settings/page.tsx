@@ -19,7 +19,10 @@ export default function SettingsPage() {
   const handleSave = () => {
     saveApiKeys(keys);
     setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setTimeout(() => {
+      setSaved(false);
+      router.push('/');
+    }, 1500);
   };
 
   const handleClear = () => {

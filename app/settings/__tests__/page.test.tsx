@@ -1,7 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SettingsPage from '../page';
 import * as storage from '@/lib/storage';
+import { useRouter } from 'next/navigation';
 
 // Mock the storage module
 jest.mock('@/lib/storage', () => ({
@@ -10,10 +11,20 @@ jest.mock('@/lib/storage', () => ({
   clearApiKeys: jest.fn(),
 }));
 
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(),
+}));
+
 describe('SettingsPage', () => {
+  const mockPush = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
     (storage.loadApiKeys as jest.Mock).mockReturnValue({});
+    (useRouter as jest.Mock).mockReturnValue({
+      push: mockPush,
+    });
   });
 
   it('should render the settings page with all input fields', () => {
@@ -87,8 +98,30 @@ describe('SettingsPage', () => {
       () => {
         expect(screen.queryByText('API keys saved successfully!')).not.toBeInTheDocument();
       },
-      { timeout: 3500 }
+      { timeout: 2000 }
     );
+  });
+
+  it('should redirect to home page after saving keys', async () => {
+    jest.useFakeTimers();
+    const user = userEvent.setup({ delay: null });
+    render(<SettingsPage />);
+
+    const saveButton = screen.getByText('Save Keys');
+    await user.click(saveButton);
+
+    // Verify success message appears
+    expect(screen.getByText('API keys saved successfully!')).toBeInTheDocument();
+
+    // Fast-forward time by 1500ms
+    await act(async () => {
+      jest.advanceTimersByTime(1500);
+    });
+
+    // Verify router.push was called with correct path
+    expect(mockPush).toHaveBeenCalledWith('/');
+
+    jest.useRealTimers();
   });
 
   it('should clear all API keys when Clear All button is clicked', async () => {
@@ -112,16 +145,18 @@ describe('SettingsPage', () => {
     expect(openaiInput.value).toBe('');
   });
 
-  it('should have password type inputs for API keys', () => {
+  it('should have text type inputs for API keys', () => {
     render(<SettingsPage />);
 
     const openaiInput = screen.getByLabelText('OpenAI API Key');
     const anthropicInput = screen.getByLabelText('Anthropic API Key');
     const openrouterInput = screen.getByLabelText('OpenRouter API Key');
+    const geminiInput = screen.getByLabelText('Google Gemini API Key');
 
-    expect(openaiInput).toHaveAttribute('type', 'password');
-    expect(anthropicInput).toHaveAttribute('type', 'password');
-    expect(openrouterInput).toHaveAttribute('type', 'password');
+    expect(openaiInput).toHaveAttribute('type', 'text');
+    expect(anthropicInput).toHaveAttribute('type', 'text');
+    expect(openrouterInput).toHaveAttribute('type', 'text');
+    expect(geminiInput).toHaveAttribute('type', 'text');
   });
 
   it('should display privacy note', () => {

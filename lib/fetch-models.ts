@@ -151,6 +151,7 @@ export function getPopularOpenRouterModels(models: OpenRouterModel[]) {
 
 /**
  * Get Google Gemini models from OpenRouter
+ * Includes both text and image generation models
  * Sorted in descending order (newer versions first)
  */
 export function getGeminiModels(models: OpenRouterModel[]) {

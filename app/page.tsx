@@ -133,7 +133,8 @@ export default function Home() {
     // Detect if this is an image generation model
     const isImageModel = columnModel.toLowerCase().includes('dall-e') ||
                          columnModel.toLowerCase().includes('stable-diffusion') ||
-                         columnModel.toLowerCase().includes('imagen');
+                         columnModel.toLowerCase().includes('imagen') ||
+                         (columnModel.toLowerCase().includes('image') && columnModel.toLowerCase().includes('gemini'));
 
     try {
       const endpoint = isImageModel ? '/api/generate-image' : '/api/generate';
@@ -279,7 +280,8 @@ export default function Home() {
       // Detect if this is an image generation model
       const isImageModel = model.toLowerCase().includes('dall-e') ||
                            model.toLowerCase().includes('stable-diffusion') ||
-                           model.toLowerCase().includes('imagen');
+                           model.toLowerCase().includes('imagen') ||
+                           (model.toLowerCase().includes('image') && model.toLowerCase().includes('gemini'));
 
       try {
         const endpoint = isImageModel ? '/api/generate-image' : '/api/generate';
@@ -388,18 +390,9 @@ export default function Home() {
       {/* Prompt Section - Fixed at top */}
       <div className="w-[80%] mx-auto px-4 py-12 flex-shrink-0">
         <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <label htmlFor="prompt" className="text-sm font-semibold text-gray-700">
-              Enter Prompt Here
-            </label>
-            <button
-              onClick={clearPromptAndResponses}
-              disabled={generating}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Clear Prompt and Responses
-            </button>
-          </div>
+          <label htmlFor="prompt" className="text-lg font-semibold text-gray-700 mb-2 block">
+            1. Enter Prompt Here
+          </label>
           <textarea
             id="prompt"
             value={prompt}
@@ -410,7 +403,14 @@ export default function Home() {
           />
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3 mb-6">
+          <button
+            onClick={clearPromptAndResponses}
+            disabled={generating}
+            className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+          >
+            Clear Prompt and Responses
+          </button>
           <button
             onClick={generateOutputs}
             disabled={generating || !prompt.trim()}
@@ -418,6 +418,10 @@ export default function Home() {
           >
             {generating ? 'Generating...' : 'Save and Refresh'}
           </button>
+        </div>
+
+        <div className="text-lg font-semibold text-gray-700">
+          2. View responses from multiple services here
         </div>
       </div>
 
