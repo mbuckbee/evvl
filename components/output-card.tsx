@@ -41,6 +41,21 @@ export default function OutputCard({ output, rating, onRate }: OutputCardProps) 
           <div className="text-red-600 text-sm">
             Error: {output.error}
           </div>
+        ) : output.type === 'image' && output.imageUrl ? (
+          <div className="space-y-3">
+            <div className="relative bg-gray-100 rounded-lg overflow-hidden">
+              <img
+                src={output.imageUrl}
+                alt={output.content}
+                className="w-full h-auto"
+              />
+            </div>
+            {output.content && (
+              <div className="text-xs text-gray-500 italic">
+                {output.content}
+              </div>
+            )}
+          </div>
         ) : (
           <div className="prose prose-sm max-w-none whitespace-pre-wrap text-gray-700 leading-relaxed">
             {output.content}

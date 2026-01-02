@@ -14,7 +14,10 @@ export interface ModelConfig {
 export interface AIOutput {
   id: string;
   modelConfig: ModelConfig;
-  content: string;
+  type: 'text' | 'image';
+  content: string; // For text outputs or revised_prompt for images
+  imageUrl?: string; // Temporary URL from provider (DALL-E, etc.)
+  imageData?: string; // Base64 encoded image data
   error?: string;
   tokens?: number;
   latency?: number;

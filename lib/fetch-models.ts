@@ -63,15 +63,24 @@ export function filterModelsByProvider(models: OpenRouterModel[], prefix: string
 
 /**
  * Get OpenAI models from OpenRouter
+ * Includes DALL-E image generation models
  * Sorted in descending order (newer versions first)
  */
 export function getOpenAIModels(models: OpenRouterModel[]) {
-  return filterModelsByProvider(models, 'openai')
+  const textModels = filterModelsByProvider(models, 'openai')
     .map(model => ({
       value: model.id,
       label: model.name.replace('OpenAI: ', ''),
     }))
     .sort((a, b) => b.label.localeCompare(a.label));
+
+  // Add DALL-E image generation models (always available)
+  const imageModels = [
+    { value: 'dall-e-3', label: 'DALL-E 3 (Image Generation)' },
+    { value: 'dall-e-2', label: 'DALL-E 2 (Image Generation)' },
+  ];
+
+  return [...imageModels, ...textModels];
 }
 
 /**

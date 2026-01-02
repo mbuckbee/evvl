@@ -130,8 +130,14 @@ export default function Home() {
     const outputId = uuidv4();
     const providerConfig = providers.find(p => p.key === columnProvider);
 
+    // Detect if this is an image generation model
+    const isImageModel = columnModel.toLowerCase().includes('dall-e') ||
+                         columnModel.toLowerCase().includes('stable-diffusion') ||
+                         columnModel.toLowerCase().includes('imagen');
+
     try {
-      const response = await fetch('/api/generate', {
+      const endpoint = isImageModel ? '/api/generate-image' : '/api/generate';
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -145,23 +151,42 @@ export default function Home() {
       const data = await response.json();
 
       if (response.ok) {
-        setOutputs(prev => ({
-          ...prev,
-          [columnId]: {
-            id: outputId,
-            modelConfig: { provider: columnProvider, model: columnModel, label: providerConfig?.name || columnProvider },
-            content: data.content,
-            tokens: data.tokens,
-            latency: data.latency,
-            timestamp: Date.now(),
-          }
-        }));
+        if (isImageModel) {
+          // Image generation response
+          setOutputs(prev => ({
+            ...prev,
+            [columnId]: {
+              id: outputId,
+              modelConfig: { provider: columnProvider, model: columnModel, label: providerConfig?.name || columnProvider },
+              type: 'image',
+              content: data.revisedPrompt || prompt,
+              imageUrl: data.imageUrl,
+              latency: data.latency,
+              timestamp: Date.now(),
+            }
+          }));
+        } else {
+          // Text generation response
+          setOutputs(prev => ({
+            ...prev,
+            [columnId]: {
+              id: outputId,
+              modelConfig: { provider: columnProvider, model: columnModel, label: providerConfig?.name || columnProvider },
+              type: 'text',
+              content: data.content,
+              tokens: data.tokens,
+              latency: data.latency,
+              timestamp: Date.now(),
+            }
+          }));
+        }
       } else {
         setOutputs(prev => ({
           ...prev,
           [columnId]: {
             id: outputId,
             modelConfig: { provider: columnProvider, model: columnModel, label: providerConfig?.name || columnProvider },
+            type: isImageModel ? 'image' : 'text',
             content: '',
             error: data.error || 'Failed to generate',
             timestamp: Date.now(),
@@ -174,6 +199,7 @@ export default function Home() {
         [columnId]: {
           id: outputId,
           modelConfig: { provider: columnProvider, model: columnModel, label: providerConfig?.name || columnProvider },
+          type: isImageModel ? 'image' : 'text',
           content: '',
           error: error.message || 'Network error',
           timestamp: Date.now(),
@@ -250,8 +276,14 @@ export default function Home() {
       const outputId = uuidv4();
       const providerConfig = providers.find(p => p.key === provider);
 
+      // Detect if this is an image generation model
+      const isImageModel = model.toLowerCase().includes('dall-e') ||
+                           model.toLowerCase().includes('stable-diffusion') ||
+                           model.toLowerCase().includes('imagen');
+
       try {
-        const response = await fetch('/api/generate', {
+        const endpoint = isImageModel ? '/api/generate-image' : '/api/generate';
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -268,17 +300,35 @@ export default function Home() {
           // Track successful generation
           trackEvent('generation_success', { provider, model });
 
-          return {
-            columnId: column.id,
-            output: {
-              id: outputId,
-              modelConfig: { provider, model, label: providerConfig?.name || provider },
-              content: data.content,
-              tokens: data.tokens,
-              latency: data.latency,
-              timestamp: Date.now(),
-            }
-          };
+          if (isImageModel) {
+            // Image generation response
+            return {
+              columnId: column.id,
+              output: {
+                id: outputId,
+                modelConfig: { provider, model, label: providerConfig?.name || provider },
+                type: 'image' as const,
+                content: data.revisedPrompt || prompt,
+                imageUrl: data.imageUrl,
+                latency: data.latency,
+                timestamp: Date.now(),
+              }
+            };
+          } else {
+            // Text generation response
+            return {
+              columnId: column.id,
+              output: {
+                id: outputId,
+                modelConfig: { provider, model, label: providerConfig?.name || provider },
+                type: 'text' as const,
+                content: data.content,
+                tokens: data.tokens,
+                latency: data.latency,
+                timestamp: Date.now(),
+              }
+            };
+          }
         } else {
           // Track generation error
           trackEvent('generation_error', { provider, model, error_type: 'api_error' });
@@ -288,6 +338,7 @@ export default function Home() {
             output: {
               id: outputId,
               modelConfig: { provider, model, label: providerConfig?.name || provider },
+              type: isImageModel ? 'image' as const : 'text' as const,
               content: '',
               error: data.error || 'Failed to generate',
               timestamp: Date.now(),
@@ -303,6 +354,7 @@ export default function Home() {
           output: {
             id: outputId,
             modelConfig: { provider, model, label: providerConfig?.name || provider },
+            type: isImageModel ? 'image' as const : 'text' as const,
             content: '',
             error: error.message || 'Network error',
             timestamp: Date.now(),
@@ -638,6 +690,21 @@ function ColumnComponent({ column, apiKeys, output, generating, providers, onCon
           </div>
           {output.error ? (
             <div className="text-red-600 text-sm">{output.error}</div>
+          ) : output.type === 'image' && output.imageUrl ? (
+            <div className="space-y-3">
+              <div className="relative bg-gray-100 rounded-lg overflow-hidden">
+                <img
+                  src={output.imageUrl}
+                  alt={output.content}
+                  className="w-full h-auto"
+                />
+              </div>
+              {output.content && (
+                <div className="text-xs text-gray-500 italic">
+                  {output.content}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">
               {output.content}
