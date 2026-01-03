@@ -7,6 +7,7 @@ import { ApiKeys, AIOutput } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig, ModelOption } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
 import { trackEvent } from '@/lib/analytics';
+import { apiClient, isApiError } from '@/lib/api';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -137,51 +138,26 @@ export default function Home() {
                          (columnModel.toLowerCase().includes('image') && columnModel.toLowerCase().includes('gemini'));
 
     try {
-      const endpoint = isImageModel ? '/api/generate-image' : '/api/generate';
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      let data;
+
+      if (isImageModel) {
+        data = await apiClient.generateImage({
           prompt,
           provider: columnProvider,
           model: columnModel,
           apiKey: apiKeys[columnProvider],
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        if (isImageModel) {
-          // Image generation response
-          setOutputs(prev => ({
-            ...prev,
-            [columnId]: {
-              id: outputId,
-              modelConfig: { provider: columnProvider, model: columnModel, label: providerConfig?.name || columnProvider },
-              type: 'image',
-              content: data.revisedPrompt || prompt,
-              imageUrl: data.imageUrl,
-              latency: data.latency,
-              timestamp: Date.now(),
-            }
-          }));
-        } else {
-          // Text generation response
-          setOutputs(prev => ({
-            ...prev,
-            [columnId]: {
-              id: outputId,
-              modelConfig: { provider: columnProvider, model: columnModel, label: providerConfig?.name || columnProvider },
-              type: 'text',
-              content: data.content,
-              tokens: data.tokens,
-              latency: data.latency,
-              timestamp: Date.now(),
-            }
-          }));
-        }
+        });
       } else {
+        data = await apiClient.generateText({
+          prompt,
+          provider: columnProvider,
+          model: columnModel,
+          apiKey: apiKeys[columnProvider],
+        });
+      }
+
+      if (isApiError(data)) {
+        // Error response
         setOutputs(prev => ({
           ...prev,
           [columnId]: {
@@ -189,7 +165,35 @@ export default function Home() {
             modelConfig: { provider: columnProvider, model: columnModel, label: providerConfig?.name || columnProvider },
             type: isImageModel ? 'image' : 'text',
             content: '',
-            error: data.error || 'Failed to generate',
+            error: data.error,
+            timestamp: Date.now(),
+          }
+        }));
+      } else if (isImageModel && 'imageUrl' in data) {
+        // Image generation response
+        setOutputs(prev => ({
+          ...prev,
+          [columnId]: {
+            id: outputId,
+            modelConfig: { provider: columnProvider, model: columnModel, label: providerConfig?.name || columnProvider },
+            type: 'image',
+            content: data.revisedPrompt || prompt,
+            imageUrl: data.imageUrl,
+            latency: data.latency,
+            timestamp: Date.now(),
+          }
+        }));
+      } else if (!isImageModel && 'content' in data) {
+        // Text generation response
+        setOutputs(prev => ({
+          ...prev,
+          [columnId]: {
+            id: outputId,
+            modelConfig: { provider: columnProvider, model: columnModel, label: providerConfig?.name || columnProvider },
+            type: 'text',
+            content: data.content,
+            tokens: data.tokens,
+            latency: data.latency,
             timestamp: Date.now(),
           }
         }));
@@ -284,54 +288,25 @@ export default function Home() {
                            (model.toLowerCase().includes('image') && model.toLowerCase().includes('gemini'));
 
       try {
-        const endpoint = isImageModel ? '/api/generate-image' : '/api/generate';
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        let data;
+
+        if (isImageModel) {
+          data = await apiClient.generateImage({
             prompt,
             provider,
             model,
             apiKey,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          // Track successful generation
-          trackEvent('generation_success', { provider, model });
-
-          if (isImageModel) {
-            // Image generation response
-            return {
-              columnId: column.id,
-              output: {
-                id: outputId,
-                modelConfig: { provider, model, label: providerConfig?.name || provider },
-                type: 'image' as const,
-                content: data.revisedPrompt || prompt,
-                imageUrl: data.imageUrl,
-                latency: data.latency,
-                timestamp: Date.now(),
-              }
-            };
-          } else {
-            // Text generation response
-            return {
-              columnId: column.id,
-              output: {
-                id: outputId,
-                modelConfig: { provider, model, label: providerConfig?.name || provider },
-                type: 'text' as const,
-                content: data.content,
-                tokens: data.tokens,
-                latency: data.latency,
-                timestamp: Date.now(),
-              }
-            };
-          }
+          });
         } else {
+          data = await apiClient.generateText({
+            prompt,
+            provider,
+            model,
+            apiKey,
+          });
+        }
+
+        if (isApiError(data)) {
           // Track generation error
           trackEvent('generation_error', { provider, model, error_type: 'api_error' });
 
@@ -342,7 +317,55 @@ export default function Home() {
               modelConfig: { provider, model, label: providerConfig?.name || provider },
               type: isImageModel ? 'image' as const : 'text' as const,
               content: '',
-              error: data.error || 'Failed to generate',
+              error: data.error,
+              timestamp: Date.now(),
+            }
+          };
+        }
+
+        // Track successful generation
+        trackEvent('generation_success', { provider, model });
+
+        if (isImageModel && 'imageUrl' in data) {
+          // Image generation response
+          return {
+            columnId: column.id,
+            output: {
+              id: outputId,
+              modelConfig: { provider, model, label: providerConfig?.name || provider },
+              type: 'image' as const,
+              content: data.revisedPrompt || prompt,
+              imageUrl: data.imageUrl,
+              latency: data.latency,
+              timestamp: Date.now(),
+            }
+          };
+        } else if (!isImageModel && 'content' in data) {
+          // Text generation response
+          return {
+            columnId: column.id,
+            output: {
+              id: outputId,
+              modelConfig: { provider, model, label: providerConfig?.name || provider },
+              type: 'text' as const,
+              content: data.content,
+              tokens: data.tokens,
+              latency: data.latency,
+              timestamp: Date.now(),
+            }
+          };
+        } else {
+          // Unexpected response format
+          trackEvent('generation_error', { provider, model, error_type: 'unexpected_response' });
+
+          return {
+            columnId: column.id,
+            output: {
+              id: outputId,
+              modelConfig: { provider, model, label: providerConfig?.name || provider },
+              type: isImageModel ? 'image' as const : 'text' as const,
+              content: '',
+              error: 'Unexpected response format',
               timestamp: Date.now(),
             }
           };

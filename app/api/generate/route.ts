@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { transformModelSlug } from '@/lib/model-transformer';
+import { openai, anthropic, openrouter, gemini, ModelNotAvailableError } from '@/lib/providers';
 
 // Sanitize error objects to remove API keys before logging
 function sanitizeError(error: any): any {
@@ -64,106 +63,33 @@ export async function POST(req: NextRequest) {
     // Log all API requests for monitoring
     console.log(`[API_REQUEST] provider=${provider} model=${transformedModel}`);
 
-    const startTime = Date.now();
-
     try {
+      let result;
+
+      // Call the appropriate provider
       if (provider === 'openai') {
-        const openai = new OpenAI({ apiKey });
-
-        const completion = await openai.chat.completions.create({
+        result = await openai.generateText({
           model: transformedModel,
-          messages: [{ role: 'user', content: prompt }],
-        });
-
-        const latency = Date.now() - startTime;
-        const content = completion.choices[0]?.message?.content || '';
-        const tokens = completion.usage?.total_tokens || 0;
-
-        return NextResponse.json({
-          content,
-          tokens,
-          latency,
+          prompt,
+          apiKey,
         });
       } else if (provider === 'openrouter') {
-        const openai = new OpenAI({
-          apiKey,
-          baseURL: 'https://openrouter.ai/api/v1',
-        });
-
-        const completion = await openai.chat.completions.create({
+        result = await openrouter.generateText({
           model: transformedModel,
-          messages: [{ role: 'user', content: prompt }],
-        });
-
-        const latency = Date.now() - startTime;
-        const content = completion.choices[0]?.message?.content || '';
-        const tokens = completion.usage?.total_tokens || 0;
-
-        return NextResponse.json({
-          content,
-          tokens,
-          latency,
+          prompt,
+          apiKey,
         });
       } else if (provider === 'anthropic') {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: transformedModel,
-            max_tokens: 4096,
-            messages: [{ role: 'user', content: prompt }],
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          console.error('Anthropic API error response:', JSON.stringify(sanitizeError(error), null, 2));
-
-          // Check if it's a model not found error
-          if (response.status === 404 ||
-              error.error?.type === 'not_found_error' ||
-              error.error?.message?.includes('model') ||
-              error.type === 'not_found_error') {
-            return NextResponse.json(
-              { error: `This model is not available through Anthropic's direct API. Try using the OpenRouter provider instead.` },
-              { status: 400 }
-            );
-          }
-
-          throw new Error(error.error?.message || error.message || JSON.stringify(error) || 'Anthropic API request failed');
-        }
-
-        const data = await response.json();
-        const latency = Date.now() - startTime;
-        const content = data.content[0]?.type === 'text' ? data.content[0].text : '';
-        const tokens = (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0);
-
-        return NextResponse.json({
-          content,
-          tokens,
-          latency,
+        result = await anthropic.generateText({
+          model: transformedModel,
+          prompt,
+          apiKey,
         });
       } else if (provider === 'gemini') {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: transformedModel });
-
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        const content = response.text();
-
-        const latency = Date.now() - startTime;
-
-        // Gemini doesn't provide token counts in the same way, approximate based on content
-        const tokens = Math.ceil((prompt.length + content.length) / 4);
-
-        return NextResponse.json({
-          content,
-          tokens,
-          latency,
+        result = await gemini.generateText({
+          model: transformedModel,
+          prompt,
+          apiKey,
         });
       } else {
         return NextResponse.json(
@@ -171,7 +97,18 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+
+      return NextResponse.json(result);
     } catch (providerError: any) {
+      // Handle ModelNotAvailableError from providers
+      if (providerError instanceof ModelNotAvailableError) {
+        console.error(`[MODEL_NOT_AVAILABLE] provider=${provider} model=${transformedModel}`, providerError.message);
+        return NextResponse.json(
+          { error: providerError.message },
+          { status: 400 }
+        );
+      }
+
       // Handle provider-specific errors (model not found, etc.)
       console.error(`[MODEL_ERROR] provider=${provider} model=${transformedModel}`, sanitizeError(providerError));
 

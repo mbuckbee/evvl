@@ -36,3 +36,7 @@ dev-api-keys.txt
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tauri
+/src-tauri/target
+/src-tauri/WixTools
