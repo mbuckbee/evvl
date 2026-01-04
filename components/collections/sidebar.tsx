@@ -142,29 +142,29 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, o
           return (
             <div key={project.id} className="border-b border-gray-200 dark:border-gray-700">
               {/* Project Header */}
-              <div className="w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+              <div className="w-full flex items-start gap-2 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                 <button
                   onClick={() => toggleProject(project.id)}
-                  className="flex items-center gap-2 flex-1 text-left"
+                  className="flex items-start gap-2 flex-1 text-left"
                 >
                   {isOpen ? (
-                    <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                    <ChevronDownIcon className="h-4 w-4 text-gray-500 mt-0.5" />
                   ) : (
-                    <ChevronRightIcon className="h-4 w-4 text-gray-500" />
+                    <ChevronRightIcon className="h-4 w-4 text-gray-500 mt-0.5" />
                   )}
-                  <FolderIcon className="h-4 w-4 text-gray-500" />
+                  <FolderIcon className="h-4 w-4 text-gray-500 mt-0.5" />
                   <span className="text-sm font-medium text-gray-900 dark:text-white">
                     {project.name}
                   </span>
                 </button>
                 <button
                   onClick={() => handleProjectClick(project.id)}
-                  className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5"
                   title="Edit project"
                 >
                   Edit
                 </button>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-gray-500 mt-0.5">
                   {prompts.length + modelConfigs.length}
                 </span>
               </div>
