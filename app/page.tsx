@@ -194,20 +194,6 @@ export default function Home() {
     }
   };
 
-  // Sidebar handlers
-  const handleRequestSelect = (requestId: string) => {
-    console.log('Request selected:', requestId);
-    // TODO: Load request from collection in Phase 2
-  };
-
-  const handleNewRequest = () => {
-    // Clear current request
-    setPrompt('');
-    setOutput(undefined);
-    setShowPromptEditor(false);
-    setShowConfigEditor(false);
-    setShowProjectEditor(false);
-  };
 
   const handleNewProject = () => {
     setEditingProjectId(null);
@@ -363,8 +349,6 @@ export default function Home() {
           sidebar={
             <Sidebar
               key={sidebarKey}
-              onRequestSelect={handleRequestSelect}
-              onNewRequest={handleNewRequest}
               onNewProject={handleNewProject}
               onProjectSelect={handleProjectSelect}
               onNewPrompt={handleNewPrompt}

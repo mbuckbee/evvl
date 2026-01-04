@@ -14,8 +14,6 @@ import {
 import { migrateEvalHistory, isMigrationComplete } from '@/lib/migration';
 
 interface SidebarProps {
-  onRequestSelect?: (requestId: string) => void;
-  onNewRequest?: () => void;
   onNewProject?: () => void;
   onProjectSelect?: (projectId: string) => void;
   onNewPrompt?: (projectId: string) => void;
@@ -26,7 +24,7 @@ interface SidebarProps {
   onDataSetSelect?: (dataSetId: string, shouldEdit?: boolean) => void;
 }
 
-export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, onProjectSelect, onNewPrompt, onPromptSelect, onNewModelConfig, onModelConfigSelect, onNewDataSet, onDataSetSelect }: SidebarProps) {
+export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, onPromptSelect, onNewModelConfig, onModelConfigSelect, onNewDataSet, onDataSetSelect }: SidebarProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [openProjects, setOpenProjects] = useState<string[]>([]);
 
