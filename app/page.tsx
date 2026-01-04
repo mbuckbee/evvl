@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { loadApiKeys, loadColumns, saveColumns } from '@/lib/storage';
-import { ApiKeys, AIOutput } from '@/lib/types';
+import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getActiveProjectId, setActiveProjectId } from '@/lib/storage';
+import { ApiKeys, AIOutput, Prompt, ProjectModelConfig } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
 import { trackEvent } from '@/lib/analytics';
@@ -12,6 +12,8 @@ import ThreePanelLayout from '@/components/layout/three-panel-layout';
 import Sidebar from '@/components/collections/sidebar';
 import RequestPanel from '@/components/request/request-panel';
 import ResponsePanel from '@/components/response/response-panel';
+import PromptEditor from '@/components/prompts/prompt-editor';
+import ConfigEditor from '@/components/model-configs/config-editor';
 
 export default function Home() {
   // State management
@@ -22,6 +24,14 @@ export default function Home() {
   const [output, setOutput] = useState<AIOutput | undefined>();
   const [isGenerating, setIsGenerating] = useState(false);
   const [providers, setProviders] = useState<ProviderConfig[]>(PROVIDERS);
+
+  // Editor state
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
+  const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
+  const [showConfigEditor, setShowConfigEditor] = useState(false);
+  const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
+  const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
+  const [sidebarKey, setSidebarKey] = useState(0);
 
   // Initialize on mount
   useEffect(() => {
@@ -181,7 +191,7 @@ export default function Home() {
     }
   };
 
-  // Sidebar handlers (placeholder for Phase 2)
+  // Sidebar handlers
   const handleRequestSelect = (requestId: string) => {
     console.log('Request selected:', requestId);
     // TODO: Load request from collection in Phase 2
@@ -191,6 +201,92 @@ export default function Home() {
     // Clear current request
     setPrompt('');
     setOutput(undefined);
+    setShowPromptEditor(false);
+    setShowConfigEditor(false);
+  };
+
+  const handleNewPrompt = (projectId: string) => {
+    setActiveProjectIdState(projectId);
+    setEditingPromptId(null);
+    setShowPromptEditor(true);
+    setActiveProjectId(projectId);
+  };
+
+  const handlePromptSelect = (promptId: string, shouldEdit: boolean = false) => {
+    const selectedPrompt = getPromptById(promptId);
+    if (selectedPrompt) {
+      if (shouldEdit) {
+        // Open in editor for editing
+        setActiveProjectIdState(selectedPrompt.projectId);
+        setEditingPromptId(promptId);
+        setShowPromptEditor(true);
+        setShowConfigEditor(false);
+      } else {
+        // Load the current version's content into the request panel for testing
+        const currentVersion = selectedPrompt.versions.find(v => v.id === selectedPrompt.currentVersionId);
+        if (currentVersion) {
+          setPrompt(currentVersion.content);
+          // Close editors to show request panel
+          setShowPromptEditor(false);
+          setShowConfigEditor(false);
+        }
+      }
+    }
+  };
+
+  const handlePromptSave = () => {
+    setShowPromptEditor(false);
+    setEditingPromptId(null);
+    // Refresh sidebar to show updated prompts
+    setSidebarKey(prev => prev + 1);
+  };
+
+  const handlePromptCancel = () => {
+    setShowPromptEditor(false);
+    setEditingPromptId(null);
+  };
+
+  const handleNewModelConfig = (projectId: string) => {
+    setActiveProjectIdState(projectId);
+    setEditingConfigId(null);
+    setShowConfigEditor(true);
+    setActiveProjectId(projectId);
+  };
+
+  const handleModelConfigSelect = (configId: string, shouldEdit: boolean = false) => {
+    const selectedConfig = getModelConfigById(configId);
+    if (selectedConfig) {
+      if (shouldEdit) {
+        // Open in editor for editing
+        setActiveProjectIdState(selectedConfig.projectId);
+        setEditingConfigId(configId);
+        setShowConfigEditor(true);
+        setShowPromptEditor(false);
+      } else {
+        // Load the config's provider and model into the request panel for testing
+        setProvider(selectedConfig.provider);
+        setModel(selectedConfig.model);
+
+        // TODO: Apply parameters when RequestPanel supports them
+        // For now, just set provider and model
+
+        // Close editors to show request panel
+        setShowPromptEditor(false);
+        setShowConfigEditor(false);
+      }
+    }
+  };
+
+  const handleConfigSave = () => {
+    setShowConfigEditor(false);
+    setEditingConfigId(null);
+    // Refresh sidebar to show updated configs
+    setSidebarKey(prev => prev + 1);
+  };
+
+  const handleConfigCancel = () => {
+    setShowConfigEditor(false);
+    setEditingConfigId(null);
   };
 
   return (
@@ -228,21 +324,42 @@ export default function Home() {
         <ThreePanelLayout
           sidebar={
             <Sidebar
+              key={sidebarKey}
               onRequestSelect={handleRequestSelect}
               onNewRequest={handleNewRequest}
+              onNewPrompt={handleNewPrompt}
+              onPromptSelect={handlePromptSelect}
+              onNewModelConfig={handleNewModelConfig}
+              onModelConfigSelect={handleModelConfigSelect}
             />
           }
           requestPanel={
-            <RequestPanel
-              prompt={prompt}
-              onPromptChange={setPrompt}
-              provider={provider}
-              model={model}
-              onProviderChange={setProvider}
-              onModelChange={setModel}
-              onSend={handleSend}
-              isGenerating={isGenerating}
-            />
+            showPromptEditor && activeProjectId ? (
+              <PromptEditor
+                projectId={activeProjectId}
+                prompt={editingPromptId ? getPromptById(editingPromptId) : undefined}
+                onSave={handlePromptSave}
+                onCancel={handlePromptCancel}
+              />
+            ) : showConfigEditor && activeProjectId ? (
+              <ConfigEditor
+                projectId={activeProjectId}
+                config={editingConfigId ? getModelConfigById(editingConfigId) : undefined}
+                onSave={handleConfigSave}
+                onCancel={handleConfigCancel}
+              />
+            ) : (
+              <RequestPanel
+                prompt={prompt}
+                onPromptChange={setPrompt}
+                provider={provider}
+                model={model}
+                onProviderChange={setProvider}
+                onModelChange={setModel}
+                onSend={handleSend}
+                isGenerating={isGenerating}
+              />
+            )
           }
           responsePanel={
             <ResponsePanel

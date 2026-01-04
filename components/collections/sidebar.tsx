@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MagnifyingGlassIcon, PlusIcon, FolderIcon, DocumentTextIcon, ChevronRightIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PlusIcon, FolderIcon, DocumentTextIcon, ChevronRightIcon, ChevronDownIcon, SparklesIcon, CogIcon } from '@heroicons/react/24/outline';
 import { v4 as uuidv4 } from 'uuid';
-import { Project, Prompt } from '@/lib/types';
+import { Project, Prompt, ProjectModelConfig } from '@/lib/types';
 import {
   loadProjects,
   loadUIState,
   saveUIState,
   saveProject,
   getPromptsByProjectId,
+  getModelConfigsByProjectId,
 } from '@/lib/storage';
 import { migrateEvalHistory, isMigrationComplete } from '@/lib/migration';
 
@@ -17,9 +18,13 @@ interface SidebarProps {
   onRequestSelect?: (requestId: string) => void;
   onNewRequest?: () => void;
   onProjectSelect?: (projectId: string) => void;
+  onNewPrompt?: (projectId: string) => void;
+  onPromptSelect?: (promptId: string, shouldEdit?: boolean) => void;
+  onNewModelConfig?: (projectId: string) => void;
+  onModelConfigSelect?: (configId: string, shouldEdit?: boolean) => void;
 }
 
-export default function Sidebar({ onRequestSelect, onNewRequest, onProjectSelect }: SidebarProps) {
+export default function Sidebar({ onRequestSelect, onNewRequest, onProjectSelect, onNewPrompt, onPromptSelect, onNewModelConfig, onModelConfigSelect }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [projects, setProjects] = useState<Project[]>([]);
   const [openProjects, setOpenProjects] = useState<string[]>([]);
@@ -92,9 +97,31 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onProjectSelect
     setOpenProjects([...openProjects, newProject.id]);
   };
 
-  const handlePromptClick = (promptId: string) => {
-    if (onRequestSelect) {
-      onRequestSelect(promptId);
+  const handlePromptClick = (promptId: string, e: React.MouseEvent) => {
+    if (onPromptSelect) {
+      const shouldEdit = e.button === 2 || e.shiftKey; // Right-click or Shift+Click to edit
+      onPromptSelect(promptId, shouldEdit);
+    }
+  };
+
+  const handleNewPromptClick = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent project toggle
+    if (onNewPrompt) {
+      onNewPrompt(projectId);
+    }
+  };
+
+  const handleModelConfigClick = (configId: string, e: React.MouseEvent) => {
+    if (onModelConfigSelect) {
+      const shouldEdit = e.button === 2 || e.shiftKey; // Right-click or Shift+Click to edit
+      onModelConfigSelect(configId, shouldEdit);
+    }
+  };
+
+  const handleNewModelConfigClick = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent project toggle
+    if (onNewModelConfig) {
+      onNewModelConfig(projectId);
     }
   };
 
@@ -132,6 +159,7 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onProjectSelect
       <div className="flex-1 overflow-y-auto">
         {projects.map((project) => {
           const prompts = getPromptsByProjectId(project.id);
+          const modelConfigs = getModelConfigsByProjectId(project.id);
           const isOpen = openProjects.includes(project.id);
 
           return (
@@ -151,31 +179,90 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onProjectSelect
                   {project.name}
                 </span>
                 <span className="ml-auto text-xs text-gray-500">
-                  {prompts.length}
+                  {prompts.length + modelConfigs.length}
                 </span>
               </button>
 
-              {/* Prompts List */}
+              {/* Prompts and Model Configs List */}
               {isOpen && (
                 <div className="bg-gray-50 dark:bg-gray-800">
-                  {prompts.length > 0 ? (
-                    prompts.map((prompt) => (
-                      <button
-                        key={prompt.id}
-                        onClick={() => handlePromptClick(prompt.id)}
-                        className="w-full flex items-center gap-2 px-4 pl-10 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
-                      >
-                        <DocumentTextIcon className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
-                          {prompt.name}
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-4 pl-10 py-2 text-xs text-gray-500 dark:text-gray-400 italic">
-                      No prompts yet
-                    </div>
-                  )}
+                  {/* Prompts Section */}
+                  <div className="border-b border-gray-200 dark:border-gray-700">
+                    {/* New Prompt Button */}
+                    <button
+                      onClick={(e) => handleNewPromptClick(project.id, e)}
+                      className="w-full flex items-center gap-2 px-4 pl-10 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                    >
+                      <SparklesIcon className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                        New Prompt
+                      </span>
+                    </button>
+
+                    {/* Prompts */}
+                    {prompts.length > 0 ? (
+                      prompts.map((prompt) => (
+                        <button
+                          key={prompt.id}
+                          onClick={(e) => handlePromptClick(prompt.id, e)}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            handlePromptClick(prompt.id, e);
+                          }}
+                          className="w-full flex items-center gap-2 px-4 pl-10 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                          title="Click to load, Right-click or Shift+Click to edit"
+                        >
+                          <DocumentTextIcon className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
+                            {prompt.name}
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 pl-10 py-2 text-xs text-gray-500 dark:text-gray-400 italic">
+                        No prompts yet
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Model Configs Section */}
+                  <div>
+                    {/* New Model Config Button */}
+                    <button
+                      onClick={(e) => handleNewModelConfigClick(project.id, e)}
+                      className="w-full flex items-center gap-2 px-4 pl-10 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                    >
+                      <CogIcon className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-green-600 dark:text-green-400 font-medium">
+                        New Model Config
+                      </span>
+                    </button>
+
+                    {/* Model Configs */}
+                    {modelConfigs.length > 0 ? (
+                      modelConfigs.map((config) => (
+                        <button
+                          key={config.id}
+                          onClick={(e) => handleModelConfigClick(config.id, e)}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            handleModelConfigClick(config.id, e);
+                          }}
+                          className="w-full flex items-center gap-2 px-4 pl-10 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                          title="Click to load, Right-click or Shift+Click to edit"
+                        >
+                          <CogIcon className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
+                            {config.name}
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 pl-10 py-2 text-xs text-gray-500 dark:text-gray-400 italic">
+                        No model configs yet
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
