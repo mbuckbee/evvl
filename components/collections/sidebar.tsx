@@ -134,7 +134,7 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onProjectSelect
           </h2>
           <button
             onClick={handleNewProject}
-            className="flex items-center gap-1 px-2 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <PlusIcon className="h-4 w-4" />
             New
