@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PlusIcon, FolderIcon, DocumentTextIcon, ChevronRightIcon, ChevronDownIcon, SparklesIcon, CogIcon } from '@heroicons/react/24/outline';
-import { Project, Prompt, ProjectModelConfig } from '@/lib/types';
+import { PlusIcon, FolderIcon, DocumentTextIcon, ChevronRightIcon, ChevronDownIcon, SparklesIcon, CogIcon, TableCellsIcon } from '@heroicons/react/24/outline';
+import { Project, Prompt, ProjectModelConfig, DataSet } from '@/lib/types';
 import {
   loadProjects,
   loadUIState,
   saveUIState,
   getPromptsByProjectId,
   getModelConfigsByProjectId,
+  getDataSetsByProjectId,
 } from '@/lib/storage';
 import { migrateEvalHistory, isMigrationComplete } from '@/lib/migration';
 
@@ -21,9 +22,11 @@ interface SidebarProps {
   onPromptSelect?: (promptId: string, shouldEdit?: boolean) => void;
   onNewModelConfig?: (projectId: string) => void;
   onModelConfigSelect?: (configId: string, shouldEdit?: boolean) => void;
+  onNewDataSet?: (projectId: string) => void;
+  onDataSetSelect?: (dataSetId: string, shouldEdit?: boolean) => void;
 }
 
-export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, onProjectSelect, onNewPrompt, onPromptSelect, onNewModelConfig, onModelConfigSelect }: SidebarProps) {
+export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, onProjectSelect, onNewPrompt, onPromptSelect, onNewModelConfig, onModelConfigSelect, onNewDataSet, onDataSetSelect }: SidebarProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [openProjects, setOpenProjects] = useState<string[]>([]);
 
@@ -114,6 +117,20 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, o
     }
   };
 
+  const handleDataSetClick = (dataSetId: string, e: React.MouseEvent) => {
+    if (onDataSetSelect) {
+      const shouldEdit = e.button === 2 || e.shiftKey; // Right-click or Shift+Click to edit
+      onDataSetSelect(dataSetId, shouldEdit);
+    }
+  };
+
+  const handleNewDataSetClick = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent project toggle
+    if (onNewDataSet) {
+      onNewDataSet(projectId);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-900">
       {/* Header */}
@@ -137,6 +154,7 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, o
         {projects.map((project) => {
           const prompts = getPromptsByProjectId(project.id);
           const modelConfigs = getModelConfigsByProjectId(project.id);
+          const dataSets = getDataSetsByProjectId(project.id);
           const isOpen = openProjects.includes(project.id);
 
           return (
@@ -165,7 +183,7 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, o
                   Edit
                 </button>
                 <span className="text-xs text-gray-500 mt-0.5">
-                  {prompts.length + modelConfigs.length}
+                  {prompts.length + modelConfigs.length + dataSets.length}
                 </span>
               </div>
 
@@ -212,7 +230,7 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, o
                   </div>
 
                   {/* Model Configs Section */}
-                  <div>
+                  <div className="border-b border-gray-200 dark:border-gray-700">
                     {/* New Model Config Button */}
                     <button
                       onClick={(e) => handleNewModelConfigClick(project.id, e)}
@@ -249,6 +267,45 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, o
                       </div>
                     )}
                   </div>
+
+                  {/* Data Sets Section */}
+                  <div>
+                    {/* New Data Set Button */}
+                    <button
+                      onClick={(e) => handleNewDataSetClick(project.id, e)}
+                      className="w-full flex items-center gap-2 px-4 pl-10 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                    >
+                      <TableCellsIcon className="h-4 w-4 text-purple-500" />
+                      <span className="text-sm text-purple-600 dark:text-purple-400 font-medium">
+                        New Data Set
+                      </span>
+                    </button>
+
+                    {/* Data Sets */}
+                    {dataSets.length > 0 ? (
+                      dataSets.map((dataSet) => (
+                        <button
+                          key={dataSet.id}
+                          onClick={(e) => handleDataSetClick(dataSet.id, e)}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            handleDataSetClick(dataSet.id, e);
+                          }}
+                          className="w-full flex items-center gap-2 px-4 pl-10 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                          title="Click to load, Right-click or Shift+Click to edit"
+                        >
+                          <TableCellsIcon className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
+                            {dataSet.name}
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 pl-10 py-2 text-xs text-gray-500 dark:text-gray-400 italic">
+                        No data sets yet
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -259,7 +316,13 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, o
       {/* Footer */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center justify-between">
-          <span>{projects.reduce((acc, p) => acc + getPromptsByProjectId(p.id).length, 0)} prompts</span>
+          <span>
+            {projects.reduce((acc, p) =>
+              acc + getPromptsByProjectId(p.id).length +
+              getModelConfigsByProjectId(p.id).length +
+              getDataSetsByProjectId(p.id).length, 0
+            )} items
+          </span>
           <span>{projects.length} projects</span>
         </div>
       </div>
