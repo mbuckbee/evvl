@@ -2,19 +2,31 @@
 
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Project } from '@/lib/types';
-import { saveProject } from '@/lib/storage';
+import { saveProject, deleteProject } from '@/lib/storage';
 
 interface ProjectEditorProps {
   project?: Project;
   onSave?: (project: Project) => void;
   onCancel?: () => void;
+  onDelete?: () => void;
 }
 
-export default function ProjectEditor({ project, onSave, onCancel }: ProjectEditorProps) {
+export default function ProjectEditor({ project, onSave, onCancel, onDelete }: ProjectEditorProps) {
   const [name, setName] = useState(project?.name || '');
   const [description, setDescription] = useState(project?.description || '');
+
+  const handleDelete = () => {
+    if (!project) return;
+
+    const confirmMessage = `Are you sure you want to delete "${project.name}"? This will also delete all prompts and model configs in this project. This action cannot be undone.`;
+
+    if (confirm(confirmMessage)) {
+      deleteProject(project.id);
+      if (onDelete) onDelete();
+    }
+  };
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -55,9 +67,21 @@ export default function ProjectEditor({ project, onSave, onCancel }: ProjectEdit
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-800">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {project ? 'Edit Project' : 'New Project'}
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {project ? 'Edit Project' : 'New Project'}
+          </h2>
+          {project && (
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-1 px-2 py-1 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+              title="Delete project"
+            >
+              <TrashIcon className="h-4 w-4" />
+              Delete
+            </button>
+          )}
+        </div>
         {onCancel && (
           <button
             onClick={onCancel}

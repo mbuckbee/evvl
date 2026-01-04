@@ -236,6 +236,13 @@ export default function Home() {
     setEditingProjectId(null);
   };
 
+  const handleProjectDelete = () => {
+    setShowProjectEditor(false);
+    setEditingProjectId(null);
+    // Refresh sidebar to remove deleted project
+    setSidebarKey(prev => prev + 1);
+  };
+
   const handleNewPrompt = (projectId: string) => {
     setActiveProjectIdState(projectId);
     setEditingPromptId(null);
@@ -372,6 +379,7 @@ export default function Home() {
                 project={editingProjectId ? getProjectById(editingProjectId) : undefined}
                 onSave={handleProjectSave}
                 onCancel={handleProjectCancel}
+                onDelete={handleProjectDelete}
               />
             ) : showPromptEditor && activeProjectId ? (
               <PromptEditor
