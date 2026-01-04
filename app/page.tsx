@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId } from '@/lib/storage';
+import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects } from '@/lib/storage';
 import { ApiKeys, AIOutput, Prompt, ProjectModelConfig } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
@@ -27,7 +27,7 @@ export default function Home() {
   const [providers, setProviders] = useState<ProviderConfig[]>(PROVIDERS);
 
   // Editor state
-  const [showPromptEditor, setShowPromptEditor] = useState(false);
+  const [showPromptEditor, setShowPromptEditor] = useState(true); // Start with prompt editor open
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [showConfigEditor, setShowConfigEditor] = useState(false);
   const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
@@ -43,6 +43,19 @@ export default function Home() {
 
     // Set default model for initial provider
     setModel(getDefaultModel('openai'));
+
+    // Set active project to first available project
+    const activeId = getActiveProjectId();
+    if (activeId) {
+      setActiveProjectIdState(activeId);
+    } else {
+      // If no active project, use the first project
+      const projects = loadProjects();
+      if (projects.length > 0) {
+        setActiveProjectIdState(projects[0].id);
+        setActiveProjectId(projects[0].id);
+      }
+    }
 
     // Load dynamic models from OpenRouter API
     async function loadModels() {
