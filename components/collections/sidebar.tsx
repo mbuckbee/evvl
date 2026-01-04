@@ -191,7 +191,7 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, o
               {isOpen && (
                 <div className="bg-gray-50 dark:bg-gray-800">
                   {/* Prompts Section */}
-                  <div className="border-b border-gray-200 dark:border-gray-700">
+                  <div>
                     {/* New Prompt Button */}
                     <button
                       onClick={(e) => handleNewPromptClick(project.id, e)}
@@ -230,7 +230,7 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, o
                   </div>
 
                   {/* Model Configs Section */}
-                  <div className="border-b border-gray-200 dark:border-gray-700">
+                  <div>
                     {/* New Model Config Button */}
                     <button
                       onClick={(e) => handleNewModelConfigClick(project.id, e)}
