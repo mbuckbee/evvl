@@ -37,7 +37,7 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onProjectSelect
 
     // Load UI state
     const uiState = loadUIState();
-    setOpenProjects(uiState.openProjects);
+    setOpenProjects(uiState.openProjects || []);
 
     // If no projects exist, create a default one
     if (loadedProjects.length === 0) {
