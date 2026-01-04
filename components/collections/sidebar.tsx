@@ -43,7 +43,7 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onProjectSelect
     if (loadedProjects.length === 0) {
       const defaultProject: Project = {
         id: uuidv4(),
-        name: 'My First Project',
+        name: 'My Project',
         description: 'Get started by creating prompts and model configs',
         createdAt: Date.now(),
         updatedAt: Date.now(),
