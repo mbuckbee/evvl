@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getActiveProjectId, setActiveProjectId } from '@/lib/storage';
+import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId } from '@/lib/storage';
 import { ApiKeys, AIOutput, Prompt, ProjectModelConfig } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
@@ -14,6 +14,7 @@ import RequestPanel from '@/components/request/request-panel';
 import ResponsePanel from '@/components/response/response-panel';
 import PromptEditor from '@/components/prompts/prompt-editor';
 import ConfigEditor from '@/components/model-configs/config-editor';
+import ProjectEditor from '@/components/projects/project-editor';
 
 export default function Home() {
   // State management
@@ -30,6 +31,8 @@ export default function Home() {
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [showConfigEditor, setShowConfigEditor] = useState(false);
   const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
+  const [showProjectEditor, setShowProjectEditor] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
   const [sidebarKey, setSidebarKey] = useState(0);
 
@@ -203,6 +206,34 @@ export default function Home() {
     setOutput(undefined);
     setShowPromptEditor(false);
     setShowConfigEditor(false);
+    setShowProjectEditor(false);
+  };
+
+  const handleNewProject = () => {
+    setEditingProjectId(null);
+    setShowProjectEditor(true);
+    setShowPromptEditor(false);
+    setShowConfigEditor(false);
+  };
+
+  const handleProjectSelect = (projectId: string) => {
+    // For now, just open the project for editing
+    setEditingProjectId(projectId);
+    setShowProjectEditor(true);
+    setShowPromptEditor(false);
+    setShowConfigEditor(false);
+  };
+
+  const handleProjectSave = () => {
+    setShowProjectEditor(false);
+    setEditingProjectId(null);
+    // Refresh sidebar to show new/updated project
+    setSidebarKey(prev => prev + 1);
+  };
+
+  const handleProjectCancel = () => {
+    setShowProjectEditor(false);
+    setEditingProjectId(null);
   };
 
   const handleNewPrompt = (projectId: string) => {
@@ -327,6 +358,8 @@ export default function Home() {
               key={sidebarKey}
               onRequestSelect={handleRequestSelect}
               onNewRequest={handleNewRequest}
+              onNewProject={handleNewProject}
+              onProjectSelect={handleProjectSelect}
               onNewPrompt={handleNewPrompt}
               onPromptSelect={handlePromptSelect}
               onNewModelConfig={handleNewModelConfig}
@@ -334,7 +367,13 @@ export default function Home() {
             />
           }
           requestPanel={
-            showPromptEditor && activeProjectId ? (
+            showProjectEditor ? (
+              <ProjectEditor
+                project={editingProjectId ? getProjectById(editingProjectId) : undefined}
+                onSave={handleProjectSave}
+                onCancel={handleProjectCancel}
+              />
+            ) : showPromptEditor && activeProjectId ? (
               <PromptEditor
                 projectId={activeProjectId}
                 prompt={editingPromptId ? getPromptById(editingPromptId) : undefined}

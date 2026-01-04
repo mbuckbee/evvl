@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { PlusIcon, FolderIcon, DocumentTextIcon, ChevronRightIcon, ChevronDownIcon, SparklesIcon, CogIcon } from '@heroicons/react/24/outline';
-import { v4 as uuidv4 } from 'uuid';
 import { Project, Prompt, ProjectModelConfig } from '@/lib/types';
 import {
   loadProjects,
   loadUIState,
   saveUIState,
-  saveProject,
   getPromptsByProjectId,
   getModelConfigsByProjectId,
 } from '@/lib/storage';
@@ -17,6 +15,7 @@ import { migrateEvalHistory, isMigrationComplete } from '@/lib/migration';
 interface SidebarProps {
   onRequestSelect?: (requestId: string) => void;
   onNewRequest?: () => void;
+  onNewProject?: () => void;
   onProjectSelect?: (projectId: string) => void;
   onNewPrompt?: (projectId: string) => void;
   onPromptSelect?: (promptId: string, shouldEdit?: boolean) => void;
@@ -24,7 +23,7 @@ interface SidebarProps {
   onModelConfigSelect?: (configId: string, shouldEdit?: boolean) => void;
 }
 
-export default function Sidebar({ onRequestSelect, onNewRequest, onProjectSelect, onNewPrompt, onPromptSelect, onNewModelConfig, onModelConfigSelect }: SidebarProps) {
+export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, onProjectSelect, onNewPrompt, onPromptSelect, onNewModelConfig, onModelConfigSelect }: SidebarProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [openProjects, setOpenProjects] = useState<string[]>([]);
 
@@ -81,19 +80,10 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onProjectSelect
     }
   };
 
-  const handleNewProject = () => {
-    const newProject: Project = {
-      id: uuidv4(),
-      name: `New Project ${projects.length + 1}`,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      promptIds: [],
-      modelConfigIds: [],
-      dataSetIds: [],
-    };
-    saveProject(newProject);
-    setProjects([...projects, newProject]);
-    setOpenProjects([...openProjects, newProject.id]);
+  const handleNewProjectClick = () => {
+    if (onNewProject) {
+      onNewProject();
+    }
   };
 
   const handlePromptClick = (promptId: string, e: React.MouseEvent) => {
@@ -133,7 +123,7 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onProjectSelect
             Projects
           </h2>
           <button
-            onClick={handleNewProject}
+            onClick={handleNewProjectClick}
             className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <PlusIcon className="h-4 w-4" />
