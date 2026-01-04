@@ -230,7 +230,7 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, o
                   </div>
 
                   {/* Model Configs Section */}
-                  <div>
+                  <div className="mt-1">
                     {/* New Model Config Button */}
                     <button
                       onClick={(e) => handleNewModelConfigClick(project.id, e)}
@@ -269,7 +269,7 @@ export default function Sidebar({ onRequestSelect, onNewRequest, onNewProject, o
                   </div>
 
                   {/* Data Sets Section */}
-                  <div>
+                  <div className="mt-1">
                     {/* New Data Set Button */}
                     <button
                       onClick={(e) => handleNewDataSetClick(project.id, e)}
