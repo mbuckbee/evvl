@@ -4,12 +4,10 @@ import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
-import Navigation from "@/components/navigation";
-import Footer from "@/components/footer";
 
 export const metadata: Metadata = {
-  title: "Evvl - AI Output Evaluation",
-  description: "Compare and evaluate AI model outputs side by side",
+  title: "Evvl - AI Model Testing & Evaluation",
+  description: "Test, compare, and organize AI model evaluations",
 };
 
 export default function RootLayout({
@@ -21,10 +19,8 @@ export default function RootLayout({
 
   return (
     <html lang="en" className={GeistSans.className}>
-      <body className="h-screen flex flex-col">
-        <Navigation />
-        <main className="flex-1 overflow-y-auto">{children}</main>
-        <Footer />
+      <body className="h-screen">
+        <main className="h-full">{children}</main>
         <Analytics />
         <SpeedInsights />
 

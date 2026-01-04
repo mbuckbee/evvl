@@ -218,7 +218,7 @@ export default function Home() {
             </div>
           </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            Postman for AI APIs
+            AI Model Testing & Evaluation
           </div>
         </div>
       </nav>
