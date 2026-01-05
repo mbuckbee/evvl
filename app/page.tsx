@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects } from '@/lib/storage';
+import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects, getPromptsByProjectId } from '@/lib/storage';
 import { ApiKeys, AIOutput, Prompt, ProjectModelConfig, Project } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
@@ -216,11 +216,26 @@ export default function Home() {
   };
 
   const handleProjectSelect = (projectId: string) => {
-    // For now, just open the project for editing
-    setEditingProjectId(projectId);
-    setShowProjectEditor(true);
-    setShowPromptEditor(false);
+    // Set as active project
+    setActiveProjectIdState(projectId);
+    setActiveProjectId(projectId);
+
+    // Get first prompt from this project
+    const prompts = getPromptsByProjectId(projectId);
+    if (prompts.length > 0) {
+      // Load first prompt into editor
+      setEditingPromptId(prompts[0].id);
+      setShowPromptEditor(true);
+    } else {
+      // No prompts, show empty state or new prompt form
+      setEditingPromptId(null);
+      setShowPromptEditor(true);
+    }
+
+    // Close other editors
+    setShowProjectEditor(false);
     setShowConfigEditor(false);
+    setShowNewConfigInResponse(false);
   };
 
   const handleProjectSave = (project: Project) => {
@@ -267,6 +282,7 @@ export default function Home() {
     if (selectedPrompt) {
       // Open prompt in editor for viewing/editing
       setActiveProjectIdState(selectedPrompt.projectId);
+      setActiveProjectId(selectedPrompt.projectId);
       setEditingPromptId(promptId);
       setShowPromptEditor(true);
       setShowConfigEditor(false);
@@ -290,23 +306,45 @@ export default function Home() {
   const handleNewModelConfig = (projectId: string) => {
     setActiveProjectIdState(projectId);
     setActiveProjectId(projectId);
+
+    // Load first prompt into top panel
+    const prompts = getPromptsByProjectId(projectId);
+    if (prompts.length > 0) {
+      setEditingPromptId(prompts[0].id);
+      setShowPromptEditor(true);
+    } else {
+      setEditingPromptId(null);
+      setShowPromptEditor(false);
+    }
+
     // Show new config editor in response panel instead of top panel
     setShowNewConfigInResponse(true);
-    // Close all top panel editors
+    // Close other editors
     setShowConfigEditor(false);
-    setShowPromptEditor(false);
     setShowProjectEditor(false);
   };
 
   const handleModelConfigSelect = (configId: string, shouldEdit: boolean = false) => {
     const selectedConfig = getModelConfigById(configId);
     if (selectedConfig) {
+      // Set active project
+      setActiveProjectIdState(selectedConfig.projectId);
+      setActiveProjectId(selectedConfig.projectId);
+
+      // Load first prompt from this project
+      const prompts = getPromptsByProjectId(selectedConfig.projectId);
+      if (prompts.length > 0) {
+        setEditingPromptId(prompts[0].id);
+        setShowPromptEditor(true);
+      } else {
+        setEditingPromptId(null);
+        setShowPromptEditor(false);
+      }
+
       if (shouldEdit) {
         // Open in editor for editing
-        setActiveProjectIdState(selectedConfig.projectId);
         setEditingConfigId(configId);
         setShowConfigEditor(true);
-        setShowPromptEditor(false);
       } else {
         // Load the config's provider and model into the request panel for testing
         setProvider(selectedConfig.provider);
@@ -315,8 +353,7 @@ export default function Home() {
         // TODO: Apply parameters when RequestPanel supports them
         // For now, just set provider and model
 
-        // Close editors to show request panel
-        setShowPromptEditor(false);
+        // Close config editor
         setShowConfigEditor(false);
 
         // Highlight the card in the response panel
@@ -324,6 +361,9 @@ export default function Home() {
         // Clear highlight after animation completes
         setTimeout(() => setHighlightedConfigId(null), 2000);
       }
+
+      // Close project editor
+      setShowProjectEditor(false);
     }
   };
 
