@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { Project } from '@/lib/types';
-import { saveProject, deleteProject } from '@/lib/storage';
+import { Project, ProjectModelConfig } from '@/lib/types';
+import { saveProject, deleteProject, saveModelConfig } from '@/lib/storage';
 
 interface ProjectEditorProps {
   project?: Project;
@@ -47,8 +47,9 @@ export default function ProjectEditor({ project, onSave, onCancel, onDelete }: P
       if (onSave) onSave(updatedProject);
     } else {
       // Creating new project
+      const newProjectId = uuidv4();
       const newProject: Project = {
-        id: uuidv4(),
+        id: newProjectId,
         name: name.trim(),
         description: description.trim() || undefined,
         createdAt: Date.now(),
@@ -59,6 +60,46 @@ export default function ProjectEditor({ project, onSave, onCancel, onDelete }: P
       };
 
       saveProject(newProject);
+
+      // Create default model configs for the new project
+      const defaultConfigs = [
+        {
+          id: uuidv4(),
+          projectId: newProjectId,
+          name: 'GPT-4',
+          provider: 'openai' as const,
+          model: 'gpt-4',
+          createdAt: Date.now(),
+        },
+        {
+          id: uuidv4(),
+          projectId: newProjectId,
+          name: 'Claude 3.5 Sonnet',
+          provider: 'anthropic' as const,
+          model: 'claude-3-5-sonnet-20241022',
+          createdAt: Date.now(),
+        },
+        {
+          id: uuidv4(),
+          projectId: newProjectId,
+          name: 'OpenRouter GPT-4',
+          provider: 'openrouter' as const,
+          model: 'openai/gpt-4',
+          createdAt: Date.now(),
+        },
+        {
+          id: uuidv4(),
+          projectId: newProjectId,
+          name: 'Gemini Pro',
+          provider: 'gemini' as const,
+          model: 'gemini-pro',
+          createdAt: Date.now(),
+        },
+      ];
+
+      // Save all default configs
+      defaultConfigs.forEach(config => saveModelConfig(config));
+
       if (onSave) onSave(newProject);
     }
   };
