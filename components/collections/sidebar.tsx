@@ -174,13 +174,18 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
               <div className="w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                 <button
                   onClick={() => toggleProject(project.id)}
-                  className="flex items-center gap-2 flex-1 text-left"
+                  className="flex items-center gap-2"
                 >
                   {isOpen ? (
                     <ChevronDownIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
                   ) : (
                     <ChevronRightIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
                   )}
+                </button>
+                <button
+                  onClick={() => handleProjectClick(project.id)}
+                  className="flex items-center gap-2 flex-1 text-left"
+                >
                   <FolderIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
                   <span className="text-sm font-medium text-gray-900 dark:text-white">
                     {project.name}
