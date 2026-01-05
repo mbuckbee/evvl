@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon, Cog6ToothIcon, XMarkIcon, Squares2X2Icon, ViewColumnsIcon, Bars3Icon, SquaresPlusIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
-import { loadApiKeys, loadModelConfigs, deleteModelConfig } from '@/lib/storage';
+import { loadApiKeys, loadModelConfigs, deleteModelConfig, getModelConfigById } from '@/lib/storage';
 import { ProjectModelConfig } from '@/lib/types';
+import ConfigEditor from '@/components/model-configs/config-editor';
 
 interface ResponsePanelProps {
   output?: {
@@ -18,7 +19,6 @@ interface ResponsePanelProps {
   isGenerating?: boolean;
   projectId?: string;
   highlightedConfigId?: string;
-  onConfigEdit?: (configId: string) => void;
 }
 
 type LayoutType = 'grid' | 'columns' | 'rows' | 'stacked';
@@ -31,10 +31,11 @@ const providerIconMap: Record<string, string> = {
   openrouter: 'openrouter',
 };
 
-export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId, onConfigEdit }: ResponsePanelProps) {
+export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId }: ResponsePanelProps) {
   const [apiKeys, setApiKeys] = useState<Record<string, string | undefined>>({});
   const [layout, setLayout] = useState<LayoutType>('grid');
   const [modelConfigs, setModelConfigs] = useState<ProjectModelConfig[]>([]);
+  const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
 
   useEffect(() => {
     setApiKeys(loadApiKeys());
@@ -112,6 +113,24 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                 const isRow = layout === 'rows';
                 const iconName = providerIconMap[config.provider] || 'openrouter';
                 const isHighlighted = highlightedConfigId === config.id;
+                const isEditing = editingConfigId === config.id;
+
+                // If this config is being edited, show the ConfigEditor instead
+                if (isEditing && projectId) {
+                  return (
+                    <div key={config.id} className="border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                      <ConfigEditor
+                        projectId={projectId}
+                        config={config}
+                        onSave={() => {
+                          setEditingConfigId(null);
+                          setModelConfigs(loadModelConfigs());
+                        }}
+                        onCancel={() => setEditingConfigId(null)}
+                      />
+                    </div>
+                  );
+                }
 
                 return (
                   <div
@@ -152,7 +171,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => onConfigEdit?.(config.id)}
+                          onClick={() => setEditingConfigId(config.id)}
                           className="p-0 border-0 bg-transparent"
                           title="Edit model config"
                         >
