@@ -1,12 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
 import { ProjectModelConfig, AIParameters, Provider } from '@/lib/types';
 import { saveModelConfig } from '@/lib/storage';
 import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
+
+// Map provider to icon name
+const providerIconMap: Record<string, string> = {
+  openai: 'chatgpt',
+  anthropic: 'claude',
+  gemini: 'gemini',
+  openrouter: 'openrouter',
+};
 
 interface ConfigEditorProps {
   projectId: string;
@@ -20,6 +29,8 @@ export default function ConfigEditor({ projectId, config, onSave, onCancel }: Co
   const [provider, setProvider] = useState<Provider>(config?.provider || 'openai');
   const [model, setModel] = useState(config?.model || '');
   const [providers, setProviders] = useState<ProviderConfig[]>(PROVIDERS);
+  const [providerDropdownOpen, setProviderDropdownOpen] = useState(false);
+  const providerDropdownRef = useRef<HTMLDivElement>(null);
 
   // Parameters
   const [temperature, setTemperature] = useState<number | undefined>(config?.parameters?.temperature);
@@ -80,6 +91,18 @@ export default function ConfigEditor({ projectId, config, onSave, onCancel }: Co
       }
     }
   }, [provider, providers, config]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (providerDropdownRef.current && !providerDropdownRef.current.contains(event.target as Node)) {
+        setProviderDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSave = () => {
     if (!name.trim() || !model) {
@@ -170,17 +193,64 @@ export default function ConfigEditor({ projectId, config, onSave, onCancel }: Co
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Provider *
           </label>
-          <select
-            value={provider}
-            onChange={(e) => setProvider(e.target.value as Provider)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            {providers.map((p) => (
-              <option key={p.key} value={p.key}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative" ref={providerDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setProviderDropdownOpen(!providerDropdownOpen)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <Image
+                  src={`/series_icon/light/${providerIconMap[provider]}.svg`}
+                  alt={currentProvider?.name || provider}
+                  width={20}
+                  height={20}
+                  className="dark:hidden"
+                />
+                <Image
+                  src={`/series_icon/dark/${providerIconMap[provider]}.svg`}
+                  alt={currentProvider?.name || provider}
+                  width={20}
+                  height={20}
+                  className="hidden dark:block"
+                />
+                <span>{currentProvider?.name || provider}</span>
+              </div>
+              <ChevronDownIcon className={`h-4 w-4 transition-transform ${providerDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {providerDropdownOpen && (
+              <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg">
+                {providers.map((p) => (
+                  <button
+                    key={p.key}
+                    type="button"
+                    onClick={() => {
+                      setProvider(p.key as Provider);
+                      setProviderDropdownOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 first:rounded-t-md last:rounded-b-md"
+                  >
+                    <Image
+                      src={`/series_icon/light/${providerIconMap[p.key]}.svg`}
+                      alt={p.name}
+                      width={20}
+                      height={20}
+                      className="dark:hidden"
+                    />
+                    <Image
+                      src={`/series_icon/dark/${providerIconMap[p.key]}.svg`}
+                      alt={p.name}
+                      width={20}
+                      height={20}
+                      className="hidden dark:block"
+                    />
+                    <span className="text-gray-900 dark:text-white">{p.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Model */}
