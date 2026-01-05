@@ -53,17 +53,13 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
     setModelConfigs(loadModelConfigs());
   }, [projectId]); // Reload when projectId changes
 
-  // Initialize selected versions to latest when prompt changes
+  // Initialize selected versions to "latest" when prompt changes
   useEffect(() => {
     if (currentPrompt && modelConfigs.length > 0) {
-      const latestVersion = currentPrompt.versions.reduce((latest, current) =>
-        current.versionNumber > latest.versionNumber ? current : latest
-      , currentPrompt.versions[0]);
-
       const newSelectedVersions: Record<string, string> = {};
       modelConfigs.forEach(config => {
         if (!selectedVersions[config.id]) {
-          newSelectedVersions[config.id] = latestVersion.id;
+          newSelectedVersions[config.id] = 'latest';
         }
       });
 
@@ -250,11 +246,9 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                               title="Select prompt version"
                             >
                               <span>
-                                v{currentPrompt.versions.find(v => v.id === selectedVersions[config.id])?.versionNumber ||
-                                  currentPrompt.versions.reduce((latest, current) =>
-                                    current.versionNumber > latest.versionNumber ? current : latest,
-                                    currentPrompt.versions[0]
-                                  ).versionNumber}
+                                {selectedVersions[config.id] === 'latest' || !selectedVersions[config.id]
+                                  ? 'Latest'
+                                  : `v${currentPrompt.versions.find(v => v.id === selectedVersions[config.id])?.versionNumber || '?'}`}
                               </span>
                               <ChevronDownIcon className={`h-3 w-3 transition-transform ${openVersionDropdowns[config.id] ? 'rotate-180' : ''}`} />
                             </button>
@@ -262,6 +256,27 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                             {/* Dropdown Menu */}
                             {openVersionDropdowns[config.id] && (
                               <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-10 max-h-60 overflow-y-auto">
+                                {/* Latest option */}
+                                <button
+                                  onClick={() => handleVersionChange(config.id, 'latest')}
+                                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 border-b border-gray-200 dark:border-gray-700 ${
+                                    selectedVersions[config.id] === 'latest' || !selectedVersions[config.id]
+                                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                                      : 'text-gray-900 dark:text-white'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium">Latest</span>
+                                    {(selectedVersions[config.id] === 'latest' || !selectedVersions[config.id]) && (
+                                      <span className="text-xs">✓</span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Always use newest version
+                                  </div>
+                                </button>
+
+                                {/* Specific versions */}
                                 {currentPrompt.versions
                                   .sort((a, b) => b.versionNumber - a.versionNumber)
                                   .map((version) => (

@@ -322,9 +322,18 @@ export default function Home() {
       const apiKey = apiKeys[config.provider];
       if (!apiKey) continue; // Skip if no API key
 
-      // Get the selected version for this config, or use latest as default
-      const selectedVersionId = selectedVersions[config.id] || latestVersion.id;
-      const selectedVersion = prompt.versions.find(v => v.id === selectedVersionId) || latestVersion;
+      // Get the selected version for this config
+      const selectedVersionId = selectedVersions[config.id];
+      let selectedVersion;
+
+      if (selectedVersionId === 'latest' || !selectedVersionId) {
+        // Use latest version
+        selectedVersion = latestVersion;
+      } else {
+        // Use specific version
+        selectedVersion = prompt.versions.find(v => v.id === selectedVersionId) || latestVersion;
+      }
+
       const promptContent = selectedVersion?.content || '';
 
       // Set loading state
