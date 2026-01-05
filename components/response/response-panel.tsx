@@ -8,6 +8,8 @@ import { loadApiKeys, loadModelConfigs, deleteModelConfig, getModelConfigById } 
 import { ProjectModelConfig } from '@/lib/types';
 import ConfigEditor from '@/components/model-configs/config-editor';
 
+import { AIOutput } from '@/lib/types';
+
 interface ResponsePanelProps {
   output?: {
     content: string;
@@ -22,6 +24,8 @@ interface ResponsePanelProps {
   highlightedConfigId?: string;
   showNewConfigEditor?: boolean;
   onNewConfigClose?: () => void;
+  configResponses?: Record<string, AIOutput>;
+  generatingConfigs?: Record<string, boolean>;
 }
 
 type LayoutType = 'grid' | 'columns' | 'rows' | 'stacked';
@@ -34,7 +38,7 @@ const providerIconMap: Record<string, string> = {
   openrouter: 'openrouter',
 };
 
-export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId, showNewConfigEditor, onNewConfigClose }: ResponsePanelProps) {
+export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId, showNewConfigEditor, onNewConfigClose, configResponses = {}, generatingConfigs = {} }: ResponsePanelProps) {
   const [apiKeys, setApiKeys] = useState<Record<string, string | undefined>>({});
   const [layout, setLayout] = useState<LayoutType>('grid');
   const [modelConfigs, setModelConfigs] = useState<ProjectModelConfig[]>([]);
@@ -205,15 +209,46 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                       </div>
                     </div>
 
-                    {/* API Key Status */}
+                    {/* Response Content or Status */}
                     {!isRow && (
-                      <div className={`text-center ${isCompact ? 'py-4' : 'py-8'}`}>
-                        {hasKey ? (
-                          <div className="text-sm text-green-600 dark:text-green-400">
-                            ✓ API key configured
+                      <div className={`${isCompact ? 'py-4' : 'py-4'}`}>
+                        {generatingConfigs[config.id] ? (
+                          // Loading state
+                          <div className="text-center py-8">
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mb-2" />
+                            <p className="text-xs text-gray-600 dark:text-gray-400">Generating...</p>
+                          </div>
+                        ) : configResponses[config.id] ? (
+                          // Show response
+                          <div className="space-y-2">
+                            {configResponses[config.id].error ? (
+                              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                                <p className="text-xs text-red-700 dark:text-red-300">{configResponses[config.id].error}</p>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="text-xs text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700 max-h-32 overflow-y-auto">
+                                  {configResponses[config.id].content}
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                  {configResponses[config.id].tokens !== undefined && (
+                                    <span>{configResponses[config.id].tokens} tokens</span>
+                                  )}
+                                  {configResponses[config.id].latency !== undefined && (
+                                    <span>{(configResponses[config.id].latency! / 1000).toFixed(2)}s</span>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ) : hasKey ? (
+                          // API key configured, waiting for generation
+                          <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                            Ready to generate
                           </div>
                         ) : (
-                          <div>
+                          // No API key
+                          <div className="text-center">
                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                               API key not configured
                             </p>

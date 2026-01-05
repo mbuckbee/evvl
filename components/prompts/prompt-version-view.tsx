@@ -10,9 +10,10 @@ interface PromptVersionViewProps {
   onSave?: (content: string) => void;
   onSaveAsNewVersion?: (content: string, versionNote?: string) => void;
   onNameUpdate?: (name: string) => void;
+  onSaveAndRefresh?: (content: string) => void;
 }
 
-export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNewVersion, onNameUpdate }: PromptVersionViewProps) {
+export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNewVersion, onNameUpdate, onSaveAndRefresh }: PromptVersionViewProps) {
   // Always show the latest version (highest version number)
   const latestVersion = prompt.versions.reduce((latest, current) =>
     current.versionNumber > latest.versionNumber ? current : latest
@@ -35,8 +36,8 @@ export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNe
       alert('Please enter some prompt content');
       return;
     }
-    if (onSave) {
-      onSave(content.trim());
+    if (onSaveAndRefresh) {
+      onSaveAndRefresh(content.trim());
     }
   };
 

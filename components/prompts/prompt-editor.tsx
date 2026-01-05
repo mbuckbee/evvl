@@ -12,9 +12,10 @@ interface PromptEditorProps {
   prompt?: Prompt; // If provided, we're editing. If not, we're creating.
   onSave?: (prompt: Prompt) => void;
   onCancel?: () => void;
+  onSaveAndRefresh?: (prompt: Prompt) => void;
 }
 
-export default function PromptEditor({ projectId, prompt, onSave, onCancel }: PromptEditorProps) {
+export default function PromptEditor({ projectId, prompt, onSave, onCancel, onSaveAndRefresh }: PromptEditorProps) {
   // If viewing existing prompt, show view form
   if (prompt) {
     const handleSave = (content: string) => {
@@ -39,6 +40,31 @@ export default function PromptEditor({ projectId, prompt, onSave, onCancel }: Pr
 
         savePrompt(updatedPrompt);
         if (onSave) onSave(updatedPrompt);
+      }
+    };
+
+    const handleSaveAndRefresh = (content: string) => {
+      // Update the latest version in place
+      const latestVersion = prompt.versions.reduce((latest, current) =>
+        current.versionNumber > latest.versionNumber ? current : latest
+      , prompt.versions[0]);
+
+      if (latestVersion) {
+        const updatedVersions = prompt.versions.map(v =>
+          v.id === latestVersion.id
+            ? { ...v, content }
+            : v
+        );
+
+        const updatedPrompt: Prompt = {
+          ...prompt,
+          versions: updatedVersions,
+          currentVersionId: latestVersion.id,
+          updatedAt: Date.now(),
+        };
+
+        savePrompt(updatedPrompt);
+        if (onSaveAndRefresh) onSaveAndRefresh(updatedPrompt);
       }
     };
 
@@ -85,6 +111,7 @@ export default function PromptEditor({ projectId, prompt, onSave, onCancel }: Pr
         onSave={handleSave}
         onSaveAsNewVersion={handleSaveAsNewVersion}
         onNameUpdate={handleNameUpdate}
+        onSaveAndRefresh={handleSaveAndRefresh}
       />
     );
   }

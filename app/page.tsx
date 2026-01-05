@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects, getPromptsByProjectId } from '@/lib/storage';
+import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects, getPromptsByProjectId, getModelConfigsByProjectId } from '@/lib/storage';
 import { ApiKeys, AIOutput, Prompt, ProjectModelConfig, Project } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
@@ -36,6 +36,8 @@ export default function Home() {
   const [sidebarKey, setSidebarKey] = useState(0);
   const [highlightedConfigId, setHighlightedConfigId] = useState<string | null>(null);
   const [showNewConfigInResponse, setShowNewConfigInResponse] = useState(false);
+  const [configResponses, setConfigResponses] = useState<Record<string, AIOutput>>({});
+  const [generatingConfigs, setGeneratingConfigs] = useState<Record<string, boolean>>({});
 
   // Initialize on mount
   useEffect(() => {
@@ -299,6 +301,86 @@ export default function Home() {
     setSidebarKey(prev => prev + 1);
   };
 
+  const handlePromptSaveAndRefresh = async (prompt: Prompt) => {
+    // Save the prompt
+    setEditingPromptId(prompt.id);
+    setShowPromptEditor(true);
+    setSidebarKey(prev => prev + 1);
+
+    // Get all model configs for this project
+    if (!activeProjectId) return;
+    const modelConfigs = getModelConfigsByProjectId(activeProjectId);
+
+    // Get the latest version content
+    const latestVersion = prompt.versions.reduce((latest, current) =>
+      current.versionNumber > latest.versionNumber ? current : latest
+    , prompt.versions[0]);
+
+    const promptContent = latestVersion?.content || '';
+
+    // Run inference for each model config
+    for (const config of modelConfigs) {
+      const apiKey = apiKeys[config.provider];
+      if (!apiKey) continue; // Skip if no API key
+
+      // Set loading state
+      setGeneratingConfigs(prev => ({ ...prev, [config.id]: true }));
+
+      try {
+        const data = await apiClient.generateText({
+          prompt: promptContent,
+          provider: config.provider,
+          model: config.model,
+          apiKey: apiKey,
+          ...config.parameters,
+        });
+
+        if (isApiError(data)) {
+          // Error response
+          setConfigResponses(prev => ({
+            ...prev,
+            [config.id]: {
+              id: uuidv4(),
+              modelConfig: { provider: config.provider, model: config.model, label: config.name },
+              type: 'text',
+              content: '',
+              error: data.error,
+              timestamp: Date.now(),
+            }
+          }));
+        } else if ('content' in data) {
+          // Success response
+          setConfigResponses(prev => ({
+            ...prev,
+            [config.id]: {
+              id: uuidv4(),
+              modelConfig: { provider: config.provider, model: config.model, label: config.name },
+              type: 'text',
+              content: data.content,
+              tokens: data.tokens,
+              latency: data.latency,
+              timestamp: Date.now(),
+            }
+          }));
+        }
+      } catch (error: any) {
+        setConfigResponses(prev => ({
+          ...prev,
+          [config.id]: {
+            id: uuidv4(),
+            modelConfig: { provider: config.provider, model: config.model, label: config.name },
+            type: 'text',
+            content: '',
+            error: error.message || 'Network error',
+            timestamp: Date.now(),
+          }
+        }));
+      } finally {
+        setGeneratingConfigs(prev => ({ ...prev, [config.id]: false }));
+      }
+    }
+  };
+
   const handlePromptCancel = () => {
     setShowPromptEditor(false);
     setEditingPromptId(null);
@@ -438,6 +520,7 @@ export default function Home() {
                 prompt={editingPromptId ? getPromptById(editingPromptId) : undefined}
                 onSave={handlePromptSave}
                 onCancel={handlePromptCancel}
+                onSaveAndRefresh={handlePromptSaveAndRefresh}
               />
             ) : showConfigEditor && activeProjectId ? (
               <ConfigEditor
@@ -465,6 +548,8 @@ export default function Home() {
                 setShowNewConfigInResponse(false);
                 setSidebarKey(prev => prev + 1);
               }}
+              configResponses={configResponses}
+              generatingConfigs={generatingConfigs}
             />
           }
         />
