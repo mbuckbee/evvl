@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon, Cog6ToothIcon, XMarkIcon, Squares2X2Icon, ViewColumnsIcon, Bars3Icon, SquaresPlusIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
+import Link from 'next/link';
 import { loadApiKeys, loadModelConfigs, deleteModelConfig, getModelConfigById } from '@/lib/storage';
 import { ProjectModelConfig } from '@/lib/types';
 import ConfigEditor from '@/components/model-configs/config-editor';
