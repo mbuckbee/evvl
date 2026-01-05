@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects } from '@/lib/storage';
-import { ApiKeys, AIOutput, Prompt, ProjectModelConfig } from '@/lib/types';
+import { ApiKeys, AIOutput, Prompt, ProjectModelConfig, Project } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
 import { trackEvent } from '@/lib/analytics';
@@ -221,11 +221,22 @@ export default function Home() {
     setShowConfigEditor(false);
   };
 
-  const handleProjectSave = () => {
+  const handleProjectSave = (project: Project) => {
+    const isNewProject = !editingProjectId;
+
     setShowProjectEditor(false);
     setEditingProjectId(null);
     // Refresh sidebar to show new/updated project
     setSidebarKey(prev => prev + 1);
+
+    // If it's a new project, automatically open the new prompt form
+    if (isNewProject) {
+      setActiveProjectIdState(project.id);
+      setActiveProjectId(project.id);
+      setEditingPromptId(null);
+      setShowPromptEditor(true);
+      setShowConfigEditor(false);
+    }
   };
 
   const handleProjectCancel = () => {

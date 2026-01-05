@@ -38,7 +38,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId 
   useEffect(() => {
     setApiKeys(loadApiKeys());
     setModelConfigs(loadModelConfigs());
-  }, []);
+  }, [projectId]); // Reload when projectId changes
 
   if (!output && !isGenerating) {
     // Filter configs by project if projectId is provided

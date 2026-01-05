@@ -144,6 +144,11 @@ export default function ProjectEditor({ project, onSave, onCancel, onDelete }: P
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSave();
+              }
+            }}
             placeholder="e.g., Client Evaluation, Blog Post Generator"
             autoFocus
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -158,6 +163,11 @@ export default function ProjectEditor({ project, onSave, onCancel, onDelete }: P
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                handleSave();
+              }
+            }}
             placeholder="What is this project for?"
             rows={3}
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
