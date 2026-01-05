@@ -38,6 +38,7 @@ export default function Home() {
   const [showNewConfigInResponse, setShowNewConfigInResponse] = useState(false);
   const [configResponses, setConfigResponses] = useState<Record<string, AIOutput>>({});
   const [generatingConfigs, setGeneratingConfigs] = useState<Record<string, boolean>>({});
+  const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({});
 
   // Initialize on mount
   useEffect(() => {
@@ -311,17 +312,20 @@ export default function Home() {
     if (!activeProjectId) return;
     const modelConfigs = getModelConfigsByProjectId(activeProjectId);
 
-    // Get the latest version content
+    // Get the latest version as default
     const latestVersion = prompt.versions.reduce((latest, current) =>
       current.versionNumber > latest.versionNumber ? current : latest
     , prompt.versions[0]);
-
-    const promptContent = latestVersion?.content || '';
 
     // Run inference for each model config
     for (const config of modelConfigs) {
       const apiKey = apiKeys[config.provider];
       if (!apiKey) continue; // Skip if no API key
+
+      // Get the selected version for this config, or use latest as default
+      const selectedVersionId = selectedVersions[config.id] || latestVersion.id;
+      const selectedVersion = prompt.versions.find(v => v.id === selectedVersionId) || latestVersion;
+      const promptContent = selectedVersion?.content || '';
 
       // Set loading state
       setGeneratingConfigs(prev => ({ ...prev, [config.id]: true }));
@@ -379,6 +383,10 @@ export default function Home() {
         setGeneratingConfigs(prev => ({ ...prev, [config.id]: false }));
       }
     }
+  };
+
+  const handleVersionChange = (configId: string, versionId: string) => {
+    setSelectedVersions(prev => ({ ...prev, [configId]: versionId }));
   };
 
   const handlePromptCancel = () => {
@@ -550,6 +558,8 @@ export default function Home() {
               }}
               configResponses={configResponses}
               generatingConfigs={generatingConfigs}
+              currentPrompt={editingPromptId ? getPromptById(editingPromptId) : undefined}
+              onVersionChange={handleVersionChange}
             />
           }
         />

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon, Cog6ToothIcon, XMarkIcon, Squares2X2Icon, ViewColumnsIcon, Bars3Icon, SquaresPlusIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect, useRef } from 'react';
+import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon, Cog6ToothIcon, XMarkIcon, Squares2X2Icon, ViewColumnsIcon, Bars3Icon, SquaresPlusIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import Link from 'next/link';
 import { loadApiKeys, loadModelConfigs, deleteModelConfig, getModelConfigById } from '@/lib/storage';
-import { ProjectModelConfig } from '@/lib/types';
+import { ProjectModelConfig, Prompt, ApiKeys } from '@/lib/types';
 import ConfigEditor from '@/components/model-configs/config-editor';
 
 import { AIOutput } from '@/lib/types';
@@ -26,6 +26,8 @@ interface ResponsePanelProps {
   onNewConfigClose?: () => void;
   configResponses?: Record<string, AIOutput>;
   generatingConfigs?: Record<string, boolean>;
+  currentPrompt?: Prompt;
+  onVersionChange?: (configId: string, versionId: string) => void;
 }
 
 type LayoutType = 'grid' | 'columns' | 'rows' | 'stacked';
@@ -38,16 +40,38 @@ const providerIconMap: Record<string, string> = {
   openrouter: 'openrouter',
 };
 
-export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId, showNewConfigEditor, onNewConfigClose, configResponses = {}, generatingConfigs = {} }: ResponsePanelProps) {
-  const [apiKeys, setApiKeys] = useState<Record<string, string | undefined>>({});
+export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId, showNewConfigEditor, onNewConfigClose, configResponses = {}, generatingConfigs = {}, currentPrompt, onVersionChange }: ResponsePanelProps) {
+  const [apiKeys, setApiKeys] = useState<ApiKeys>({});
   const [layout, setLayout] = useState<LayoutType>('grid');
   const [modelConfigs, setModelConfigs] = useState<ProjectModelConfig[]>([]);
   const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
+  const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({});
+  const [openVersionDropdowns, setOpenVersionDropdowns] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setApiKeys(loadApiKeys());
     setModelConfigs(loadModelConfigs());
   }, [projectId]); // Reload when projectId changes
+
+  // Initialize selected versions to latest when prompt changes
+  useEffect(() => {
+    if (currentPrompt && modelConfigs.length > 0) {
+      const latestVersion = currentPrompt.versions.reduce((latest, current) =>
+        current.versionNumber > latest.versionNumber ? current : latest
+      , currentPrompt.versions[0]);
+
+      const newSelectedVersions: Record<string, string> = {};
+      modelConfigs.forEach(config => {
+        if (!selectedVersions[config.id]) {
+          newSelectedVersions[config.id] = latestVersion.id;
+        }
+      });
+
+      if (Object.keys(newSelectedVersions).length > 0) {
+        setSelectedVersions(prev => ({ ...prev, ...newSelectedVersions }));
+      }
+    }
+  }, [currentPrompt, modelConfigs]);
 
   const handleDeleteConfig = (configId: string, configName: string) => {
     if (confirm(`Are you sure you want to remove "${configName}" from this project?`)) {
@@ -56,6 +80,31 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
       setModelConfigs(loadModelConfigs());
     }
   };
+
+  const handleVersionChange = (configId: string, versionId: string) => {
+    setSelectedVersions(prev => ({ ...prev, [configId]: versionId }));
+    setOpenVersionDropdowns(prev => ({ ...prev, [configId]: false }));
+    if (onVersionChange) {
+      onVersionChange(configId, versionId);
+    }
+  };
+
+  const toggleVersionDropdown = (configId: string) => {
+    setOpenVersionDropdowns(prev => ({ ...prev, [configId]: !prev[configId] }));
+  };
+
+  // Click outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.version-dropdown')) {
+        setOpenVersionDropdowns({});
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   if (!output && !isGenerating) {
     // Filter configs by project if projectId is provided
@@ -192,6 +241,57 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {/* Version Dropdown */}
+                        {currentPrompt && currentPrompt.versions.length > 0 && (
+                          <div className="relative version-dropdown">
+                            <button
+                              onClick={() => toggleVersionDropdown(config.id)}
+                              className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1"
+                              title="Select prompt version"
+                            >
+                              <span>
+                                v{currentPrompt.versions.find(v => v.id === selectedVersions[config.id])?.versionNumber ||
+                                  currentPrompt.versions.reduce((latest, current) =>
+                                    current.versionNumber > latest.versionNumber ? current : latest,
+                                    currentPrompt.versions[0]
+                                  ).versionNumber}
+                              </span>
+                              <ChevronDownIcon className={`h-3 w-3 transition-transform ${openVersionDropdowns[config.id] ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {openVersionDropdowns[config.id] && (
+                              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-10 max-h-60 overflow-y-auto">
+                                {currentPrompt.versions
+                                  .sort((a, b) => b.versionNumber - a.versionNumber)
+                                  .map((version) => (
+                                    <button
+                                      key={version.id}
+                                      onClick={() => handleVersionChange(config.id, version.id)}
+                                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                                        selectedVersions[config.id] === version.id
+                                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                                          : 'text-gray-900 dark:text-white'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium">v{version.versionNumber}</span>
+                                        {selectedVersions[config.id] === version.id && (
+                                          <span className="text-xs">✓</span>
+                                        )}
+                                      </div>
+                                      {version.note && (
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                          {version.note}
+                                        </div>
+                                      )}
+                                    </button>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <button
                           onClick={() => setEditingConfigId(config.id)}
                           className="p-0 border-0 bg-transparent"
