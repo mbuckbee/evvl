@@ -34,6 +34,7 @@ export default function Home() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
   const [sidebarKey, setSidebarKey] = useState(0);
+  const [highlightedConfigId, setHighlightedConfigId] = useState<string | null>(null);
 
   // Initialize on mount
   useEffect(() => {
@@ -314,6 +315,11 @@ export default function Home() {
         // Close editors to show request panel
         setShowPromptEditor(false);
         setShowConfigEditor(false);
+
+        // Highlight the card in the response panel
+        setHighlightedConfigId(configId);
+        // Clear highlight after animation completes
+        setTimeout(() => setHighlightedConfigId(null), 2000);
       }
     }
   };
@@ -409,6 +415,7 @@ export default function Home() {
               output={output}
               isGenerating={isGenerating}
               projectId={activeProjectId || undefined}
+              highlightedConfigId={highlightedConfigId || undefined}
             />
           }
         />

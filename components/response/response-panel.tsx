@@ -18,6 +18,7 @@ interface ResponsePanelProps {
   };
   isGenerating?: boolean;
   projectId?: string;
+  highlightedConfigId?: string;
 }
 
 type LayoutType = 'grid' | 'columns' | 'rows' | 'stacked';
@@ -30,7 +31,7 @@ const providerIconMap: Record<string, string> = {
   openrouter: 'openrouter',
 };
 
-export default function ResponsePanel({ output, isGenerating = false, projectId }: ResponsePanelProps) {
+export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId }: ResponsePanelProps) {
   const [apiKeys, setApiKeys] = useState<Record<string, string | undefined>>({});
   const [layout, setLayout] = useState<LayoutType>('grid');
   const [modelConfigs, setModelConfigs] = useState<ProjectModelConfig[]>([]);
@@ -110,13 +111,16 @@ export default function ResponsePanel({ output, isGenerating = false, projectId 
                 const isCompact = layout === 'columns';
                 const isRow = layout === 'rows';
                 const iconName = providerIconMap[config.provider] || 'openrouter';
+                const isHighlighted = highlightedConfigId === config.id;
 
                 return (
                   <div
                     key={config.id}
                     className={`border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 ${
                       isCompact ? 'p-4' : 'p-6'
-                    } ${isRow ? 'flex items-center' : ''}`}
+                    } ${isRow ? 'flex items-center' : ''} ${
+                      isHighlighted ? 'ring-4 ring-blue-500 animate-pulse' : ''
+                    } transition-all duration-300`}
                   >
                     {/* Header with icon, name, and actions */}
                     <div className={`flex items-start justify-between ${isRow ? 'flex-1' : 'mb-4'}`}>
