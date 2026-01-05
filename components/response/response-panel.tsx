@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon, CogIcon, XMarkIcon, Squares2X2Icon, ViewColumnsIcon, Bars3Icon, SquaresPlusIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import Link from 'next/link';
-import { loadApiKeys, loadModelConfigs } from '@/lib/storage';
+import { loadApiKeys, loadModelConfigs, deleteModelConfig } from '@/lib/storage';
 import { ProjectModelConfig } from '@/lib/types';
 
 interface ResponsePanelProps {
@@ -39,6 +39,14 @@ export default function ResponsePanel({ output, isGenerating = false, projectId 
     setApiKeys(loadApiKeys());
     setModelConfigs(loadModelConfigs());
   }, [projectId]); // Reload when projectId changes
+
+  const handleDeleteConfig = (configId: string, configName: string) => {
+    if (confirm(`Are you sure you want to remove "${configName}" from this project?`)) {
+      deleteModelConfig(configId);
+      // Reload model configs after deletion
+      setModelConfigs(loadModelConfigs());
+    }
+  };
 
   if (!output && !isGenerating) {
     // Filter configs by project if projectId is provided
@@ -142,7 +150,12 @@ export default function ResponsePanel({ output, isGenerating = false, projectId 
                         <Link href="/settings">
                           <CogIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" />
                         </Link>
-                        <XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" />
+                        <button
+                          onClick={() => handleDeleteConfig(config.id, config.name)}
+                          className="p-0 border-0 bg-transparent"
+                        >
+                          <XMarkIcon className="h-5 w-5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-colors" />
+                        </button>
                       </div>
                     </div>
 
