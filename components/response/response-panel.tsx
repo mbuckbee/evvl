@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon, CogIcon, XMarkIcon, Squares2X2Icon, ViewColumnsIcon, Bars3Icon, SquaresPlusIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon, Cog6ToothIcon, XMarkIcon, Squares2X2Icon, ViewColumnsIcon, Bars3Icon, SquaresPlusIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import Link from 'next/link';
 import { loadApiKeys, loadModelConfigs, deleteModelConfig } from '@/lib/storage';
@@ -152,7 +152,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                       </div>
                       <div className="flex items-center gap-2">
                         <Link href="/settings">
-                          <CogIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" />
+                          <Cog6ToothIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" />
                         </Link>
                         <button
                           onClick={() => handleDeleteConfig(config.id, config.name)}
