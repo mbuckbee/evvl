@@ -12,9 +12,6 @@ import {
   getPromptsByProjectId,
   getModelConfigsByProjectId,
   getDataSetsByProjectId,
-  loadPrompts,
-  loadModelConfigs,
-  loadDataSets,
 } from '@/lib/storage';
 import { migrateEvalHistory, isMigrationComplete } from '@/lib/migration';
 
@@ -31,12 +28,10 @@ interface SidebarProps {
 
 export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, onPromptSelect, onNewModelConfig, onModelConfigSelect, onNewDataSet, onDataSetSelect }: SidebarProps) {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [allPrompts, setAllPrompts] = useState<Prompt[]>([]);
-  const [allModelConfigs, setAllModelConfigs] = useState<ProjectModelConfig[]>([]);
-  const [allDataSets, setAllDataSets] = useState<DataSet[]>([]);
-  const [openSections, setOpenSections] = useState<string[]>(['prompts']); // Default to prompts section open
+  const [openProjects, setOpenProjects] = useState<string[]>([]);
+  const [openSections, setOpenSections] = useState<string[]>([]); // Track which sections are open (e.g., "projectId-prompts")
 
-  // Load all data on mount
+  // Load projects and run migration on mount
   useEffect(() => {
     // Run migration if not completed
     if (!isMigrationComplete()) {
@@ -47,10 +42,9 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
     const loadedProjects = loadProjects();
     setProjects(loadedProjects);
 
-    // Load all prompts, configs, and datasets
-    setAllPrompts(loadPrompts());
-    setAllModelConfigs(loadModelConfigs());
-    setAllDataSets(loadDataSets());
+    // Load UI state
+    const uiState = loadUIState();
+    setOpenProjects(uiState.openProjects || []);
 
     // If no projects exist, create a default one
     if (loadedProjects.length === 0) {
@@ -66,14 +60,31 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
       };
       saveProject(defaultProject);
       setProjects([defaultProject]);
+      setOpenProjects([defaultProject.id]);
+      // Default to prompts section open for the default project
+      setOpenSections([`${defaultProject.id}-prompts`]);
     }
   }, []);
 
-  const toggleSection = (section: string) => {
+  // Save UI state when open projects change
+  useEffect(() => {
+    const uiState = loadUIState();
+    saveUIState({ ...uiState, openProjects });
+  }, [openProjects]);
+
+  const toggleProject = (projectId: string) => {
+    setOpenProjects(prev =>
+      prev.includes(projectId)
+        ? prev.filter(id => id !== projectId)
+        : [...prev, projectId]
+    );
+  };
+
+  const toggleSection = (sectionKey: string) => {
     setOpenSections(prev =>
-      prev.includes(section)
-        ? prev.filter(s => s !== section)
-        : [...prev, section]
+      prev.includes(sectionKey)
+        ? prev.filter(key => key !== sectionKey)
+        : [...prev, sectionKey]
     );
   };
 
@@ -91,241 +102,287 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
 
   const handlePromptClick = (promptId: string, e: React.MouseEvent) => {
     if (onPromptSelect) {
-      const shouldEdit = e.button === 2 || e.shiftKey;
+      const shouldEdit = e.button === 2 || e.shiftKey; // Right-click or Shift+Click to edit
       onPromptSelect(promptId, shouldEdit);
     }
   };
 
-  const handleNewPromptClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onNewPrompt && projects.length > 0) {
-      onNewPrompt(projects[0].id); // Use first project for now
+  const handleNewPromptClick = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent project toggle
+    if (onNewPrompt) {
+      onNewPrompt(projectId);
     }
   };
 
   const handleModelConfigClick = (configId: string, e: React.MouseEvent) => {
     if (onModelConfigSelect) {
-      const shouldEdit = e.button === 2 || e.shiftKey;
+      const shouldEdit = e.button === 2 || e.shiftKey; // Right-click or Shift+Click to edit
       onModelConfigSelect(configId, shouldEdit);
     }
   };
 
-  const handleNewModelConfigClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onNewModelConfig && projects.length > 0) {
-      onNewModelConfig(projects[0].id); // Use first project for now
+  const handleNewModelConfigClick = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent project toggle
+    if (onNewModelConfig) {
+      onNewModelConfig(projectId);
     }
   };
 
   const handleDataSetClick = (dataSetId: string, e: React.MouseEvent) => {
     if (onDataSetSelect) {
-      const shouldEdit = e.button === 2 || e.shiftKey;
+      const shouldEdit = e.button === 2 || e.shiftKey; // Right-click or Shift+Click to edit
       onDataSetSelect(dataSetId, shouldEdit);
     }
   };
 
-  const handleNewDataSetClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onNewDataSet && projects.length > 0) {
-      onNewDataSet(projects[0].id); // Use first project for now
+  const handleNewDataSetClick = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent project toggle
+    if (onNewDataSet) {
+      onNewDataSet(projectId);
     }
-  };
-
-  const getProjectName = (projectId: string) => {
-    return projects.find(p => p.id === projectId)?.name || 'Unknown Project';
   };
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-900">
-      {/* Projects Section */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Projects
           </h2>
           <button
             onClick={handleNewProjectClick}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <PlusIcon className="h-3 w-3" />
+            <PlusIcon className="h-4 w-4" />
             New
           </button>
         </div>
-        <div className="pb-2">
-          {projects.map((project) => (
-            <button
-              key={project.id}
-              onClick={() => handleProjectClick(project.id)}
-              className="w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
-            >
-              <FolderIcon className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">
-                {project.name}
-              </span>
-            </button>
-          ))}
-        </div>
       </div>
 
-      {/* Scrollable Sections */}
+      {/* Projects List */}
       <div className="flex-1 overflow-y-auto">
-        {/* Prompts Section */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <div className="w-full px-4 py-3 flex items-center justify-between">
-            <button
-              onClick={() => toggleSection('prompts')}
-              className="flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex-1"
-            >
-              {openSections.includes('prompts') ? (
-                <ChevronDownIcon className="h-4 w-4 text-gray-500" />
-              ) : (
-                <ChevronRightIcon className="h-4 w-4 text-gray-500" />
-              )}
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider">
-                Prompts
-              </h3>
-            </button>
-            <button
-              onClick={handleNewPromptClick}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-            >
-              <PlusIcon className="h-3 w-3" />
-              New
-            </button>
-          </div>
+        {projects.map((project) => {
+          const prompts = getPromptsByProjectId(project.id);
+          const modelConfigs = getModelConfigsByProjectId(project.id);
+          const dataSets = getDataSetsByProjectId(project.id);
+          const isOpen = openProjects.includes(project.id);
 
-          {openSections.includes('prompts') && (
-            <div className="bg-gray-50 dark:bg-gray-800">
-              {/* Prompts List */}
-              {allPrompts.length > 0 ? (
-                allPrompts.map((prompt) => (
-                  <button
-                    key={prompt.id}
-                    onClick={(e) => handlePromptClick(prompt.id, e)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      handlePromptClick(prompt.id, e);
-                    }}
-                    className="w-full px-4 pl-8 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
-                  >
-                    <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
-                      {prompt.name}
-                    </span>
-                  </button>
-                ))
-              ) : (
-                <div className="px-4 pl-8 py-2 text-xs text-gray-500 dark:text-gray-400 italic">
-                  No prompts yet
+          return (
+            <div key={project.id} className="border-b border-gray-200 dark:border-gray-700">
+              {/* Project Header */}
+              <div className="w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+                <button
+                  onClick={() => toggleProject(project.id)}
+                  className="flex items-center gap-2 flex-1 text-left"
+                >
+                  {isOpen ? (
+                    <ChevronDownIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
+                  ) : (
+                    <ChevronRightIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
+                  )}
+                  <FolderIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    {project.name}
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleProjectClick(project.id)}
+                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Edit project"
+                >
+                  Edit
+                </button>
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  {prompts.length + modelConfigs.length + dataSets.length}
+                </span>
+              </div>
+
+              {/* Nested Sections */}
+              {isOpen && (
+                <div className="bg-gray-50 dark:bg-gray-800">
+                  {/* Prompts Folder */}
+                  <div>
+                    <div className="w-full flex items-center gap-2 px-4 pl-8 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group">
+                      <button
+                        onClick={() => toggleSection(`${project.id}-prompts`)}
+                        className="flex items-center gap-2 flex-1 text-left"
+                      >
+                        {openSections.includes(`${project.id}-prompts`) ? (
+                          <ChevronDownIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
+                        ) : (
+                          <ChevronRightIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
+                        )}
+                        <SparklesIcon className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          Prompts
+                        </span>
+                      </button>
+                      <button
+                        onClick={(e) => handleNewPromptClick(project.id, e)}
+                        className="px-2 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded transition-colors"
+                      >
+                        New
+                      </button>
+                    </div>
+
+                    {openSections.includes(`${project.id}-prompts`) && (
+                      <div>
+                        {/* Prompts */}
+                        {prompts.length > 0 ? (
+                          prompts.map((prompt) => (
+                            <button
+                              key={prompt.id}
+                              onClick={(e) => handlePromptClick(prompt.id, e)}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                handlePromptClick(prompt.id, e);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 pl-14 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                              title="Click to edit"
+                            >
+                              <DocumentTextIcon className="h-4 w-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 flex-shrink-0" />
+                              <span className="text-sm text-gray-900 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white">
+                                {prompt.name}
+                              </span>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 pl-14 py-2 text-xs text-gray-600 dark:text-gray-400 italic">
+                            No prompts yet
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Model Configs Folder */}
+                  <div>
+                    <div className="w-full flex items-center gap-2 px-4 pl-8 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group">
+                      <button
+                        onClick={() => toggleSection(`${project.id}-configs`)}
+                        className="flex items-center gap-2 flex-1 text-left"
+                      >
+                        {openSections.includes(`${project.id}-configs`) ? (
+                          <ChevronDownIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
+                        ) : (
+                          <ChevronRightIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
+                        )}
+                        <CogIcon className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          Model Configs
+                        </span>
+                      </button>
+                      <button
+                        onClick={(e) => handleNewModelConfigClick(project.id, e)}
+                        className="px-2 py-1 text-xs font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 rounded transition-colors"
+                      >
+                        New
+                      </button>
+                    </div>
+
+                    {openSections.includes(`${project.id}-configs`) && (
+                      <div>
+                        {/* Model Configs */}
+                        {modelConfigs.length > 0 ? (
+                          modelConfigs.map((config) => (
+                            <button
+                              key={config.id}
+                              onClick={(e) => handleModelConfigClick(config.id, e)}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                handleModelConfigClick(config.id, e);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 pl-14 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                              title="Click to edit"
+                            >
+                              <CogIcon className="h-4 w-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 flex-shrink-0" />
+                              <span className="text-sm text-gray-900 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white">
+                                {config.name}
+                              </span>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 pl-14 py-2 text-xs text-gray-600 dark:text-gray-400 italic">
+                            No model configs yet
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Data Sets Folder */}
+                  <div>
+                    <div className="w-full flex items-center gap-2 px-4 pl-8 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group">
+                      <button
+                        onClick={() => toggleSection(`${project.id}-datasets`)}
+                        className="flex items-center gap-2 flex-1 text-left"
+                      >
+                        {openSections.includes(`${project.id}-datasets`) ? (
+                          <ChevronDownIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
+                        ) : (
+                          <ChevronRightIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
+                        )}
+                        <TableCellsIcon className="h-4 w-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          Data Sets
+                        </span>
+                      </button>
+                      <button
+                        onClick={(e) => handleNewDataSetClick(project.id, e)}
+                        className="px-2 py-1 text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 rounded transition-colors"
+                      >
+                        New
+                      </button>
+                    </div>
+
+                    {openSections.includes(`${project.id}-datasets`) && (
+                      <div>
+                        {/* Data Sets */}
+                        {dataSets.length > 0 ? (
+                          dataSets.map((dataSet) => (
+                            <button
+                              key={dataSet.id}
+                              onClick={(e) => handleDataSetClick(dataSet.id, e)}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                handleDataSetClick(dataSet.id, e);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 pl-14 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                              title="Click to edit"
+                            >
+                              <TableCellsIcon className="h-4 w-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 flex-shrink-0" />
+                              <span className="text-sm text-gray-900 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white">
+                                {dataSet.name}
+                              </span>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 pl-14 py-2 text-xs text-gray-600 dark:text-gray-400 italic">
+                            No data sets yet
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
-          )}
-        </div>
+          );
+        })}
+      </div>
 
-        {/* Model Configs Section */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <div className="w-full px-4 py-3 flex items-center justify-between">
-            <button
-              onClick={() => toggleSection('configs')}
-              className="flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex-1"
-            >
-              {openSections.includes('configs') ? (
-                <ChevronDownIcon className="h-4 w-4 text-gray-500" />
-              ) : (
-                <ChevronRightIcon className="h-4 w-4 text-gray-500" />
-              )}
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider">
-                Model Configs
-              </h3>
-            </button>
-            <button
-              onClick={handleNewModelConfigClick}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-colors"
-            >
-              <PlusIcon className="h-3 w-3" />
-              New
-            </button>
-          </div>
-
-          {openSections.includes('configs') && (
-            <div className="bg-gray-50 dark:bg-gray-800">
-              {/* Model Configs List */}
-              {allModelConfigs.length > 0 ? (
-                allModelConfigs.map((config) => (
-                  <button
-                    key={config.id}
-                    onClick={(e) => handleModelConfigClick(config.id, e)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      handleModelConfigClick(config.id, e);
-                    }}
-                    className="w-full px-4 pl-8 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
-                  >
-                    <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
-                      {config.name}
-                    </span>
-                  </button>
-                ))
-              ) : (
-                <div className="px-4 pl-8 py-2 text-xs text-gray-500 dark:text-gray-400 italic">
-                  No model configs yet
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Data Sets Section */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <div className="w-full px-4 py-3 flex items-center justify-between">
-            <button
-              onClick={() => toggleSection('datasets')}
-              className="flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex-1"
-            >
-              {openSections.includes('datasets') ? (
-                <ChevronDownIcon className="h-4 w-4 text-gray-500" />
-              ) : (
-                <ChevronRightIcon className="h-4 w-4 text-gray-500" />
-              )}
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider">
-                Data Sets
-              </h3>
-            </button>
-            <button
-              onClick={handleNewDataSetClick}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
-            >
-              <PlusIcon className="h-3 w-3" />
-              New
-            </button>
-          </div>
-
-          {openSections.includes('datasets') && (
-            <div className="bg-gray-50 dark:bg-gray-800">
-              {/* Data Sets List */}
-              {allDataSets.length > 0 ? (
-                allDataSets.map((dataSet) => (
-                  <button
-                    key={dataSet.id}
-                    onClick={(e) => handleDataSetClick(dataSet.id, e)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      handleDataSetClick(dataSet.id, e);
-                    }}
-                    className="w-full px-4 pl-8 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
-                  >
-                    <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
-                      {dataSet.name}
-                    </span>
-                  </button>
-                ))
-              ) : (
-                <div className="px-4 pl-8 py-2 text-xs text-gray-500 dark:text-gray-400 italic">
-                  No data sets yet
-                </div>
-              )}
-            </div>
-          )}
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400">
+        <div className="flex items-center justify-between">
+          <span>
+            {projects.reduce((acc, p) =>
+              acc + getPromptsByProjectId(p.id).length +
+              getModelConfigsByProjectId(p.id).length +
+              getDataSetsByProjectId(p.id).length, 0
+            )} items
+          </span>
+          <span>{projects.length} projects</span>
         </div>
       </div>
     </div>
