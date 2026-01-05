@@ -124,7 +124,8 @@ export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNe
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Enter your prompt here... Use {{variables}} for data set substitution"
-              className="flex-1 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono"
+              rows={5}
+              className="flex-1 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono min-h-[8rem]"
             />
 
             <p className="flex-shrink-0 mt-2 text-xs text-gray-500 dark:text-gray-400">
