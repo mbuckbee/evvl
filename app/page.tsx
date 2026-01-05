@@ -416,6 +416,7 @@ export default function Home() {
               isGenerating={isGenerating}
               projectId={activeProjectId || undefined}
               highlightedConfigId={highlightedConfigId || undefined}
+              onConfigEdit={(configId) => handleModelConfigSelect(configId, true)}
             />
           }
         />

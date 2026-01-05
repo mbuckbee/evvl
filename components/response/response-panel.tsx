@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon, Cog6ToothIcon, XMarkIcon, Squares2X2Icon, ViewColumnsIcon, Bars3Icon, SquaresPlusIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
-import Link from 'next/link';
 import { loadApiKeys, loadModelConfigs, deleteModelConfig } from '@/lib/storage';
 import { ProjectModelConfig } from '@/lib/types';
 
@@ -19,6 +18,7 @@ interface ResponsePanelProps {
   isGenerating?: boolean;
   projectId?: string;
   highlightedConfigId?: string;
+  onConfigEdit?: (configId: string) => void;
 }
 
 type LayoutType = 'grid' | 'columns' | 'rows' | 'stacked';
@@ -31,7 +31,7 @@ const providerIconMap: Record<string, string> = {
   openrouter: 'openrouter',
 };
 
-export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId }: ResponsePanelProps) {
+export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId, onConfigEdit }: ResponsePanelProps) {
   const [apiKeys, setApiKeys] = useState<Record<string, string | undefined>>({});
   const [layout, setLayout] = useState<LayoutType>('grid');
   const [modelConfigs, setModelConfigs] = useState<ProjectModelConfig[]>([]);
@@ -151,12 +151,17 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Link href="/settings">
+                        <button
+                          onClick={() => onConfigEdit?.(config.id)}
+                          className="p-0 border-0 bg-transparent"
+                          title="Edit model config"
+                        >
                           <Cog6ToothIcon className="h-5 w-5 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-100 cursor-pointer" />
-                        </Link>
+                        </button>
                         <button
                           onClick={() => handleDeleteConfig(config.id, config.name)}
                           className="p-0 border-0 bg-transparent"
+                          title="Remove model config"
                         >
                           <XMarkIcon className="h-5 w-5 text-gray-400 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-colors" />
                         </button>
