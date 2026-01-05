@@ -35,6 +35,7 @@ export default function Home() {
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
   const [sidebarKey, setSidebarKey] = useState(0);
   const [highlightedConfigId, setHighlightedConfigId] = useState<string | null>(null);
+  const [showNewConfigInResponse, setShowNewConfigInResponse] = useState(false);
 
   // Initialize on mount
   useEffect(() => {
@@ -288,11 +289,13 @@ export default function Home() {
 
   const handleNewModelConfig = (projectId: string) => {
     setActiveProjectIdState(projectId);
-    setEditingConfigId(null);
-    setShowConfigEditor(true);
+    setActiveProjectId(projectId);
+    // Show new config editor in response panel instead of top panel
+    setShowNewConfigInResponse(true);
+    // Close all top panel editors
+    setShowConfigEditor(false);
     setShowPromptEditor(false);
     setShowProjectEditor(false);
-    setActiveProjectId(projectId);
   };
 
   const handleModelConfigSelect = (configId: string, shouldEdit: boolean = false) => {
@@ -416,6 +419,11 @@ export default function Home() {
               isGenerating={isGenerating}
               projectId={activeProjectId || undefined}
               highlightedConfigId={highlightedConfigId || undefined}
+              showNewConfigEditor={showNewConfigInResponse}
+              onNewConfigClose={() => {
+                setShowNewConfigInResponse(false);
+                setSidebarKey(prev => prev + 1);
+              }}
             />
           }
         />

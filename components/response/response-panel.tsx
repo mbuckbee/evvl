@@ -19,6 +19,8 @@ interface ResponsePanelProps {
   isGenerating?: boolean;
   projectId?: string;
   highlightedConfigId?: string;
+  showNewConfigEditor?: boolean;
+  onNewConfigClose?: () => void;
 }
 
 type LayoutType = 'grid' | 'columns' | 'rows' | 'stacked';
@@ -31,7 +33,7 @@ const providerIconMap: Record<string, string> = {
   openrouter: 'openrouter',
 };
 
-export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId }: ResponsePanelProps) {
+export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId, showNewConfigEditor, onNewConfigClose }: ResponsePanelProps) {
   const [apiKeys, setApiKeys] = useState<Record<string, string | undefined>>({});
   const [layout, setLayout] = useState<LayoutType>('grid');
   const [modelConfigs, setModelConfigs] = useState<ProjectModelConfig[]>([]);
@@ -107,6 +109,21 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
               layout === 'rows' ? 'flex flex-col gap-4' :
               'flex flex-col gap-4'
             }>
+              {/* New Config Editor - shown first when creating */}
+              {showNewConfigEditor && projectId && (
+                <div className="border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                  <ConfigEditor
+                    projectId={projectId}
+                    config={undefined}
+                    onSave={() => {
+                      setModelConfigs(loadModelConfigs());
+                      onNewConfigClose?.();
+                    }}
+                    onCancel={onNewConfigClose}
+                  />
+                </div>
+              )}
+
               {filteredConfigs.map((config) => {
                 const hasKey = !!apiKeys[config.provider];
                 const isCompact = layout === 'columns';
