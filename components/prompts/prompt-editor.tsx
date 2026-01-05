@@ -18,11 +18,14 @@ export default function PromptEditor({ projectId, prompt, onSave, onCancel }: Pr
   // If viewing existing prompt, show view form
   if (prompt) {
     const handleSave = (content: string) => {
-      // Update the current version in place
-      const currentVersion = prompt.versions.find(v => v.id === prompt.currentVersionId);
-      if (currentVersion) {
+      // Update the latest version in place
+      const latestVersion = prompt.versions.reduce((latest, current) =>
+        current.versionNumber > latest.versionNumber ? current : latest
+      , prompt.versions[0]);
+
+      if (latestVersion) {
         const updatedVersions = prompt.versions.map(v =>
-          v.id === prompt.currentVersionId
+          v.id === latestVersion.id
             ? { ...v, content }
             : v
         );
@@ -30,6 +33,7 @@ export default function PromptEditor({ projectId, prompt, onSave, onCancel }: Pr
         const updatedPrompt: Prompt = {
           ...prompt,
           versions: updatedVersions,
+          currentVersionId: latestVersion.id, // Ensure currentVersionId points to latest
           updatedAt: Date.now(),
         };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { XMarkIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { Prompt } from '@/lib/types';
 
@@ -13,12 +13,22 @@ interface PromptVersionViewProps {
 }
 
 export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNewVersion, onNameUpdate }: PromptVersionViewProps) {
-  const currentVersion = prompt.versions.find(v => v.id === prompt.currentVersionId);
-  const [content, setContent] = useState(currentVersion?.content || '');
+  // Always show the latest version (highest version number)
+  const latestVersion = prompt.versions.reduce((latest, current) =>
+    current.versionNumber > latest.versionNumber ? current : latest
+  , prompt.versions[0]);
+
+  const [content, setContent] = useState(latestVersion?.content || '');
   const [isEditingName, setIsEditingName] = useState(false);
   const [name, setName] = useState(prompt.name);
   const [isEnteringVersionNote, setIsEnteringVersionNote] = useState(false);
   const [versionNote, setVersionNote] = useState('');
+
+  // Update content when prompt changes (user clicks different prompt)
+  useEffect(() => {
+    setContent(latestVersion?.content || '');
+    setName(prompt.name);
+  }, [prompt.id, latestVersion?.content, prompt.name]);
 
   const handleSave = () => {
     if (!content.trim()) {
@@ -107,7 +117,7 @@ export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNe
         <div className="flex flex-col h-full">
           <div className="flex-1 flex flex-col min-h-0">
             <label className="flex-shrink-0 block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              v{currentVersion?.versionNumber || 1} Prompt Text
+              v{latestVersion?.versionNumber || 1} Prompt Text
             </label>
 
             <textarea
