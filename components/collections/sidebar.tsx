@@ -89,6 +89,18 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
   };
 
   const handleProjectClick = (projectId: string) => {
+    // Expand the project folder
+    if (!openProjects.includes(projectId)) {
+      setOpenProjects(prev => [...prev, projectId]);
+    }
+
+    // Expand the Prompts section by default
+    const promptsSection = `${projectId}-prompts`;
+    if (!openSections.includes(promptsSection)) {
+      setOpenSections(prev => [...prev, promptsSection]);
+    }
+
+    // Load the project
     if (onProjectSelect) {
       onProjectSelect(projectId);
     }

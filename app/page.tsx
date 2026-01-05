@@ -220,11 +220,12 @@ export default function Home() {
     setActiveProjectIdState(projectId);
     setActiveProjectId(projectId);
 
-    // Get first prompt from this project
+    // Get latest prompt from this project (sorted by creation date, most recent first)
     const prompts = getPromptsByProjectId(projectId);
     if (prompts.length > 0) {
-      // Load first prompt into editor
-      setEditingPromptId(prompts[0].id);
+      // Load latest prompt into editor
+      const latestPrompt = prompts[prompts.length - 1]; // Latest is last in array
+      setEditingPromptId(latestPrompt.id);
       setShowPromptEditor(true);
     } else {
       // No prompts, show empty state or new prompt form
