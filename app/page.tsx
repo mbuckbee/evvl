@@ -8,9 +8,8 @@ import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
 import { trackEvent } from '@/lib/analytics';
 import { apiClient, isApiError } from '@/lib/api';
-import ThreePanelLayout from '@/components/layout/three-panel-layout';
+import TwoColumnLayout from '@/components/layout/two-column-layout';
 import Sidebar from '@/components/collections/sidebar';
-import RequestPanel from '@/components/request/request-panel';
 import ResponsePanel from '@/components/response/response-panel';
 import PromptEditor from '@/components/prompts/prompt-editor';
 import ConfigEditor from '@/components/model-configs/config-editor';
@@ -188,10 +187,9 @@ export default function Home() {
       }
 
       // Track analytics
-      trackEvent('generate', {
+      trackEvent('generation_success', {
         provider,
         model,
-        type: isImageModel ? 'image' : 'text',
       });
     } catch (error: any) {
       setOutput({
@@ -246,34 +244,27 @@ export default function Home() {
     setActiveProjectIdState(projectId);
     setEditingPromptId(null);
     setShowPromptEditor(true);
+    setShowConfigEditor(false);
+    setShowProjectEditor(false);
     setActiveProjectId(projectId);
   };
 
   const handlePromptSelect = (promptId: string, shouldEdit: boolean = false) => {
     const selectedPrompt = getPromptById(promptId);
     if (selectedPrompt) {
-      if (shouldEdit) {
-        // Open in editor for editing
-        setActiveProjectIdState(selectedPrompt.projectId);
-        setEditingPromptId(promptId);
-        setShowPromptEditor(true);
-        setShowConfigEditor(false);
-      } else {
-        // Load the current version's content into the request panel for testing
-        const currentVersion = selectedPrompt.versions.find(v => v.id === selectedPrompt.currentVersionId);
-        if (currentVersion) {
-          setPrompt(currentVersion.content);
-          // Close editors to show request panel
-          setShowPromptEditor(false);
-          setShowConfigEditor(false);
-        }
-      }
+      // Open prompt in editor for viewing/editing
+      setActiveProjectIdState(selectedPrompt.projectId);
+      setEditingPromptId(promptId);
+      setShowPromptEditor(true);
+      setShowConfigEditor(false);
+      setShowProjectEditor(false);
     }
   };
 
-  const handlePromptSave = () => {
-    setShowPromptEditor(false);
-    setEditingPromptId(null);
+  const handlePromptSave = (prompt: Prompt) => {
+    // Keep the editor open and show the saved prompt
+    setEditingPromptId(prompt.id);
+    setShowPromptEditor(true);
     // Refresh sidebar to show updated prompts
     setSidebarKey(prev => prev + 1);
   };
@@ -287,6 +278,8 @@ export default function Home() {
     setActiveProjectIdState(projectId);
     setEditingConfigId(null);
     setShowConfigEditor(true);
+    setShowPromptEditor(false);
+    setShowProjectEditor(false);
     setActiveProjectId(projectId);
   };
 
@@ -356,9 +349,9 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Three-panel layout */}
+      {/* Two-column layout: sidebar | (top panel / bottom panel) */}
       <div className="flex-1 overflow-hidden">
-        <ThreePanelLayout
+        <TwoColumnLayout
           sidebar={
             <Sidebar
               key={sidebarKey}
@@ -370,7 +363,7 @@ export default function Home() {
               onModelConfigSelect={handleModelConfigSelect}
             />
           }
-          requestPanel={
+          topPanel={
             showProjectEditor ? (
               <ProjectEditor
                 project={editingProjectId ? getProjectById(editingProjectId) : undefined}
@@ -393,22 +386,18 @@ export default function Home() {
                 onCancel={handleConfigCancel}
               />
             ) : (
-              <RequestPanel
-                prompt={prompt}
-                onPromptChange={setPrompt}
-                provider={provider}
-                model={model}
-                onProviderChange={setProvider}
-                onModelChange={setModel}
-                onSend={handleSend}
-                isGenerating={isGenerating}
-              />
+              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-800">
+                <div className="text-center text-gray-500 dark:text-gray-400">
+                  <p className="text-lg">Select or create a prompt to get started</p>
+                </div>
+              </div>
             )
           }
-          responsePanel={
+          bottomPanel={
             <ResponsePanel
               output={output}
               isGenerating={isGenerating}
+              projectId={activeProjectId || undefined}
             />
           }
         />

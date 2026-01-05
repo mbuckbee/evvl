@@ -161,7 +161,6 @@ export function saveProject(project: Project): void {
     }
 
     localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-    trackEvent('project_saved', { projectId: project.id });
   }
 }
 
@@ -189,8 +188,6 @@ export function deleteProject(id: string): void {
     deletePromptsByProjectId(id);
     deleteModelConfigsByProjectId(id);
     deleteDataSetsByProjectId(id);
-
-    trackEvent('project_deleted', { projectId: id });
   }
 }
 

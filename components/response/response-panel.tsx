@@ -1,7 +1,11 @@
 'use client';
 
-import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect } from 'react';
+import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon, CogIcon, XMarkIcon, Squares2X2Icon, ViewColumnsIcon, Bars3Icon, SquaresPlusIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
+import Link from 'next/link';
+import { loadApiKeys, loadModelConfigs } from '@/lib/storage';
+import { ProjectModelConfig } from '@/lib/types';
 
 interface ResponsePanelProps {
   output?: {
@@ -13,34 +17,180 @@ interface ResponsePanelProps {
     type?: 'text' | 'image';
   };
   isGenerating?: boolean;
+  projectId?: string;
 }
 
-export default function ResponsePanel({ output, isGenerating = false }: ResponsePanelProps) {
+type LayoutType = 'grid' | 'columns' | 'rows' | 'stacked';
+
+// Map provider to icon name
+const providerIconMap: Record<string, string> = {
+  openai: 'chatgpt',
+  anthropic: 'claude',
+  gemini: 'gemini',
+  openrouter: 'openrouter',
+};
+
+export default function ResponsePanel({ output, isGenerating = false, projectId }: ResponsePanelProps) {
+  const [apiKeys, setApiKeys] = useState<Record<string, string | undefined>>({});
+  const [layout, setLayout] = useState<LayoutType>('grid');
+  const [modelConfigs, setModelConfigs] = useState<ProjectModelConfig[]>([]);
+
+  useEffect(() => {
+    setApiKeys(loadApiKeys());
+    setModelConfigs(loadModelConfigs());
+  }, []);
+
   if (!output && !isGenerating) {
+    // Filter configs by project if projectId is provided
+    const filteredConfigs = projectId
+      ? modelConfigs.filter(c => c.projectId === projectId)
+      : modelConfigs;
+
+    const layoutOptions = [
+      { type: 'grid' as LayoutType, icon: Squares2X2Icon, label: 'Grid' },
+      { type: 'columns' as LayoutType, icon: ViewColumnsIcon, label: 'Columns' },
+      { type: 'rows' as LayoutType, icon: Bars3Icon, label: 'Rows' },
+      { type: 'stacked' as LayoutType, icon: SquaresPlusIcon, label: 'Stacked' },
+    ];
+
     return (
-      <div className="h-full flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center max-w-md px-6">
-          <div className="mx-auto w-16 h-16 mb-4 text-gray-300 dark:text-gray-600">
-            <svg
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"
-              />
-            </svg>
+      <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Responses</h2>
+
+          {/* Layout Switcher */}
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            {layoutOptions.map((option) => {
+              const IconComponent = option.icon;
+              return (
+                <button
+                  key={option.type}
+                  onClick={() => setLayout(option.type)}
+                  className={`p-2 rounded-md transition-colors ${
+                    layout === option.type
+                      ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  }`}
+                  title={option.label}
+                >
+                  <IconComponent className="h-5 w-5" />
+                </button>
+              );
+            })}
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No response yet
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Enter a prompt and click Send to get a response from your selected AI model.
-          </p>
+        </div>
+
+        {/* Model Configuration Cards */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {filteredConfigs.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center text-gray-500 dark:text-gray-400">
+                <p className="text-lg mb-2">No model configs yet</p>
+                <p className="text-sm">Create a model config to get started</p>
+              </div>
+            </div>
+          ) : (
+            <div className={
+              layout === 'grid' ? 'grid grid-cols-2 gap-4' :
+              layout === 'columns' ? 'grid grid-cols-4 gap-4' :
+              layout === 'rows' ? 'flex flex-col gap-4' :
+              'flex flex-col gap-4'
+            }>
+              {filteredConfigs.map((config) => {
+                const hasKey = !!apiKeys[config.provider];
+                const isCompact = layout === 'columns';
+                const isRow = layout === 'rows';
+                const iconName = providerIconMap[config.provider] || 'openrouter';
+
+                return (
+                  <div
+                    key={config.id}
+                    className={`border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 ${
+                      isCompact ? 'p-4' : 'p-6'
+                    } ${isRow ? 'flex items-center' : ''}`}
+                  >
+                    {/* Header with icon, name, and actions */}
+                    <div className={`flex items-start justify-between ${isRow ? 'flex-1' : 'mb-4'}`}>
+                      <div className="flex items-center gap-3">
+                        {/* Light mode icon */}
+                        <Image
+                          src={`/series_icon/light/${iconName}.svg`}
+                          alt={config.name}
+                          width={32}
+                          height={32}
+                          className={`dark:hidden ${isCompact ? 'w-6 h-6' : 'w-8 h-8'}`}
+                        />
+                        {/* Dark mode icon */}
+                        <Image
+                          src={`/series_icon/dark/${iconName}.svg`}
+                          alt={config.name}
+                          width={32}
+                          height={32}
+                          className={`hidden dark:block ${isCompact ? 'w-6 h-6' : 'w-8 h-8'}`}
+                        />
+                        <div>
+                          <h3 className={`font-semibold text-gray-900 dark:text-white ${isCompact ? 'text-sm' : ''}`}>
+                            {config.name}
+                          </h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {config.model}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Link href="/settings">
+                          <CogIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" />
+                        </Link>
+                        <XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" />
+                      </div>
+                    </div>
+
+                    {/* API Key Status */}
+                    {!isRow && (
+                      <div className={`text-center ${isCompact ? 'py-4' : 'py-8'}`}>
+                        {hasKey ? (
+                          <div className="text-sm text-green-600 dark:text-green-400">
+                            ✓ API key configured
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                              API key not configured
+                            </p>
+                            <Link
+                              href="/settings"
+                              className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                            >
+                              Configure {config.provider} →
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Row layout status */}
+                    {isRow && (
+                      <div className="ml-auto flex items-center">
+                        {hasKey ? (
+                          <div className="text-sm text-green-600 dark:text-green-400">
+                            ✓ Configured
+                          </div>
+                        ) : (
+                          <Link
+                            href="/settings"
+                            className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                          >
+                            Configure →
+                          </Link>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     );
