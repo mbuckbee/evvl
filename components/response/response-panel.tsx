@@ -145,7 +145,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
 
         {/* Model Configuration Cards */}
         <div className="flex-1 overflow-y-auto p-6">
-          {filteredConfigs.length === 0 ? (
+          {filteredConfigs.length === 0 && !showNewConfigEditor ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-gray-500 dark:text-gray-400">
                 <p className="text-lg mb-2">No model configs yet</p>
