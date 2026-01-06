@@ -28,6 +28,7 @@ interface ResponsePanelProps {
   generatingConfigs?: Record<string, boolean>;
   currentPrompt?: Prompt;
   onVersionChange?: (configId: string, versionId: string) => void;
+  onConfigSave?: (configId: string) => void;
 }
 
 type LayoutType = 'grid' | 'columns' | 'rows' | 'stacked';
@@ -40,7 +41,7 @@ const providerIconMap: Record<string, string> = {
   openrouter: 'openrouter',
 };
 
-export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId, showNewConfigEditor, onNewConfigClose, configResponses = {}, generatingConfigs = {}, currentPrompt, onVersionChange }: ResponsePanelProps) {
+export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId, showNewConfigEditor, onNewConfigClose, configResponses = {}, generatingConfigs = {}, currentPrompt, onVersionChange, onConfigSave }: ResponsePanelProps) {
   const [apiKeys, setApiKeys] = useState<ApiKeys>({});
   const [layout, setLayout] = useState<LayoutType>('grid');
   const [modelConfigs, setModelConfigs] = useState<ProjectModelConfig[]>([]);
@@ -192,6 +193,9 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                         onSave={() => {
                           setEditingConfigId(null);
                           setModelConfigs(loadModelConfigs());
+                          if (onConfigSave) {
+                            onConfigSave(config.id);
+                          }
                         }}
                         onCancel={() => setEditingConfigId(null)}
                       />

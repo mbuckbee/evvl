@@ -425,6 +425,117 @@ export default function Home() {
     setSelectedVersions(prev => ({ ...prev, [configId]: versionId }));
   };
 
+  const handleConfigSave = async (configId: string) => {
+    // Only run inference if there's a current prompt loaded
+    if (!editingPromptId || !activeProjectId) return;
+
+    const prompt = getPromptById(editingPromptId);
+    if (!prompt) return;
+
+    const config = getModelConfigById(configId);
+    if (!config) return;
+
+    const apiKey = apiKeys[config.provider];
+    if (!apiKey) return; // Skip if no API key
+
+    // Get the latest version
+    const latestVersion = prompt.versions.reduce((latest, current) =>
+      current.versionNumber > latest.versionNumber ? current : latest
+    , prompt.versions[0]);
+
+    // Get the selected version for this config
+    const selectedVersionId = selectedVersions[config.id];
+    let selectedVersion;
+
+    if (selectedVersionId === 'latest' || !selectedVersionId) {
+      selectedVersion = latestVersion;
+    } else {
+      selectedVersion = prompt.versions.find(v => v.id === selectedVersionId) || latestVersion;
+    }
+
+    const promptContent = selectedVersion?.content || '';
+
+    // Detect if this is an image generation model
+    const isImageModel = config.model.includes('dall-e') ||
+                        config.model.includes('-image') ||
+                        config.model.includes('stable-diffusion') ||
+                        config.model.includes('midjourney');
+
+    // Set loading state
+    setGeneratingConfigs(prev => ({ ...prev, [config.id]: true }));
+
+    try {
+      const data = isImageModel
+        ? await apiClient.generateImage({
+            prompt: promptContent,
+            provider: config.provider,
+            model: config.model,
+            apiKey: apiKey,
+          })
+        : await apiClient.generateText({
+            prompt: promptContent,
+            provider: config.provider,
+            model: config.model,
+            apiKey: apiKey,
+            ...config.parameters,
+          });
+
+      if (isApiError(data)) {
+        setConfigResponses(prev => ({
+          ...prev,
+          [config.id]: {
+            id: uuidv4(),
+            modelConfig: { provider: config.provider, model: config.model, label: config.name },
+            type: isImageModel ? 'image' : 'text',
+            content: '',
+            error: data.error,
+            timestamp: Date.now(),
+          }
+        }));
+      } else if ('imageUrl' in data) {
+        setConfigResponses(prev => ({
+          ...prev,
+          [config.id]: {
+            id: uuidv4(),
+            modelConfig: { provider: config.provider, model: config.model, label: config.name },
+            type: 'image',
+            content: data.revisedPrompt || promptContent,
+            imageUrl: data.imageUrl,
+            latency: data.latency,
+            timestamp: Date.now(),
+          }
+        }));
+      } else if ('content' in data) {
+        setConfigResponses(prev => ({
+          ...prev,
+          [config.id]: {
+            id: uuidv4(),
+            modelConfig: { provider: config.provider, model: config.model, label: config.name },
+            type: 'text',
+            content: data.content,
+            tokens: data.tokens,
+            latency: data.latency,
+            timestamp: Date.now(),
+          }
+        }));
+      }
+    } catch (error: any) {
+      setConfigResponses(prev => ({
+        ...prev,
+        [config.id]: {
+          id: uuidv4(),
+          modelConfig: { provider: config.provider, model: config.model, label: config.name },
+          type: isImageModel ? 'image' : 'text',
+          content: '',
+          error: error.message || 'Network error',
+          timestamp: Date.now(),
+        }
+      }));
+    } finally {
+      setGeneratingConfigs(prev => ({ ...prev, [config.id]: false }));
+    }
+  };
+
   const handlePromptCancel = () => {
     setShowPromptEditor(false);
     setEditingPromptId(null);
@@ -596,6 +707,7 @@ export default function Home() {
               generatingConfigs={generatingConfigs}
               currentPrompt={editingPromptId ? getPromptById(editingPromptId) : undefined}
               onVersionChange={handleVersionChange}
+              onConfigSave={handleConfigSave}
             />
           }
         />
