@@ -425,7 +425,7 @@ export default function Home() {
     setSelectedVersions(prev => ({ ...prev, [configId]: versionId }));
   };
 
-  const handleConfigSave = async (configId: string) => {
+  const handleConfigSaveAndRefresh = async (configId: string) => {
     // Only run inference if there's a current prompt loaded
     if (!editingPromptId || !activeProjectId) return;
 
@@ -707,7 +707,7 @@ export default function Home() {
               generatingConfigs={generatingConfigs}
               currentPrompt={editingPromptId ? getPromptById(editingPromptId) : undefined}
               onVersionChange={handleVersionChange}
-              onConfigSave={handleConfigSave}
+              onConfigSave={handleConfigSaveAndRefresh}
             />
           }
         />
