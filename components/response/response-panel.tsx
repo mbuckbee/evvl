@@ -340,6 +340,30 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
                                 <p className="text-xs text-red-700 dark:text-red-300">{configResponses[config.id].error}</p>
                               </div>
+                            ) : configResponses[config.id].type === 'image' && configResponses[config.id].imageUrl ? (
+                              <>
+                                {/* Image display */}
+                                <div className="bg-gray-100 dark:bg-gray-800 rounded overflow-hidden">
+                                  <Image
+                                    src={configResponses[config.id].imageUrl!}
+                                    alt="Generated image"
+                                    width={512}
+                                    height={512}
+                                    className="w-full h-auto"
+                                    unoptimized
+                                  />
+                                </div>
+                                {configResponses[config.id].content && (
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 italic">
+                                    {configResponses[config.id].content}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                  {configResponses[config.id].latency !== undefined && (
+                                    <span>{(configResponses[config.id].latency! / 1000).toFixed(2)}s</span>
+                                  )}
+                                </div>
+                              </>
                             ) : (
                               <>
                                 <div className="text-xs text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700 max-h-32 overflow-y-auto">

@@ -336,17 +336,30 @@ export default function Home() {
 
       const promptContent = selectedVersion?.content || '';
 
+      // Detect if this is an image generation model
+      const isImageModel = config.model.includes('dall-e') ||
+                          config.model.includes('-image') ||
+                          config.model.includes('stable-diffusion') ||
+                          config.model.includes('midjourney');
+
       // Set loading state
       setGeneratingConfigs(prev => ({ ...prev, [config.id]: true }));
 
       try {
-        const data = await apiClient.generateText({
-          prompt: promptContent,
-          provider: config.provider,
-          model: config.model,
-          apiKey: apiKey,
-          ...config.parameters,
-        });
+        const data = isImageModel
+          ? await apiClient.generateImage({
+              prompt: promptContent,
+              provider: config.provider,
+              model: config.model,
+              apiKey: apiKey,
+            })
+          : await apiClient.generateText({
+              prompt: promptContent,
+              provider: config.provider,
+              model: config.model,
+              apiKey: apiKey,
+              ...config.parameters,
+            });
 
         if (isApiError(data)) {
           // Error response
@@ -355,14 +368,28 @@ export default function Home() {
             [config.id]: {
               id: uuidv4(),
               modelConfig: { provider: config.provider, model: config.model, label: config.name },
-              type: 'text',
+              type: isImageModel ? 'image' : 'text',
               content: '',
               error: data.error,
               timestamp: Date.now(),
             }
           }));
+        } else if ('imageUrl' in data) {
+          // Image generation success response
+          setConfigResponses(prev => ({
+            ...prev,
+            [config.id]: {
+              id: uuidv4(),
+              modelConfig: { provider: config.provider, model: config.model, label: config.name },
+              type: 'image',
+              content: data.revisedPrompt || promptContent,
+              imageUrl: data.imageUrl,
+              latency: data.latency,
+              timestamp: Date.now(),
+            }
+          }));
         } else if ('content' in data) {
-          // Success response
+          // Text generation success response
           setConfigResponses(prev => ({
             ...prev,
             [config.id]: {
@@ -382,7 +409,7 @@ export default function Home() {
           [config.id]: {
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
-            type: 'text',
+            type: isImageModel ? 'image' : 'text',
             content: '',
             error: error.message || 'Network error',
             timestamp: Date.now(),
