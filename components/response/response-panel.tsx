@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon, Cog6ToothIcon, XMarkIcon, Squares2X2Icon, ViewColumnsIcon, Bars3Icon, SquaresPlusIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon, Cog6ToothIcon, XMarkIcon, Squares2X2Icon, ViewColumnsIcon, SquaresPlusIcon, ChevronDownIcon, PlusIcon, TableCellsIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import Link from 'next/link';
-import { loadApiKeys, loadModelConfigs, deleteModelConfig, getModelConfigById } from '@/lib/storage';
-import { ProjectModelConfig, Prompt, ApiKeys } from '@/lib/types';
+import { loadApiKeys, loadModelConfigs, deleteModelConfig, getModelConfigById, getDataSetsByProjectId } from '@/lib/storage';
+import { ProjectModelConfig, Prompt, ApiKeys, DataSet } from '@/lib/types';
 import ConfigEditor from '@/components/model-configs/config-editor';
 
 import { AIOutput } from '@/lib/types';
@@ -24,14 +24,19 @@ interface ResponsePanelProps {
   highlightedConfigId?: string;
   showNewConfigEditor?: boolean;
   onNewConfigClose?: () => void;
-  configResponses?: Record<string, AIOutput>;
+  configResponses?: Record<string, AIOutput[]>;
   generatingConfigs?: Record<string, boolean>;
   currentPrompt?: Prompt;
   onVersionChange?: (configId: string, versionId: string) => void;
   onConfigSave?: (configId: string) => void;
+  onDataSetChange?: (dataSetId: string | null) => void;
+  selectedDataSetId?: string | null;
+  selectedDataSet?: DataSet | null;
+  onNewDataSet?: (projectId: string) => void;
+  onNewModelConfig?: (projectId: string) => void;
 }
 
-type LayoutType = 'grid' | 'columns' | 'rows' | 'stacked';
+type LayoutType = 'grid' | 'columns' | 'stacked' | 'table';
 
 // Map provider to icon name
 const providerIconMap: Record<string, string> = {
@@ -41,17 +46,25 @@ const providerIconMap: Record<string, string> = {
   openrouter: 'openrouter',
 };
 
-export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId, showNewConfigEditor, onNewConfigClose, configResponses = {}, generatingConfigs = {}, currentPrompt, onVersionChange, onConfigSave }: ResponsePanelProps) {
+export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId, showNewConfigEditor, onNewConfigClose, configResponses = {}, generatingConfigs = {}, currentPrompt, onVersionChange, onConfigSave, onDataSetChange, selectedDataSetId: propSelectedDataSetId, selectedDataSet, onNewDataSet, onNewModelConfig }: ResponsePanelProps) {
   const [apiKeys, setApiKeys] = useState<ApiKeys>({});
   const [layout, setLayout] = useState<LayoutType>('grid');
   const [modelConfigs, setModelConfigs] = useState<ProjectModelConfig[]>([]);
   const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
   const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({});
   const [openVersionDropdowns, setOpenVersionDropdowns] = useState<Record<string, boolean>>({});
+  const [dataSets, setDataSets] = useState<DataSet[]>([]);
+  const [isDataSetDropdownOpen, setIsDataSetDropdownOpen] = useState(false);
+
+  const selectedDataSetId = propSelectedDataSetId ?? null;
 
   useEffect(() => {
     setApiKeys(loadApiKeys());
     setModelConfigs(loadModelConfigs());
+    if (projectId) {
+      const projectDataSets = getDataSetsByProjectId(projectId);
+      setDataSets(projectDataSets);
+    }
   }, [projectId]); // Reload when projectId changes
 
   // Initialize selected versions to "latest" when prompt changes
@@ -97,6 +110,9 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
       if (!target.closest('.version-dropdown')) {
         setOpenVersionDropdowns({});
       }
+      if (!target.closest('.dataset-dropdown')) {
+        setIsDataSetDropdownOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -112,8 +128,8 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
     const layoutOptions = [
       { type: 'grid' as LayoutType, icon: Squares2X2Icon, label: 'Grid' },
       { type: 'columns' as LayoutType, icon: ViewColumnsIcon, label: 'Columns' },
-      { type: 'rows' as LayoutType, icon: Bars3Icon, label: 'Rows' },
       { type: 'stacked' as LayoutType, icon: SquaresPlusIcon, label: 'Stacked' },
+      { type: 'table' as LayoutType, icon: TableCellsIcon, label: 'Table' },
     ];
 
     return (
@@ -122,29 +138,98 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Responses</h2>
 
-          {/* Layout Switcher */}
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <div className="flex items-center gap-3">
+            {/* Add Model Config Button */}
+            {projectId && onNewModelConfig && (
+              <button
+                onClick={() => onNewModelConfig(projectId)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 rounded-md transition-colors"
+              >
+                <PlusIcon className="h-4 w-4" />
+                <span>Add Model Config</span>
+              </button>
+            )}
+
+            {/* Data Set Dropdown or Add Button */}
+            {dataSets.length > 0 ? (
+              <div className="flex items-center gap-2 dataset-dropdown">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Dataset:</span>
+                <div className="relative">
+                  <button
+                    onClick={() => setIsDataSetDropdownOpen(!isDataSetDropdownOpen)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <span>{selectedDataSetId ? dataSets.find(ds => ds.id === selectedDataSetId)?.name : 'No data set'}</span>
+                    <ChevronDownIcon className="h-4 w-4" />
+                  </button>
+
+                  {isDataSetDropdownOpen && (
+                    <div className="absolute top-full right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-10">
+                      <button
+                        onClick={() => {
+                          if (onDataSetChange) onDataSetChange(null);
+                          setIsDataSetDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        No data set
+                      </button>
+                      {dataSets.map(dataSet => (
+                        <button
+                          key={dataSet.id}
+                          onClick={() => {
+                            if (onDataSetChange) onDataSetChange(dataSet.id);
+                            setIsDataSetDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                            selectedDataSetId === dataSet.id
+                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {dataSet.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : projectId && onNewDataSet ? (
+              <button
+                onClick={() => onNewDataSet(projectId)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 rounded-md transition-colors"
+              >
+                <PlusIcon className="h-4 w-4" />
+                <span>Add Dataset</span>
+              </button>
+            ) : null}
+
+            {/* Layout Switcher */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             {layoutOptions.map((option) => {
               const IconComponent = option.icon;
               return (
                 <button
                   key={option.type}
                   onClick={() => setLayout(option.type)}
-                  className={`p-2 rounded-md transition-colors ${
+                  className={`p-2 rounded-md transition-colors relative group ${
                     layout === option.type
                       ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                   }`}
-                  title={option.label}
                 >
                   <IconComponent className="h-5 w-5" />
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap pointer-events-none">
+                    {option.label}
+                  </span>
                 </button>
               );
             })}
+            </div>
           </div>
         </div>
 
-        {/* Model Configuration Cards */}
+        {/* Model Configuration Cards or Table */}
         <div className="flex-1 overflow-y-auto p-6">
           {filteredConfigs.length === 0 && !showNewConfigEditor ? (
             <div className="flex items-center justify-center h-full">
@@ -153,11 +238,150 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                 <p className="text-sm">Create a model config to get started</p>
               </div>
             </div>
+          ) : layout === 'table' ? (
+            /* Table View - Each row is a dataset item (or single row if no dataset) with all model responses */
+            <div className="space-y-6">
+              {(selectedDataSetId && selectedDataSet && selectedDataSet.items.length > 0 ? selectedDataSet.items : [{ id: 'single', variables: {} }]).map((item, itemIndex) => {
+                const firstColumnName = Object.keys(item.variables)[0];
+                const label = firstColumnName && selectedDataSet ? item.variables[firstColumnName] : (selectedDataSet ? `Row ${itemIndex + 1}` : null);
+
+                return (
+                  <div key={item.id}>
+                    {/* Dataset Item Label - only show if there's a dataset */}
+                    {label && (
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 px-2">
+                        {label}
+                      </h3>
+                    )}
+
+                    {/* Model Config Responses in a row */}
+                    <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${filteredConfigs.length}, minmax(300px, 1fr))` }}>
+                      {filteredConfigs.map((config) => {
+                        // If no dataset, show the first response (index 0), otherwise show response for this item
+                        const responseIndex = selectedDataSet ? itemIndex : 0;
+                        const response = configResponses[config.id]?.[responseIndex];
+                        const isGenerating = generatingConfigs[config.id];
+                        const hasKey = !!apiKeys[config.provider];
+                        const iconName = providerIconMap[config.provider] || 'openrouter';
+
+                        return (
+                          <div
+                            key={config.id}
+                            className="border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 p-6"
+                          >
+                            {/* Header with model config info */}
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex items-center gap-3">
+                                <Image
+                                  src={`/series_icon/light/${iconName}.svg`}
+                                  alt={config.name}
+                                  width={32}
+                                  height={32}
+                                  className="dark:hidden w-8 h-8"
+                                />
+                                <Image
+                                  src={`/series_icon/dark/${iconName}.svg`}
+                                  alt={config.name}
+                                  width={32}
+                                  height={32}
+                                  className="hidden dark:block w-8 h-8"
+                                />
+                                <div>
+                                  <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                                    {config.name}
+                                  </h4>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {config.model}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Response Content */}
+                            <div className="py-4">
+                              {isGenerating ? (
+                                <div className="text-center py-8">
+                                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mb-2" />
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">Generating...</p>
+                                </div>
+                              ) : response ? (
+                                <div>
+                                  {response.error ? (
+                                    <div className="text-red-600 dark:text-red-400 text-sm">
+                                      Error: {response.error}
+                                    </div>
+                                  ) : response.type === 'image' && response.imageUrl ? (
+                                    <div>
+                                      <img
+                                        src={response.imageUrl}
+                                        alt="Generated"
+                                        className="rounded-lg mb-3 w-full h-auto"
+                                      />
+                                      {response.content && (
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 italic mb-2">
+                                          {response.content}
+                                        </p>
+                                      )}
+                                      {response.latency && (
+                                        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                          <ClockIcon className="h-3 w-3" />
+                                          {response.latency}s
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <div className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap mb-3">
+                                        {response.content}
+                                      </div>
+                                      <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                        {response.tokens && (
+                                          <div className="flex items-center gap-1">
+                                            <CpuChipIcon className="h-3 w-3" />
+                                            {response.tokens}
+                                          </div>
+                                        )}
+                                        {response.latency && (
+                                          <div className="flex items-center gap-1">
+                                            <ClockIcon className="h-3 w-3" />
+                                            {response.latency}s
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : hasKey ? (
+                                <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                                  Save and refresh prompt to view output
+                                </div>
+                              ) : (
+                                <div className="text-center">
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                                    API key not configured
+                                  </p>
+                                  <Link
+                                    href="/settings"
+                                    className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                                  >
+                                    Configure {config.provider} →
+                                  </Link>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
+            /* Card Views */
             <div className={
               layout === 'grid' ? 'grid grid-cols-2 gap-4' :
               layout === 'columns' ? 'grid grid-cols-4 gap-4' :
-              layout === 'rows' ? 'flex flex-col gap-4' :
               'flex flex-col gap-4'
             }>
               {/* New Config Editor - shown first when creating */}
@@ -178,7 +402,6 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
               {filteredConfigs.map((config) => {
                 const hasKey = !!apiKeys[config.provider];
                 const isCompact = layout === 'columns';
-                const isRow = layout === 'rows';
                 const iconName = providerIconMap[config.provider] || 'openrouter';
                 const isHighlighted = highlightedConfigId === config.id;
                 const isEditing = editingConfigId === config.id;
@@ -208,12 +431,12 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                     key={config.id}
                     className={`border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 ${
                       isCompact ? 'p-4' : 'p-6'
-                    } ${isRow ? 'flex items-center' : ''} ${
+                    } ${
                       isHighlighted ? 'ring-4 ring-blue-500 animate-pulse' : ''
                     } transition-all duration-300`}
                   >
                     {/* Header with icon, name, and actions */}
-                    <div className={`flex items-start justify-between ${isRow ? 'flex-1' : 'mb-4'}`}>
+                    <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         {/* Light mode icon */}
                         <Image
@@ -313,81 +536,102 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
 
                         <button
                           onClick={() => setEditingConfigId(config.id)}
-                          className="p-0 border-0 bg-transparent"
-                          title="Edit model config"
+                          className="p-0 border-0 bg-transparent relative group"
                         >
                           <Cog6ToothIcon className="h-5 w-5 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-100 cursor-pointer" />
+                          <span className="absolute bottom-full right-0 mb-2 hidden group-hover:block px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap pointer-events-none">
+                            Modify config
+                          </span>
                         </button>
                         <button
                           onClick={() => handleDeleteConfig(config.id, config.name)}
-                          className="p-0 border-0 bg-transparent"
-                          title="Remove model config"
+                          className="p-0 border-0 bg-transparent relative group"
                         >
                           <XMarkIcon className="h-5 w-5 text-gray-400 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-colors" />
+                          <span className="absolute bottom-full right-0 mb-2 hidden group-hover:block px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap pointer-events-none">
+                            Remove config
+                          </span>
                         </button>
                       </div>
                     </div>
 
                     {/* Response Content or Status */}
-                    {!isRow && (
-                      <div className={`${isCompact ? 'py-4' : 'py-4'}`}>
+                    <div className={`${isCompact ? 'py-4' : 'py-4'}`}>
                         {generatingConfigs[config.id] ? (
                           // Loading state
                           <div className="text-center py-8">
                             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mb-2" />
                             <p className="text-xs text-gray-600 dark:text-gray-400">Generating...</p>
                           </div>
-                        ) : configResponses[config.id] ? (
-                          // Show response
-                          <div className="space-y-2">
-                            {configResponses[config.id].error ? (
-                              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
-                                <p className="text-xs text-red-700 dark:text-red-300">{configResponses[config.id].error}</p>
-                              </div>
-                            ) : configResponses[config.id].type === 'image' && configResponses[config.id].imageUrl ? (
-                              <>
-                                {/* Image display */}
-                                <div className="bg-gray-100 dark:bg-gray-800 rounded overflow-hidden">
-                                  <Image
-                                    src={configResponses[config.id].imageUrl!}
-                                    alt="Generated image"
-                                    width={512}
-                                    height={512}
-                                    className="w-full h-auto"
-                                    unoptimized
-                                  />
-                                </div>
-                                {configResponses[config.id].content && (
-                                  <div className="text-xs text-gray-600 dark:text-gray-400 italic">
-                                    {configResponses[config.id].content}
+                        ) : configResponses[config.id] && configResponses[config.id].length > 0 ? (
+                          // Show responses
+                          <div className="space-y-4">
+                            {configResponses[config.id].map((response, index) => {
+                              // Get label from first column of data set
+                              let label = `Row ${index + 1}`;
+                              if (selectedDataSet && selectedDataSet.items[index]) {
+                                const item = selectedDataSet.items[index];
+                                const firstColumnName = Object.keys(item.variables)[0];
+                                if (firstColumnName) {
+                                  label = item.variables[firstColumnName] || label;
+                                }
+                              }
+
+                              return (
+                              <div key={index} className="space-y-2">
+                                {selectedDataSetId && configResponses[config.id].length > 1 && (
+                                  <div className="text-xs font-medium text-gray-600 dark:text-gray-400 pb-1">
+                                    {label}
                                   </div>
                                 )}
-                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                                  {configResponses[config.id].latency !== undefined && (
-                                    <span>{(configResponses[config.id].latency! / 1000).toFixed(2)}s</span>
-                                  )}
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <div className="text-xs text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700 max-h-32 overflow-y-auto">
-                                  {configResponses[config.id].content}
-                                </div>
-                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                                  {configResponses[config.id].tokens !== undefined && (
-                                    <span>{configResponses[config.id].tokens} tokens</span>
-                                  )}
-                                  {configResponses[config.id].latency !== undefined && (
-                                    <span>{(configResponses[config.id].latency! / 1000).toFixed(2)}s</span>
-                                  )}
-                                </div>
-                              </>
-                            )}
+                                {response.error ? (
+                                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                                    <p className="text-xs text-red-700 dark:text-red-300">{response.error}</p>
+                                  </div>
+                                ) : response.type === 'image' && response.imageUrl ? (
+                                  <>
+                                    {/* Image display */}
+                                    <div className="bg-gray-100 dark:bg-gray-800 rounded overflow-hidden">
+                                      <img
+                                        src={response.imageUrl}
+                                        alt="Generated image"
+                                        className="w-full h-auto"
+                                      />
+                                    </div>
+                                    {response.content && (
+                                      <div className="text-xs text-gray-600 dark:text-gray-400 italic">
+                                        {response.content}
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                      {response.latency !== undefined && (
+                                        <span>{(response.latency! / 1000).toFixed(2)}s</span>
+                                      )}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="text-xs text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700 max-h-32 overflow-y-auto">
+                                      {response.content}
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                      {response.tokens !== undefined && (
+                                        <span>{response.tokens} tokens</span>
+                                      )}
+                                      {response.latency !== undefined && (
+                                        <span>{(response.latency! / 1000).toFixed(2)}s</span>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                            })}
                           </div>
                         ) : hasKey ? (
                           // API key configured, waiting for generation
                           <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-                            Ready to generate
+                            Save and refresh prompt to view output
                           </div>
                         ) : (
                           // No API key
@@ -404,25 +648,6 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                           </div>
                         )}
                       </div>
-                    )}
-
-                    {/* Row layout status */}
-                    {isRow && (
-                      <div className="ml-auto flex items-center">
-                        {hasKey ? (
-                          <div className="text-sm text-green-600 dark:text-green-400">
-                            ✓ Configured
-                          </div>
-                        ) : (
-                          <Link
-                            href="/settings"
-                            className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
-                          >
-                            Configure →
-                          </Link>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })}

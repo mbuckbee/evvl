@@ -89,20 +89,26 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
   };
 
   const handleProjectClick = (projectId: string) => {
-    // Expand the project folder
-    if (!openProjects.includes(projectId)) {
+    // Toggle the project folder
+    const isOpen = openProjects.includes(projectId);
+
+    if (isOpen) {
+      // Close the project
+      setOpenProjects(prev => prev.filter(id => id !== projectId));
+    } else {
+      // Open the project
       setOpenProjects(prev => [...prev, projectId]);
-    }
 
-    // Expand the Prompts section by default
-    const promptsSection = `${projectId}-prompts`;
-    if (!openSections.includes(promptsSection)) {
-      setOpenSections(prev => [...prev, promptsSection]);
-    }
+      // Expand the Prompts section by default when opening
+      const promptsSection = `${projectId}-prompts`;
+      if (!openSections.includes(promptsSection)) {
+        setOpenSections(prev => [...prev, promptsSection]);
+      }
 
-    // Load the project
-    if (onProjectSelect) {
-      onProjectSelect(projectId);
+      // Load the project
+      if (onProjectSelect) {
+        onProjectSelect(projectId);
+      }
     }
   };
 

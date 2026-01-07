@@ -11,9 +11,10 @@ interface PromptVersionViewProps {
   onSaveAsNewVersion?: (content: string, versionNote?: string) => void;
   onNameUpdate?: (name: string) => void;
   onSaveAndRefresh?: (content: string) => void;
+  highlighted?: boolean;
 }
 
-export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNewVersion, onNameUpdate, onSaveAndRefresh }: PromptVersionViewProps) {
+export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNewVersion, onNameUpdate, onSaveAndRefresh, highlighted }: PromptVersionViewProps) {
   // Always show the latest version (highest version number)
   const latestVersion = prompt.versions.reduce((latest, current) =>
     current.versionNumber > latest.versionNumber ? current : latest
@@ -73,7 +74,9 @@ export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNe
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-800">
+    <div className={`h-full flex flex-col bg-gray-50 dark:bg-gray-800 border-4 ${
+      highlighted ? 'border-blue-500' : 'border-transparent'
+    } transition-all duration-300`}>
       <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         {isEditingName ? (
           <div className="flex items-center gap-2 flex-1">

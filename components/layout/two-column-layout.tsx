@@ -9,7 +9,7 @@ interface TwoColumnLayoutProps {
 }
 
 export default function TwoColumnLayout({ sidebar, topPanel, bottomPanel }: TwoColumnLayoutProps) {
-  const [topHeight, setTopHeight] = useState(30); // Fixed 30% by default
+  const [topHeight, setTopHeight] = useState(40); // 40% by default
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -20,15 +20,16 @@ export default function TwoColumnLayout({ sidebar, topPanel, bottomPanel }: TwoC
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging || !containerRef.current) return;
+      if (!containerRef.current || !isDragging) return;
 
       const container = containerRef.current;
       const containerRect = container.getBoundingClientRect();
       const containerHeight = containerRect.height;
       const mouseY = e.clientY - containerRect.top;
+      const mousePercent = (mouseY / containerHeight) * 100;
 
-      // Calculate percentage (constrain between 20% and 80%)
-      const newTopHeight = Math.min(Math.max((mouseY / containerHeight) * 100, 20), 80);
+      // Constrain between 20% and 80%
+      const newTopHeight = Math.min(Math.max(mousePercent, 20), 80);
       setTopHeight(newTopHeight);
     };
 
@@ -47,6 +48,8 @@ export default function TwoColumnLayout({ sidebar, topPanel, bottomPanel }: TwoC
     };
   }, [isDragging]);
 
+  const bottomHeight = 100 - topHeight;
+
   return (
     <div className="h-full flex">
       {/* Left Sidebar */}
@@ -54,9 +57,9 @@ export default function TwoColumnLayout({ sidebar, topPanel, bottomPanel }: TwoC
         {sidebar}
       </div>
 
-      {/* Right Side - Split Top/Bottom */}
+      {/* Right Side - Split Two Panels */}
       <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Panel - Prompt/Editor */}
+        {/* Top Panel - Prompt/Config/Project Editor */}
         <div
           style={{ height: `${topHeight}%` }}
           className="overflow-auto border-b border-gray-200 dark:border-gray-700"
@@ -72,9 +75,9 @@ export default function TwoColumnLayout({ sidebar, topPanel, bottomPanel }: TwoC
           }`}
         />
 
-        {/* Bottom Panel - Response */}
+        {/* Bottom Panel - Responses or Data Set Editor */}
         <div
-          style={{ height: `${100 - topHeight}%` }}
+          style={{ height: `${bottomHeight}%` }}
           className="overflow-auto"
         >
           {bottomPanel}

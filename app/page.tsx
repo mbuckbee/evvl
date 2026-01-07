@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects, getPromptsByProjectId, getModelConfigsByProjectId } from '@/lib/storage';
-import { ApiKeys, AIOutput, Prompt, ProjectModelConfig, Project } from '@/lib/types';
+import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects, getPromptsByProjectId, getModelConfigsByProjectId, getDataSetById, getDataSetsByProjectId } from '@/lib/storage';
+import { ApiKeys, AIOutput, Prompt, ProjectModelConfig, Project, DataSet } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
 import { trackEvent } from '@/lib/analytics';
@@ -14,6 +14,7 @@ import ResponsePanel from '@/components/response/response-panel';
 import PromptEditor from '@/components/prompts/prompt-editor';
 import ConfigEditor from '@/components/model-configs/config-editor';
 import ProjectEditor from '@/components/projects/project-editor';
+import DataSetEditor from '@/components/data-sets/data-set-editor';
 
 export default function Home() {
   // State management
@@ -32,13 +33,17 @@ export default function Home() {
   const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
   const [showProjectEditor, setShowProjectEditor] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [showDataSetEditor, setShowDataSetEditor] = useState(false);
+  const [editingDataSetId, setEditingDataSetId] = useState<string | null>(null);
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
   const [sidebarKey, setSidebarKey] = useState(0);
   const [highlightedConfigId, setHighlightedConfigId] = useState<string | null>(null);
+  const [highlightPromptEditor, setHighlightPromptEditor] = useState(false);
   const [showNewConfigInResponse, setShowNewConfigInResponse] = useState(false);
-  const [configResponses, setConfigResponses] = useState<Record<string, AIOutput>>({});
+  const [configResponses, setConfigResponses] = useState<Record<string, AIOutput[]>>({});
   const [generatingConfigs, setGeneratingConfigs] = useState<Record<string, boolean>>({});
   const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({});
+  const [selectedDataSetId, setSelectedDataSetId] = useState<string | null>(null);
 
   // Initialize on mount
   useEffect(() => {
@@ -223,6 +228,10 @@ export default function Home() {
     setActiveProjectIdState(projectId);
     setActiveProjectId(projectId);
 
+    // Clear responses and reset dataset when switching projects
+    setConfigResponses({});
+    setSelectedDataSetId(null);
+
     // Get latest prompt from this project (sorted by creation date, most recent first)
     const prompts = getPromptsByProjectId(projectId);
     if (prompts.length > 0) {
@@ -291,6 +300,11 @@ export default function Home() {
       setShowPromptEditor(true);
       setShowConfigEditor(false);
       setShowProjectEditor(false);
+
+      // Highlight the prompt editor
+      setHighlightPromptEditor(true);
+      // Clear highlight after animation completes
+      setTimeout(() => setHighlightPromptEditor(false), 2000);
     }
   };
 
@@ -302,11 +316,24 @@ export default function Home() {
     setSidebarKey(prev => prev + 1);
   };
 
+  // Helper function to substitute variables in a prompt
+  const substituteVariables = (promptContent: string, variables: Record<string, string>): string => {
+    let result = promptContent;
+    Object.keys(variables).forEach(key => {
+      const value = variables[key];
+      // Only replace if the value exists and is not empty
+      if (value !== undefined && value !== null && value !== '') {
+        const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+        result = result.replace(regex, value);
+      }
+    });
+    return result;
+  };
+
   const handlePromptSaveAndRefresh = async (prompt: Prompt) => {
     // Save the prompt
     setEditingPromptId(prompt.id);
     setShowPromptEditor(true);
-    setSidebarKey(prev => prev + 1);
 
     // Get all model configs for this project
     if (!activeProjectId) return;
@@ -317,10 +344,14 @@ export default function Home() {
       current.versionNumber > latest.versionNumber ? current : latest
     , prompt.versions[0]);
 
-    // Run inference for each model config
-    for (const config of modelConfigs) {
+    // Get data set if selected
+    const dataSet = selectedDataSetId ? getDataSetById(selectedDataSetId) : null;
+    const dataSetItems = (dataSet?.items && dataSet.items.length > 0) ? dataSet.items : [{ id: '', variables: {} }]; // If no dataset or empty dataset, run once with no substitution
+
+    // Run inference for each model config in parallel
+    const configPromises = modelConfigs.map(async (config) => {
       const apiKey = apiKeys[config.provider];
-      if (!apiKey) continue; // Skip if no API key
+      if (!apiKey) return; // Skip if no API key
 
       // Get the selected version for this config
       const selectedVersionId = selectedVersions[config.id];
@@ -334,7 +365,7 @@ export default function Home() {
         selectedVersion = prompt.versions.find(v => v.id === selectedVersionId) || latestVersion;
       }
 
-      const promptContent = selectedVersion?.content || '';
+      const basePromptContent = selectedVersion?.content || '';
 
       // Detect if this is an image generation model
       const isImageModel = config.model.includes('dall-e') ||
@@ -344,6 +375,131 @@ export default function Home() {
 
       // Set loading state
       setGeneratingConfigs(prev => ({ ...prev, [config.id]: true }));
+
+      const responses: AIOutput[] = [];
+
+      // Generate response for each data set item
+      for (const item of dataSetItems) {
+        const promptContent = dataSet ? substituteVariables(basePromptContent, item.variables) : basePromptContent;
+
+        try {
+          const data = isImageModel
+            ? await apiClient.generateImage({
+                prompt: promptContent,
+                provider: config.provider,
+                model: config.model,
+                apiKey: apiKey,
+              })
+            : await apiClient.generateText({
+                prompt: promptContent,
+                provider: config.provider,
+                model: config.model,
+                apiKey: apiKey,
+                ...config.parameters,
+              });
+
+          if (isApiError(data)) {
+            responses.push({
+              id: uuidv4(),
+              modelConfig: { provider: config.provider, model: config.model, label: config.name },
+              type: isImageModel ? 'image' : 'text',
+              content: '',
+              error: data.error,
+              timestamp: Date.now(),
+            });
+          } else if ('imageUrl' in data) {
+            responses.push({
+              id: uuidv4(),
+              modelConfig: { provider: config.provider, model: config.model, label: config.name },
+              type: 'image',
+              content: data.revisedPrompt || promptContent,
+              imageUrl: data.imageUrl,
+              latency: data.latency,
+              timestamp: Date.now(),
+            });
+          } else if ('content' in data) {
+            responses.push({
+              id: uuidv4(),
+              modelConfig: { provider: config.provider, model: config.model, label: config.name },
+              type: 'text',
+              content: data.content,
+              tokens: data.tokens,
+              latency: data.latency,
+              timestamp: Date.now(),
+            });
+          }
+        } catch (error: any) {
+          responses.push({
+            id: uuidv4(),
+            modelConfig: { provider: config.provider, model: config.model, label: config.name },
+            type: isImageModel ? 'image' : 'text',
+            content: '',
+            error: error.message || 'Network error',
+            timestamp: Date.now(),
+          });
+        }
+      }
+
+      // Update responses for this config immediately when done
+      setConfigResponses(prev => ({
+        ...prev,
+        [config.id]: responses
+      }));
+      setGeneratingConfigs(prev => ({ ...prev, [config.id]: false }));
+    });
+
+    // Wait for all configs to complete
+    await Promise.all(configPromises);
+  };
+
+  const handleVersionChange = async (configId: string, versionId: string) => {
+    setSelectedVersions(prev => ({ ...prev, [configId]: versionId }));
+
+    // Refresh outputs for this specific config
+    if (!editingPromptId || !activeProjectId) return;
+
+    const prompt = getPromptById(editingPromptId);
+    if (!prompt) return;
+
+    const config = getModelConfigById(configId);
+    if (!config) return;
+
+    const apiKey = apiKeys[config.provider];
+    if (!apiKey) return;
+
+    // Get the selected version
+    let selectedVersion;
+    if (versionId === 'latest') {
+      const latestVersion = prompt.versions.reduce((latest, current) =>
+        current.versionNumber > latest.versionNumber ? current : latest
+      , prompt.versions[0]);
+      selectedVersion = latestVersion;
+    } else {
+      selectedVersion = prompt.versions.find(v => v.id === versionId);
+    }
+
+    if (!selectedVersion) return;
+
+    const basePromptContent = selectedVersion.content;
+
+    // Detect if this is an image generation model
+    const isImageModel = config.model.includes('dall-e') ||
+                        config.model.includes('-image') ||
+                        config.model.includes('stable-diffusion') ||
+                        config.model.includes('midjourney');
+
+    // Get data set if selected
+    const dataSet = selectedDataSetId ? getDataSetById(selectedDataSetId) : null;
+    const dataSetItems = (dataSet?.items && dataSet.items.length > 0) ? dataSet.items : [{ id: '', variables: {} }];
+
+    // Set loading state
+    setGeneratingConfigs(prev => ({ ...prev, [config.id]: true }));
+
+    const responses: AIOutput[] = [];
+
+    // Generate response for each data set item
+    for (const item of dataSetItems) {
+      const promptContent = dataSet ? substituteVariables(basePromptContent, item.variables) : basePromptContent;
 
       try {
         const data = isImageModel
@@ -362,68 +518,66 @@ export default function Home() {
             });
 
         if (isApiError(data)) {
-          // Error response
-          setConfigResponses(prev => ({
-            ...prev,
-            [config.id]: {
-              id: uuidv4(),
-              modelConfig: { provider: config.provider, model: config.model, label: config.name },
-              type: isImageModel ? 'image' : 'text',
-              content: '',
-              error: data.error,
-              timestamp: Date.now(),
-            }
-          }));
-        } else if ('imageUrl' in data) {
-          // Image generation success response
-          setConfigResponses(prev => ({
-            ...prev,
-            [config.id]: {
-              id: uuidv4(),
-              modelConfig: { provider: config.provider, model: config.model, label: config.name },
-              type: 'image',
-              content: data.revisedPrompt || promptContent,
-              imageUrl: data.imageUrl,
-              latency: data.latency,
-              timestamp: Date.now(),
-            }
-          }));
-        } else if ('content' in data) {
-          // Text generation success response
-          setConfigResponses(prev => ({
-            ...prev,
-            [config.id]: {
-              id: uuidv4(),
-              modelConfig: { provider: config.provider, model: config.model, label: config.name },
-              type: 'text',
-              content: data.content,
-              tokens: data.tokens,
-              latency: data.latency,
-              timestamp: Date.now(),
-            }
-          }));
-        }
-      } catch (error: any) {
-        setConfigResponses(prev => ({
-          ...prev,
-          [config.id]: {
+          responses.push({
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
             type: isImageModel ? 'image' : 'text',
             content: '',
-            error: error.message || 'Network error',
+            error: data.error,
             timestamp: Date.now(),
-          }
-        }));
-      } finally {
-        setGeneratingConfigs(prev => ({ ...prev, [config.id]: false }));
+          });
+        } else if ('imageUrl' in data) {
+          responses.push({
+            id: uuidv4(),
+            modelConfig: { provider: config.provider, model: config.model, label: config.name },
+            type: 'image',
+            content: data.revisedPrompt || promptContent,
+            imageUrl: data.imageUrl,
+            latency: data.latency,
+            timestamp: Date.now(),
+          });
+        } else if ('content' in data) {
+          responses.push({
+            id: uuidv4(),
+            modelConfig: { provider: config.provider, model: config.model, label: config.name },
+            type: 'text',
+            content: data.content,
+            tokens: data.tokens,
+            latency: data.latency,
+            timestamp: Date.now(),
+          });
+        }
+      } catch (error: any) {
+        responses.push({
+          id: uuidv4(),
+          modelConfig: { provider: config.provider, model: config.model, label: config.name },
+          type: isImageModel ? 'image' : 'text',
+          content: '',
+          error: error.message || 'Network error',
+          timestamp: Date.now(),
+        });
       }
     }
+
+    // Update responses for this config
+    setConfigResponses(prev => ({
+      ...prev,
+      [config.id]: responses
+    }));
+    setGeneratingConfigs(prev => ({ ...prev, [config.id]: false }));
   };
 
-  const handleVersionChange = (configId: string, versionId: string) => {
-    setSelectedVersions(prev => ({ ...prev, [configId]: versionId }));
-  };
+  // Refresh responses when data set selection changes
+  useEffect(() => {
+    // Only refresh if we have an active prompt
+    if (!editingPromptId || !activeProjectId) return;
+
+    const prompt = getPromptById(editingPromptId);
+    if (!prompt) return;
+
+    // Trigger refresh with the new data set
+    handlePromptSaveAndRefresh(prompt);
+  }, [selectedDataSetId]);
 
   const handleConfigSaveAndRefresh = async (configId: string) => {
     // Only run inference if there's a current prompt loaded
@@ -453,7 +607,7 @@ export default function Home() {
       selectedVersion = prompt.versions.find(v => v.id === selectedVersionId) || latestVersion;
     }
 
-    const promptContent = selectedVersion?.content || '';
+    const basePromptContent = selectedVersion?.content || '';
 
     // Detect if this is an image generation model
     const isImageModel = config.model.includes('dall-e') ||
@@ -461,41 +615,46 @@ export default function Home() {
                         config.model.includes('stable-diffusion') ||
                         config.model.includes('midjourney');
 
+    // Get data set if selected
+    const dataSet = selectedDataSetId ? getDataSetById(selectedDataSetId) : null;
+    const dataSetItems = (dataSet?.items && dataSet.items.length > 0) ? dataSet.items : [{ id: '', variables: {} }];
+
     // Set loading state
     setGeneratingConfigs(prev => ({ ...prev, [config.id]: true }));
 
-    try {
-      const data = isImageModel
-        ? await apiClient.generateImage({
-            prompt: promptContent,
-            provider: config.provider,
-            model: config.model,
-            apiKey: apiKey,
-          })
-        : await apiClient.generateText({
-            prompt: promptContent,
-            provider: config.provider,
-            model: config.model,
-            apiKey: apiKey,
-            ...config.parameters,
-          });
+    const responses: AIOutput[] = [];
 
-      if (isApiError(data)) {
-        setConfigResponses(prev => ({
-          ...prev,
-          [config.id]: {
+    // Generate response for each data set item
+    for (const item of dataSetItems) {
+      const promptContent = dataSet ? substituteVariables(basePromptContent, item.variables) : basePromptContent;
+
+      try {
+        const data = isImageModel
+          ? await apiClient.generateImage({
+              prompt: promptContent,
+              provider: config.provider,
+              model: config.model,
+              apiKey: apiKey,
+            })
+          : await apiClient.generateText({
+              prompt: promptContent,
+              provider: config.provider,
+              model: config.model,
+              apiKey: apiKey,
+              ...config.parameters,
+            });
+
+        if (isApiError(data)) {
+          responses.push({
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
             type: isImageModel ? 'image' : 'text',
             content: '',
             error: data.error,
             timestamp: Date.now(),
-          }
-        }));
-      } else if ('imageUrl' in data) {
-        setConfigResponses(prev => ({
-          ...prev,
-          [config.id]: {
+          });
+        } else if ('imageUrl' in data) {
+          responses.push({
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
             type: 'image',
@@ -503,12 +662,9 @@ export default function Home() {
             imageUrl: data.imageUrl,
             latency: data.latency,
             timestamp: Date.now(),
-          }
-        }));
-      } else if ('content' in data) {
-        setConfigResponses(prev => ({
-          ...prev,
-          [config.id]: {
+          });
+        } else if ('content' in data) {
+          responses.push({
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
             type: 'text',
@@ -516,24 +672,26 @@ export default function Home() {
             tokens: data.tokens,
             latency: data.latency,
             timestamp: Date.now(),
-          }
-        }));
-      }
-    } catch (error: any) {
-      setConfigResponses(prev => ({
-        ...prev,
-        [config.id]: {
+          });
+        }
+      } catch (error: any) {
+        responses.push({
           id: uuidv4(),
           modelConfig: { provider: config.provider, model: config.model, label: config.name },
           type: isImageModel ? 'image' : 'text',
           content: '',
           error: error.message || 'Network error',
           timestamp: Date.now(),
-        }
-      }));
-    } finally {
-      setGeneratingConfigs(prev => ({ ...prev, [config.id]: false }));
+        });
+      }
     }
+
+    // Update all responses for this config
+    setConfigResponses(prev => ({
+      ...prev,
+      [config.id]: responses
+    }));
+    setGeneratingConfigs(prev => ({ ...prev, [config.id]: false }));
   };
 
   const handlePromptCancel = () => {
@@ -617,6 +775,33 @@ export default function Home() {
     setEditingConfigId(null);
   };
 
+  const handleNewDataSet = (projectId: string) => {
+    setActiveProjectIdState(projectId);
+    setActiveProjectId(projectId);
+    setEditingDataSetId(null);
+    setShowDataSetEditor(true);
+  };
+
+  const handleDataSetSelect = (dataSetId: string) => {
+    const selectedDataSet = getDataSetById(dataSetId);
+    if (selectedDataSet) {
+      setActiveProjectIdState(selectedDataSet.projectId);
+      setActiveProjectId(selectedDataSet.projectId);
+      setEditingDataSetId(dataSetId);
+      setShowDataSetEditor(true);
+    }
+  };
+
+  const handleDataSetSave = () => {
+    setShowDataSetEditor(false);
+    setEditingDataSetId(null);
+  };
+
+  const handleDataSetCancel = () => {
+    setShowDataSetEditor(false);
+    setEditingDataSetId(null);
+  };
+
   return (
     <div className="h-screen flex flex-col">
       {/* Navigation stays at top */}
@@ -659,6 +844,8 @@ export default function Home() {
               onPromptSelect={handlePromptSelect}
               onNewModelConfig={handleNewModelConfig}
               onModelConfigSelect={handleModelConfigSelect}
+              onNewDataSet={handleNewDataSet}
+              onDataSetSelect={handleDataSetSelect}
             />
           }
           topPanel={
@@ -676,6 +863,7 @@ export default function Home() {
                 onSave={handlePromptSave}
                 onCancel={handlePromptCancel}
                 onSaveAndRefresh={handlePromptSaveAndRefresh}
+                highlighted={highlightPromptEditor}
               />
             ) : showConfigEditor && activeProjectId ? (
               <ConfigEditor
@@ -693,22 +881,36 @@ export default function Home() {
             )
           }
           bottomPanel={
-            <ResponsePanel
-              output={output}
-              isGenerating={isGenerating}
-              projectId={activeProjectId || undefined}
-              highlightedConfigId={highlightedConfigId || undefined}
-              showNewConfigEditor={showNewConfigInResponse}
-              onNewConfigClose={() => {
-                setShowNewConfigInResponse(false);
-                setSidebarKey(prev => prev + 1);
-              }}
-              configResponses={configResponses}
-              generatingConfigs={generatingConfigs}
-              currentPrompt={editingPromptId ? getPromptById(editingPromptId) : undefined}
-              onVersionChange={handleVersionChange}
-              onConfigSave={handleConfigSaveAndRefresh}
-            />
+            showDataSetEditor && activeProjectId ? (
+              <DataSetEditor
+                projectId={activeProjectId}
+                dataSet={editingDataSetId ? getDataSetById(editingDataSetId) : undefined}
+                onSave={handleDataSetSave}
+                onCancel={handleDataSetCancel}
+              />
+            ) : (
+              <ResponsePanel
+                output={output}
+                isGenerating={isGenerating}
+                projectId={activeProjectId || undefined}
+                highlightedConfigId={highlightedConfigId || undefined}
+                showNewConfigEditor={showNewConfigInResponse}
+                onNewConfigClose={() => {
+                  setShowNewConfigInResponse(false);
+                  setSidebarKey(prev => prev + 1);
+                }}
+                configResponses={configResponses}
+                generatingConfigs={generatingConfigs}
+                currentPrompt={editingPromptId ? getPromptById(editingPromptId) : undefined}
+                onVersionChange={handleVersionChange}
+                onConfigSave={handleConfigSaveAndRefresh}
+                onDataSetChange={setSelectedDataSetId}
+                selectedDataSetId={selectedDataSetId}
+                selectedDataSet={selectedDataSetId ? getDataSetById(selectedDataSetId) : null}
+                onNewDataSet={handleNewDataSet}
+                onNewModelConfig={handleNewModelConfig}
+              />
+            )
           }
         />
       </div>

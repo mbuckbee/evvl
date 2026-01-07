@@ -13,9 +13,10 @@ interface PromptEditorProps {
   onSave?: (prompt: Prompt) => void;
   onCancel?: () => void;
   onSaveAndRefresh?: (prompt: Prompt) => void;
+  highlighted?: boolean;
 }
 
-export default function PromptEditor({ projectId, prompt, onSave, onCancel, onSaveAndRefresh }: PromptEditorProps) {
+export default function PromptEditor({ projectId, prompt, onSave, onCancel, onSaveAndRefresh, highlighted }: PromptEditorProps) {
   // If viewing existing prompt, show view form
   if (prompt) {
     const handleSave = (content: string) => {
@@ -112,6 +113,7 @@ export default function PromptEditor({ projectId, prompt, onSave, onCancel, onSa
         onSaveAsNewVersion={handleSaveAsNewVersion}
         onNameUpdate={handleNameUpdate}
         onSaveAndRefresh={handleSaveAndRefresh}
+        highlighted={highlighted}
       />
     );
   }
