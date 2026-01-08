@@ -208,13 +208,21 @@ export default function BackroomPage() {
         <Link href="/" className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-1">
           <span>←</span> Back to Evvl
         </Link>
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          className="btn-secondary text-sm"
-        >
-          {loading ? 'Refreshing...' : 'Refresh Stats'}
-        </button>
+        <div className="flex gap-3">
+          <Link
+            href="/backroom/api-validation"
+            className="btn-primary text-sm"
+          >
+            API Validation
+          </Link>
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="btn-secondary text-sm"
+          >
+            {loading ? 'Refreshing...' : 'Refresh Stats'}
+          </button>
+        </div>
       </div>
 
       <h1 className="text-4xl font-bold mb-3 text-gray-900">Backroom Analytics</h1>
