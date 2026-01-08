@@ -164,9 +164,15 @@ export default function BackroomPage() {
   if (!stats.kvAvailable) {
     return (
       <div className="w-[80%] mx-auto px-4 py-12">
-        <div className="mb-6">
+        <div className="mb-6 flex justify-between items-center">
           <Link href="/" className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-1">
             <span>←</span> Back to Evvl
+          </Link>
+          <Link
+            href="/backroom/api-validation"
+            className="btn-primary text-sm"
+          >
+            API Validation
           </Link>
         </div>
 
