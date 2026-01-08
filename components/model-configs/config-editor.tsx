@@ -305,7 +305,7 @@ export default function ConfigEditor({ projectId, config, onSave, onCancel }: Co
                 step="0.1"
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
                 Controls randomness (0 = deterministic, 2 = very random)
               </p>
             </div>
@@ -323,7 +323,7 @@ export default function ConfigEditor({ projectId, config, onSave, onCancel }: Co
                 min="1"
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
                 Maximum length of the generated response
               </p>
             </div>
@@ -343,7 +343,7 @@ export default function ConfigEditor({ projectId, config, onSave, onCancel }: Co
                 step="0.1"
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
                 Nucleus sampling threshold
               </p>
             </div>
@@ -363,7 +363,7 @@ export default function ConfigEditor({ projectId, config, onSave, onCancel }: Co
                 step="0.1"
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
                 Reduces repetition of tokens based on frequency
               </p>
             </div>
@@ -383,7 +383,7 @@ export default function ConfigEditor({ projectId, config, onSave, onCancel }: Co
                 step="0.1"
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
                 Reduces repetition of tokens based on presence
               </p>
             </div>

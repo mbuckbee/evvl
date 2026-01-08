@@ -17,7 +17,7 @@ import { migrateEvalHistory, isMigrationComplete } from '@/lib/migration';
 
 interface SidebarProps {
   onNewProject?: () => void;
-  onProjectSelect?: (projectId: string) => void;
+  onProjectSelect?: (projectId: string, shouldEdit?: boolean) => void;
   onNewPrompt?: (projectId: string) => void;
   onPromptSelect?: (promptId: string, shouldEdit?: boolean) => void;
   onNewModelConfig?: (projectId: string) => void;
@@ -105,10 +105,17 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
         setOpenSections(prev => [...prev, promptsSection]);
       }
 
-      // Load the project
+      // Load the project (not editing)
       if (onProjectSelect) {
-        onProjectSelect(projectId);
+        onProjectSelect(projectId, false);
       }
+    }
+  };
+
+  const handleProjectEditClick = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent project toggle
+    if (onProjectSelect) {
+      onProjectSelect(projectId, true); // Edit mode
     }
   };
 
@@ -202,23 +209,25 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
                 </button>
                 <button
                   onClick={() => handleProjectClick(project.id)}
-                  className="flex items-center gap-2 flex-1 text-left"
+                  className="flex items-center gap-2 flex-1 text-left relative group/project"
                 >
                   <FolderIcon className="h-4 w-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
                   <span className="text-sm font-medium text-gray-900 dark:text-white">
                     {project.name}
                   </span>
+                  {project.description && (
+                    <span className="absolute top-full left-0 mt-2 hidden group-hover/project:block px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap pointer-events-none z-10">
+                      {project.description}
+                    </span>
+                  )}
                 </button>
                 <button
-                  onClick={() => handleProjectClick(project.id)}
-                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => handleProjectEditClick(project.id, e)}
+                  className="text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Edit project"
                 >
                   Edit
                 </button>
-                <span className="text-xs text-gray-600 dark:text-gray-400">
-                  {prompts.length + modelConfigs.length + dataSets.length}
-                </span>
               </div>
 
               {/* Nested Sections */}
@@ -264,14 +273,14 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
                               className="w-full flex items-center gap-2 px-4 pl-14 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
                               title="Click to edit"
                             >
-                              <DocumentTextIcon className="h-4 w-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 flex-shrink-0" />
+                              <DocumentTextIcon className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-200 flex-shrink-0" />
                               <span className="text-sm text-gray-900 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white">
                                 {prompt.name}
                               </span>
                             </button>
                           ))
                         ) : (
-                          <div className="px-4 pl-14 py-2 text-xs text-gray-600 dark:text-gray-400 italic">
+                          <div className="px-4 pl-14 py-2 text-xs text-gray-600 dark:text-gray-300 italic">
                             No prompts yet
                           </div>
                         )}
@@ -319,14 +328,14 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
                               className="w-full flex items-center gap-2 px-4 pl-14 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
                               title="Click to edit"
                             >
-                              <CogIcon className="h-4 w-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 flex-shrink-0" />
+                              <CogIcon className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-200 flex-shrink-0" />
                               <span className="text-sm text-gray-900 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white">
                                 {config.name}
                               </span>
                             </button>
                           ))
                         ) : (
-                          <div className="px-4 pl-14 py-2 text-xs text-gray-600 dark:text-gray-400 italic">
+                          <div className="px-4 pl-14 py-2 text-xs text-gray-600 dark:text-gray-300 italic">
                             No model configs yet
                           </div>
                         )}
@@ -374,14 +383,14 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
                               className="w-full flex items-center gap-2 px-4 pl-14 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
                               title="Click to edit"
                             >
-                              <TableCellsIcon className="h-4 w-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 flex-shrink-0" />
+                              <TableCellsIcon className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-200 flex-shrink-0" />
                               <span className="text-sm text-gray-900 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white">
                                 {dataSet.name}
                               </span>
                             </button>
                           ))
                         ) : (
-                          <div className="px-4 pl-14 py-2 text-xs text-gray-600 dark:text-gray-400 italic">
+                          <div className="px-4 pl-14 py-2 text-xs text-gray-600 dark:text-gray-300 italic">
                             No data sets yet
                           </div>
                         )}
@@ -396,7 +405,7 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-300">
         <div className="flex items-center justify-between">
           <span>
             {projects.reduce((acc, p) =>

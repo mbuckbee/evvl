@@ -180,7 +180,7 @@ In your prompt, use: Summarize this {{category}} article titled "{{title}}": {{c
             rows={15}
             className="w-full px-3 py-2 text-sm font-mono border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
             First row should be column names (variable names for your prompts). Use {'{{'} columnName {'}}'}  in your prompt to substitute values.
           </p>
         </div>

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects, getPromptsByProjectId, getModelConfigsByProjectId, getDataSetById, getDataSetsByProjectId } from '@/lib/storage';
+import { Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects, getPromptsByProjectId, getModelConfigsByProjectId, getDataSetById, getDataSetsByProjectId, saveProject } from '@/lib/storage';
 import { ApiKeys, AIOutput, Prompt, ProjectModelConfig, Project, DataSet } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
@@ -223,7 +224,7 @@ export default function Home() {
     setShowConfigEditor(false);
   };
 
-  const handleProjectSelect = (projectId: string) => {
+  const handleProjectSelect = (projectId: string, shouldEdit?: boolean) => {
     // Set as active project
     setActiveProjectIdState(projectId);
     setActiveProjectId(projectId);
@@ -232,23 +233,33 @@ export default function Home() {
     setConfigResponses({});
     setSelectedDataSetId(null);
 
-    // Get latest prompt from this project (sorted by creation date, most recent first)
-    const prompts = getPromptsByProjectId(projectId);
-    if (prompts.length > 0) {
-      // Load latest prompt into editor
-      const latestPrompt = prompts[prompts.length - 1]; // Latest is last in array
-      setEditingPromptId(latestPrompt.id);
-      setShowPromptEditor(true);
+    if (shouldEdit) {
+      // Show project editor
+      setEditingProjectId(projectId);
+      setShowProjectEditor(true);
+      setShowPromptEditor(false);
+      setShowConfigEditor(false);
+      setShowDataSetEditor(false);
+      setShowNewConfigInResponse(false);
     } else {
-      // No prompts, show empty state or new prompt form
-      setEditingPromptId(null);
-      setShowPromptEditor(true);
-    }
+      // Get latest prompt from this project (sorted by creation date, most recent first)
+      const prompts = getPromptsByProjectId(projectId);
+      if (prompts.length > 0) {
+        // Load latest prompt into editor
+        const latestPrompt = prompts[prompts.length - 1]; // Latest is last in array
+        setEditingPromptId(latestPrompt.id);
+        setShowPromptEditor(true);
+      } else {
+        // No prompts, show empty state or new prompt form
+        setEditingPromptId(null);
+        setShowPromptEditor(true);
+      }
 
-    // Close other editors
-    setShowProjectEditor(false);
-    setShowConfigEditor(false);
-    setShowNewConfigInResponse(false);
+      // Close other editors
+      setShowProjectEditor(false);
+      setShowConfigEditor(false);
+      setShowNewConfigInResponse(false);
+    }
   };
 
   const handleProjectSave = (project: Project) => {
@@ -316,6 +327,20 @@ export default function Home() {
     setSidebarKey(prev => prev + 1);
   };
 
+  const handleProjectNameUpdate = (projectId: string, name: string) => {
+    const project = getProjectById(projectId);
+    if (project) {
+      const updatedProject: Project = {
+        ...project,
+        name: name,
+        updatedAt: Date.now(),
+      };
+      saveProject(updatedProject);
+      // Refresh sidebar to show updated project name
+      setSidebarKey(prev => prev + 1);
+    }
+  };
+
   // Helper function to substitute variables in a prompt
   const substituteVariables = (promptContent: string, variables: Record<string, string>): string => {
     let result = promptContent;
@@ -373,13 +398,14 @@ export default function Home() {
                           config.model.includes('stable-diffusion') ||
                           config.model.includes('midjourney');
 
-      // Set loading state
+      // Set loading state and pre-allocate responses array
       setGeneratingConfigs(prev => ({ ...prev, [config.id]: true }));
+      // Pre-allocate array with the correct size to maintain order (use empty array to avoid rendering issues)
+      const initialArray = new Array(dataSetItems.length);
+      setConfigResponses(prev => ({ ...prev, [config.id]: initialArray as any }));
 
-      const responses: AIOutput[] = [];
-
-      // Generate response for each data set item
-      for (const item of dataSetItems) {
+      // Generate all dataset items in parallel
+      const itemPromises = dataSetItems.map(async (item, itemIndex) => {
         const promptContent = dataSet ? substituteVariables(basePromptContent, item.variables) : basePromptContent;
 
         try {
@@ -398,17 +424,18 @@ export default function Home() {
                 ...config.parameters,
               });
 
+          let newResponse: AIOutput;
           if (isApiError(data)) {
-            responses.push({
+            newResponse = {
               id: uuidv4(),
               modelConfig: { provider: config.provider, model: config.model, label: config.name },
               type: isImageModel ? 'image' : 'text',
               content: '',
               error: data.error,
               timestamp: Date.now(),
-            });
+            };
           } else if ('imageUrl' in data) {
-            responses.push({
+            newResponse = {
               id: uuidv4(),
               modelConfig: { provider: config.provider, model: config.model, label: config.name },
               type: 'image',
@@ -416,9 +443,9 @@ export default function Home() {
               imageUrl: data.imageUrl,
               latency: data.latency,
               timestamp: Date.now(),
-            });
+            };
           } else if ('content' in data) {
-            responses.push({
+            newResponse = {
               id: uuidv4(),
               modelConfig: { provider: config.provider, model: config.model, label: config.name },
               type: 'text',
@@ -426,25 +453,46 @@ export default function Home() {
               tokens: data.tokens,
               latency: data.latency,
               timestamp: Date.now(),
-            });
+            };
+          } else {
+            return; // Skip if no valid response
           }
+
+          // Update UI immediately with this response at the correct index
+          setConfigResponses(prev => {
+            const currentResponses = [...(prev[config.id] || [])];
+            currentResponses[itemIndex] = newResponse;
+            return {
+              ...prev,
+              [config.id]: currentResponses
+            };
+          });
         } catch (error: any) {
-          responses.push({
+          const errorResponse: AIOutput = {
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
             type: isImageModel ? 'image' : 'text',
             content: '',
             error: error.message || 'Network error',
             timestamp: Date.now(),
+          };
+
+          // Update UI immediately with error response at the correct index
+          setConfigResponses(prev => {
+            const currentResponses = [...(prev[config.id] || [])];
+            currentResponses[itemIndex] = errorResponse;
+            return {
+              ...prev,
+              [config.id]: currentResponses
+            };
           });
         }
-      }
+      });
 
-      // Update responses for this config immediately when done
-      setConfigResponses(prev => ({
-        ...prev,
-        [config.id]: responses
-      }));
+      // Wait for all dataset items to complete
+      await Promise.all(itemPromises);
+
+      // Clear loading state when all items complete
       setGeneratingConfigs(prev => ({ ...prev, [config.id]: false }));
     });
 
@@ -492,13 +540,12 @@ export default function Home() {
     const dataSet = selectedDataSetId ? getDataSetById(selectedDataSetId) : null;
     const dataSetItems = (dataSet?.items && dataSet.items.length > 0) ? dataSet.items : [{ id: '', variables: {} }];
 
-    // Set loading state
+    // Set loading state and initialize empty responses array
     setGeneratingConfigs(prev => ({ ...prev, [config.id]: true }));
+    setConfigResponses(prev => ({ ...prev, [config.id]: [] }));
 
-    const responses: AIOutput[] = [];
-
-    // Generate response for each data set item
-    for (const item of dataSetItems) {
+    // Generate all dataset items in parallel
+    const itemPromises = dataSetItems.map(async (item, itemIndex) => {
       const promptContent = dataSet ? substituteVariables(basePromptContent, item.variables) : basePromptContent;
 
       try {
@@ -517,17 +564,18 @@ export default function Home() {
               ...config.parameters,
             });
 
+        let newResponse: AIOutput;
         if (isApiError(data)) {
-          responses.push({
+          newResponse = {
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
             type: isImageModel ? 'image' : 'text',
             content: '',
             error: data.error,
             timestamp: Date.now(),
-          });
+          };
         } else if ('imageUrl' in data) {
-          responses.push({
+          newResponse = {
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
             type: 'image',
@@ -535,9 +583,9 @@ export default function Home() {
             imageUrl: data.imageUrl,
             latency: data.latency,
             timestamp: Date.now(),
-          });
+          };
         } else if ('content' in data) {
-          responses.push({
+          newResponse = {
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
             type: 'text',
@@ -545,25 +593,48 @@ export default function Home() {
             tokens: data.tokens,
             latency: data.latency,
             timestamp: Date.now(),
-          });
+          };
+        } else {
+          return; // Skip if no valid response
         }
+
+        // Update UI immediately with this response at the correct index
+        setConfigResponses(prev => {
+          const currentResponses = prev[config.id] || [];
+          const updatedResponses = [...currentResponses];
+          updatedResponses[itemIndex] = newResponse;
+          return {
+            ...prev,
+            [config.id]: updatedResponses
+          };
+        });
       } catch (error: any) {
-        responses.push({
+        const errorResponse: AIOutput = {
           id: uuidv4(),
           modelConfig: { provider: config.provider, model: config.model, label: config.name },
           type: isImageModel ? 'image' : 'text',
           content: '',
           error: error.message || 'Network error',
           timestamp: Date.now(),
+        };
+
+        // Update UI immediately with error response at the correct index
+        setConfigResponses(prev => {
+          const currentResponses = prev[config.id] || [];
+          const updatedResponses = [...currentResponses];
+          updatedResponses[itemIndex] = errorResponse;
+          return {
+            ...prev,
+            [config.id]: updatedResponses
+          };
         });
       }
-    }
+    });
 
-    // Update responses for this config
-    setConfigResponses(prev => ({
-      ...prev,
-      [config.id]: responses
-    }));
+    // Wait for all dataset items to complete
+    await Promise.all(itemPromises);
+
+    // Clear loading state when all items complete
     setGeneratingConfigs(prev => ({ ...prev, [config.id]: false }));
   };
 
@@ -619,13 +690,12 @@ export default function Home() {
     const dataSet = selectedDataSetId ? getDataSetById(selectedDataSetId) : null;
     const dataSetItems = (dataSet?.items && dataSet.items.length > 0) ? dataSet.items : [{ id: '', variables: {} }];
 
-    // Set loading state
+    // Set loading state and initialize empty responses array
     setGeneratingConfigs(prev => ({ ...prev, [config.id]: true }));
+    setConfigResponses(prev => ({ ...prev, [config.id]: [] }));
 
-    const responses: AIOutput[] = [];
-
-    // Generate response for each data set item
-    for (const item of dataSetItems) {
+    // Generate all dataset items in parallel
+    const itemPromises = dataSetItems.map(async (item, itemIndex) => {
       const promptContent = dataSet ? substituteVariables(basePromptContent, item.variables) : basePromptContent;
 
       try {
@@ -644,17 +714,18 @@ export default function Home() {
               ...config.parameters,
             });
 
+        let newResponse: AIOutput;
         if (isApiError(data)) {
-          responses.push({
+          newResponse = {
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
             type: isImageModel ? 'image' : 'text',
             content: '',
             error: data.error,
             timestamp: Date.now(),
-          });
+          };
         } else if ('imageUrl' in data) {
-          responses.push({
+          newResponse = {
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
             type: 'image',
@@ -662,9 +733,9 @@ export default function Home() {
             imageUrl: data.imageUrl,
             latency: data.latency,
             timestamp: Date.now(),
-          });
+          };
         } else if ('content' in data) {
-          responses.push({
+          newResponse = {
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
             type: 'text',
@@ -672,25 +743,48 @@ export default function Home() {
             tokens: data.tokens,
             latency: data.latency,
             timestamp: Date.now(),
-          });
+          };
+        } else {
+          return; // Skip if no valid response
         }
+
+        // Update UI immediately with this response at the correct index
+        setConfigResponses(prev => {
+          const currentResponses = prev[config.id] || [];
+          const updatedResponses = [...currentResponses];
+          updatedResponses[itemIndex] = newResponse;
+          return {
+            ...prev,
+            [config.id]: updatedResponses
+          };
+        });
       } catch (error: any) {
-        responses.push({
+        const errorResponse: AIOutput = {
           id: uuidv4(),
           modelConfig: { provider: config.provider, model: config.model, label: config.name },
           type: isImageModel ? 'image' : 'text',
           content: '',
           error: error.message || 'Network error',
           timestamp: Date.now(),
+        };
+
+        // Update UI immediately with error response at the correct index
+        setConfigResponses(prev => {
+          const currentResponses = prev[config.id] || [];
+          const updatedResponses = [...currentResponses];
+          updatedResponses[itemIndex] = errorResponse;
+          return {
+            ...prev,
+            [config.id]: updatedResponses
+          };
         });
       }
-    }
+    });
 
-    // Update all responses for this config
-    setConfigResponses(prev => ({
-      ...prev,
-      [config.id]: responses
-    }));
+    // Wait for all dataset items to complete
+    await Promise.all(itemPromises);
+
+    // Clear loading state when all items complete
     setGeneratingConfigs(prev => ({ ...prev, [config.id]: false }));
   };
 
@@ -807,28 +901,16 @@ export default function Home() {
       {/* Navigation stays at top */}
       <nav className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              Evvl
-            </h1>
-            <div className="flex items-center gap-4 text-sm">
-              <a
-                href="/history"
-                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-              >
-                History
-              </a>
-              <a
-                href="/settings"
-                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-              >
-                Settings
-              </a>
-            </div>
-          </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            AI Model Testing & Evaluation
-          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+            Evvl
+          </h1>
+          <a
+            href="/settings"
+            className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <Cog6ToothIcon className="h-5 w-5" />
+            <span>Settings</span>
+          </a>
         </div>
       </nav>
 
@@ -863,6 +945,7 @@ export default function Home() {
                 onSave={handlePromptSave}
                 onCancel={handlePromptCancel}
                 onSaveAndRefresh={handlePromptSaveAndRefresh}
+                onProjectNameUpdate={handleProjectNameUpdate}
                 highlighted={highlightPromptEditor}
               />
             ) : showConfigEditor && activeProjectId ? (

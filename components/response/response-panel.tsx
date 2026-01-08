@@ -10,6 +10,12 @@ import ConfigEditor from '@/components/model-configs/config-editor';
 
 import { AIOutput } from '@/lib/types';
 
+// Helper function to format latency in seconds
+function formatLatency(latencyMs: number): string {
+  const seconds = Math.round(latencyMs / 1000);
+  return seconds < 1 ? '1' : seconds.toString();
+}
+
 interface ResponsePanelProps {
   output?: {
     content: string;
@@ -153,7 +159,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
             {/* Data Set Dropdown or Add Button */}
             {dataSets.length > 0 ? (
               <div className="flex items-center gap-2 dataset-dropdown">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Dataset:</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">Dataset:</span>
                 <div className="relative">
                   <button
                     onClick={() => setIsDataSetDropdownOpen(!isDataSetDropdownOpen)}
@@ -215,11 +221,11 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                   className={`p-2 rounded-md transition-colors relative group ${
                     layout === option.type
                       ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
                   }`}
                 >
                   <IconComponent className="h-5 w-5" />
-                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap pointer-events-none">
+                  <span className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap pointer-events-none z-10">
                     {option.label}
                   </span>
                 </button>
@@ -233,7 +239,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
         <div className="flex-1 overflow-y-auto p-6">
           {filteredConfigs.length === 0 && !showNewConfigEditor ? (
             <div className="flex items-center justify-center h-full">
-              <div className="text-center text-gray-500 dark:text-gray-400">
+              <div className="text-center text-gray-600 dark:text-gray-300">
                 <p className="text-lg mb-2">No model configs yet</p>
                 <p className="text-sm">Create a model config to get started</p>
               </div>
@@ -290,7 +296,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                                   <h4 className="text-base font-semibold text-gray-900 dark:text-white">
                                     {config.name}
                                   </h4>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  <p className="text-xs text-gray-600 dark:text-gray-300">
                                     {config.model}
                                   </p>
                                 </div>
@@ -302,7 +308,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                               {isGenerating ? (
                                 <div className="text-center py-8">
                                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mb-2" />
-                                  <p className="text-xs text-gray-600 dark:text-gray-400">Generating...</p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-300">Generating...</p>
                                 </div>
                               ) : response ? (
                                 <div>
@@ -318,14 +324,14 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                                         className="rounded-lg mb-3 w-full h-auto"
                                       />
                                       {response.content && (
-                                        <p className="text-sm text-gray-600 dark:text-gray-400 italic mb-2">
+                                        <p className="text-sm text-gray-600 dark:text-gray-300 italic mb-2">
                                           {response.content}
                                         </p>
                                       )}
                                       {response.latency && (
-                                        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
                                           <ClockIcon className="h-3 w-3" />
-                                          {response.latency}s
+                                          {formatLatency(response.latency)}s
                                         </div>
                                       )}
                                     </div>
@@ -334,7 +340,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                                       <div className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap mb-3">
                                         {response.content}
                                       </div>
-                                      <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                      <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
                                         {response.tokens && (
                                           <div className="flex items-center gap-1">
                                             <CpuChipIcon className="h-3 w-3" />
@@ -344,7 +350,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                                         {response.latency && (
                                           <div className="flex items-center gap-1">
                                             <ClockIcon className="h-3 w-3" />
-                                            {response.latency}s
+                                            {formatLatency(response.latency)}s
                                           </div>
                                         )}
                                       </div>
@@ -352,12 +358,12 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                                   )}
                                 </div>
                               ) : hasKey ? (
-                                <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                                <div className="text-center text-sm text-gray-600 dark:text-gray-300">
                                   Save and refresh prompt to view output
                                 </div>
                               ) : (
                                 <div className="text-center">
-                                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
                                     API key not configured
                                   </p>
                                   <Link
@@ -458,7 +464,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                           <h3 className={`font-semibold text-gray-900 dark:text-white ${isCompact ? 'text-sm' : ''}`}>
                             {config.name}
                           </h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-xs text-gray-600 dark:text-gray-300">
                             {config.model}
                           </p>
                         </div>
@@ -498,7 +504,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                                       <span className="text-xs">✓</span>
                                     )}
                                   </div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                  <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
                                     Always use newest version
                                   </div>
                                 </button>
@@ -523,7 +529,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                                         )}
                                       </div>
                                       {version.note && (
-                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
                                           {version.note}
                                         </div>
                                       )}
@@ -538,7 +544,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                           onClick={() => setEditingConfigId(config.id)}
                           className="p-0 border-0 bg-transparent relative group"
                         >
-                          <Cog6ToothIcon className="h-5 w-5 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-100 cursor-pointer" />
+                          <Cog6ToothIcon className="h-5 w-5 text-gray-600 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-100 cursor-pointer" />
                           <span className="absolute bottom-full right-0 mb-2 hidden group-hover:block px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap pointer-events-none">
                             Modify config
                           </span>
@@ -547,7 +553,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                           onClick={() => handleDeleteConfig(config.id, config.name)}
                           className="p-0 border-0 bg-transparent relative group"
                         >
-                          <XMarkIcon className="h-5 w-5 text-gray-400 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-colors" />
+                          <XMarkIcon className="h-5 w-5 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-colors" />
                           <span className="absolute bottom-full right-0 mb-2 hidden group-hover:block px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap pointer-events-none">
                             Remove config
                           </span>
@@ -561,12 +567,15 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                           // Loading state
                           <div className="text-center py-8">
                             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mb-2" />
-                            <p className="text-xs text-gray-600 dark:text-gray-400">Generating...</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-300">Generating...</p>
                           </div>
                         ) : configResponses[config.id] && configResponses[config.id].length > 0 ? (
                           // Show responses
                           <div className="space-y-4">
                             {configResponses[config.id].map((response, index) => {
+                              // Skip null responses but keep the index
+                              if (!response) return null;
+
                               // Get label from first column of data set
                               let label = `Row ${index + 1}`;
                               if (selectedDataSet && selectedDataSet.items[index]) {
@@ -580,7 +589,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                               return (
                               <div key={index} className="space-y-2">
                                 {selectedDataSetId && configResponses[config.id].length > 1 && (
-                                  <div className="text-xs font-medium text-gray-600 dark:text-gray-400 pb-1">
+                                  <div className="text-xs font-medium text-gray-600 dark:text-gray-300 pb-1">
                                     {label}
                                   </div>
                                 )}
@@ -599,13 +608,13 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                                       />
                                     </div>
                                     {response.content && (
-                                      <div className="text-xs text-gray-600 dark:text-gray-400 italic">
+                                      <div className="text-xs text-gray-600 dark:text-gray-300 italic">
                                         {response.content}
                                       </div>
                                     )}
-                                    <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                    <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
                                       {response.latency !== undefined && (
-                                        <span>{(response.latency! / 1000).toFixed(2)}s</span>
+                                        <span>{formatLatency(response.latency)}s</span>
                                       )}
                                     </div>
                                   </>
@@ -614,12 +623,12 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                                     <div className="text-xs text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700 max-h-32 overflow-y-auto">
                                       {response.content}
                                     </div>
-                                    <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                    <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
                                       {response.tokens !== undefined && (
                                         <span>{response.tokens} tokens</span>
                                       )}
                                       {response.latency !== undefined && (
-                                        <span>{(response.latency! / 1000).toFixed(2)}s</span>
+                                        <span>{formatLatency(response.latency)}s</span>
                                       )}
                                     </div>
                                   </>
@@ -630,13 +639,13 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                           </div>
                         ) : hasKey ? (
                           // API key configured, waiting for generation
-                          <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                          <div className="text-center text-sm text-gray-600 dark:text-gray-300">
                             Save and refresh prompt to view output
                           </div>
                         ) : (
                           // No API key
                           <div className="text-center">
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                               API key not configured
                             </p>
                             <Link
@@ -663,7 +672,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
       <div className="h-full flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4" />
-          <p className="text-sm text-gray-600 dark:text-gray-400">Generating response...</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Generating response...</p>
         </div>
       </div>
     );
@@ -698,7 +707,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Response</h2>
-          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
             {output?.tokens !== undefined && (
               <div className="flex items-center gap-1.5">
                 <CpuChipIcon className="h-4 w-4" />
@@ -708,7 +717,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
             {output?.latency !== undefined && (
               <div className="flex items-center gap-1.5">
                 <ClockIcon className="h-4 w-4" />
-                <span>{(output.latency / 1000).toFixed(2)}s</span>
+                <span>{formatLatency(output.latency)}s</span>
               </div>
             )}
             {output?.type && (
@@ -747,7 +756,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Revised Prompt
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <p className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                   {output.content}
                 </p>
               </div>

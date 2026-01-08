@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Prompt, PromptVersion } from '@/lib/types';
-import { savePrompt } from '@/lib/storage';
+import { savePrompt, getProjectById } from '@/lib/storage';
 import NewPromptForm from './new-prompt-form';
 import PromptVersionView from './prompt-version-view';
 
@@ -13,10 +13,21 @@ interface PromptEditorProps {
   onSave?: (prompt: Prompt) => void;
   onCancel?: () => void;
   onSaveAndRefresh?: (prompt: Prompt) => void;
+  onProjectNameUpdate?: (projectId: string, name: string) => void;
   highlighted?: boolean;
 }
 
-export default function PromptEditor({ projectId, prompt, onSave, onCancel, onSaveAndRefresh, highlighted }: PromptEditorProps) {
+export default function PromptEditor({ projectId, prompt, onSave, onCancel, onSaveAndRefresh, onProjectNameUpdate, highlighted }: PromptEditorProps) {
+  // Get project name for breadcrumb
+  const project = getProjectById(projectId);
+  const projectName = project?.name || '';
+
+  const handleProjectNameUpdate = (name: string) => {
+    if (onProjectNameUpdate) {
+      onProjectNameUpdate(projectId, name);
+    }
+  };
+
   // If viewing existing prompt, show view form
   if (prompt) {
     const handleSave = (content: string) => {
@@ -108,10 +119,12 @@ export default function PromptEditor({ projectId, prompt, onSave, onCancel, onSa
     return (
       <PromptVersionView
         prompt={prompt}
+        projectName={projectName}
         onCancel={onCancel}
         onSave={handleSave}
         onSaveAsNewVersion={handleSaveAsNewVersion}
         onNameUpdate={handleNameUpdate}
+        onProjectNameUpdate={handleProjectNameUpdate}
         onSaveAndRefresh={handleSaveAndRefresh}
         highlighted={highlighted}
       />

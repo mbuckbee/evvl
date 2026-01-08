@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import SettingsPage from '../page';
 import * as storage from '@/lib/storage';
+import * as environment from '@/lib/environment';
 import { useRouter } from 'next/navigation';
 
 // Mock the storage module
@@ -9,6 +10,13 @@ jest.mock('@/lib/storage', () => ({
   saveApiKeys: jest.fn(),
   loadApiKeys: jest.fn(),
   clearApiKeys: jest.fn(),
+}));
+
+// Mock the environment module
+jest.mock('@/lib/environment', () => ({
+  getRuntimeEnvironment: jest.fn(),
+  isTauriEnvironment: jest.fn(),
+  isWebEnvironment: jest.fn(),
 }));
 
 // Mock next/navigation
@@ -22,6 +30,7 @@ describe('SettingsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (storage.loadApiKeys as jest.Mock).mockReturnValue({});
+    (environment.getRuntimeEnvironment as jest.Mock).mockReturnValue('web');
     (useRouter as jest.Mock).mockReturnValue({
       push: mockPush,
     });
@@ -30,7 +39,7 @@ describe('SettingsPage', () => {
   it('should render the settings page with all input fields', () => {
     render(<SettingsPage />);
 
-    expect(screen.getByText('Settings')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByLabelText('OpenAI API Key')).toBeInTheDocument();
     expect(screen.getByLabelText('Anthropic API Key')).toBeInTheDocument();
     expect(screen.getByLabelText('OpenRouter API Key')).toBeInTheDocument();
@@ -159,12 +168,23 @@ describe('SettingsPage', () => {
     expect(geminiInput).toHaveAttribute('type', 'text');
   });
 
-  it('should display privacy note', () => {
+  it('should display privacy note for web environment', () => {
+    (environment.getRuntimeEnvironment as jest.Mock).mockReturnValue('web');
     render(<SettingsPage />);
 
     expect(screen.getByText(/Privacy Note:/)).toBeInTheDocument();
     expect(
-      screen.getByText(/Your API keys are stored locally in your browser/)
+      screen.getByText(/keys are sent through our server/)
+    ).toBeInTheDocument();
+  });
+
+  it('should display privacy note for Tauri environment', () => {
+    (environment.getRuntimeEnvironment as jest.Mock).mockReturnValue('tauri');
+    render(<SettingsPage />);
+
+    expect(screen.getByText(/Privacy Note:/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/keys are sent directly to the AI providers/)
     ).toBeInTheDocument();
   });
 

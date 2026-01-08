@@ -70,7 +70,7 @@ export default function NewPromptForm({ onCancel, onCreate }: NewPromptFormProps
             />
 
             {/* Help text - Fixed height */}
-            <p className="flex-shrink-0 mt-2 text-xs text-gray-500 dark:text-gray-400">
+            <p className="flex-shrink-0 mt-2 text-xs text-gray-600 dark:text-gray-300">
               Tip: Use {'{'}{'{'} and {'}'}{'}'}  for variables like {'{'}{'{'} text {'}'}{'}'} or {'{'}{'{'}  tone {'}'}{'}'}
             </p>
           </div>

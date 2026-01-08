@@ -1,20 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { XMarkIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { Prompt } from '@/lib/types';
 
 interface PromptVersionViewProps {
   prompt: Prompt;
+  projectName?: string;
   onCancel?: () => void;
   onSave?: (content: string) => void;
   onSaveAsNewVersion?: (content: string, versionNote?: string) => void;
   onNameUpdate?: (name: string) => void;
+  onProjectNameUpdate?: (name: string) => void;
   onSaveAndRefresh?: (content: string) => void;
   highlighted?: boolean;
 }
 
-export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNewVersion, onNameUpdate, onSaveAndRefresh, highlighted }: PromptVersionViewProps) {
+export default function PromptVersionView({ prompt, projectName, onCancel, onSave, onSaveAsNewVersion, onNameUpdate, onProjectNameUpdate, onSaveAndRefresh, highlighted }: PromptVersionViewProps) {
   // Always show the latest version (highest version number)
   const latestVersion = prompt.versions.reduce((latest, current) =>
     current.versionNumber > latest.versionNumber ? current : latest
@@ -23,6 +25,8 @@ export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNe
   const [content, setContent] = useState(latestVersion?.content || '');
   const [isEditingName, setIsEditingName] = useState(false);
   const [name, setName] = useState(prompt.name);
+  const [isEditingProjectName, setIsEditingProjectName] = useState(false);
+  const [editableProjectName, setEditableProjectName] = useState(projectName || '');
   const [isEnteringVersionNote, setIsEnteringVersionNote] = useState(false);
   const [versionNote, setVersionNote] = useState('');
 
@@ -30,7 +34,8 @@ export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNe
   useEffect(() => {
     setContent(latestVersion?.content || '');
     setName(prompt.name);
-  }, [prompt.id, latestVersion?.content, prompt.name]);
+    setEditableProjectName(projectName || '');
+  }, [prompt.id, latestVersion?.content, prompt.name, projectName]);
 
   const handleSave = () => {
     if (!content.trim()) {
@@ -73,6 +78,21 @@ export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNe
     setIsEditingName(true);
   };
 
+  const handleProjectNameClick = () => {
+    setIsEditingProjectName(true);
+  };
+
+  const handleProjectNameSave = () => {
+    if (!editableProjectName.trim()) {
+      alert('Please enter a project name');
+      return;
+    }
+    if (onProjectNameUpdate) {
+      onProjectNameUpdate(editableProjectName.trim());
+    }
+    setIsEditingProjectName(false);
+  };
+
   return (
     <div className={`h-full flex flex-col bg-gray-50 dark:bg-gray-800 border-4 ${
       highlighted ? 'border-blue-500' : 'border-transparent'
@@ -100,17 +120,55 @@ export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNe
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 cursor-pointer group" onClick={handleNameClick}>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <div className="flex items-center gap-2">
+            {isEditingProjectName ? (
+              <>
+                <input
+                  type="text"
+                  value={editableProjectName}
+                  onChange={(e) => setEditableProjectName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleProjectNameSave();
+                    } else if (e.key === 'Escape') {
+                      setIsEditingProjectName(false);
+                      setEditableProjectName(projectName || '');
+                    }
+                  }}
+                  className="px-3 py-1 text-lg font-semibold border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  autoFocus
+                />
+                <button
+                  onClick={handleProjectNameSave}
+                  className="p-1 text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400"
+                >
+                  <CheckIcon className="h-5 w-5" />
+                </button>
+                <span className="text-lg font-semibold text-gray-500 dark:text-gray-400">/</span>
+              </>
+            ) : projectName ? (
+              <>
+                <span
+                  className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer px-2 py-1 -mx-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  onClick={handleProjectNameClick}
+                >
+                  {projectName}
+                </span>
+                <span className="text-lg font-semibold text-gray-500 dark:text-gray-400">/</span>
+              </>
+            ) : null}
+            <h2
+              className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer px-2 py-1 -mx-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              onClick={handleNameClick}
+            >
               {prompt.name}
             </h2>
-            <PencilIcon className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
           </div>
         )}
         {onCancel && (
           <button
             onClick={onCancel}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
@@ -132,7 +190,7 @@ export default function PromptVersionView({ prompt, onCancel, onSave, onSaveAsNe
               className="flex-1 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono min-h-[8rem]"
             />
 
-            <p className="flex-shrink-0 mt-2 text-xs text-gray-500 dark:text-gray-400">
+            <p className="flex-shrink-0 mt-2 text-xs text-gray-600 dark:text-gray-300">
               Tip: Use {'{{'}  and {'}}'}  for variables like {'{{'} text {'}}'} or {'{{'}  tone {'}}'}
             </p>
           </div>
