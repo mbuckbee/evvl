@@ -38,6 +38,7 @@ export default function ApiValidationPage() {
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [testResults, setTestResults] = useState<Map<string, TestResult>>(new Map());
   const [testing, setTesting] = useState(false);
+  const [testingModels, setTestingModels] = useState<Set<string>>(new Set());
 
   // Use ref to track if we should stop testing
   const shouldStopRef = useRef(false);
@@ -243,20 +244,19 @@ export default function ApiValidationPage() {
     );
     if (!modelConfig) return;
 
-    // Set testing state
-    setTesting(true);
-    shouldStopRef.current = false;
-
     const key = `${provider}:${modelId}`;
 
-    // Initialize result with pending status
+    // Add to testing models set
+    setTestingModels(prev => new Set(prev).add(key));
+
+    // Initialize result with running status
     setTestResults(prev => {
       const newResults = new Map(prev);
       newResults.set(key, {
         provider: modelConfig.provider,
         model: modelConfig.model,
         modelLabel: modelConfig.label,
-        status: 'pending',
+        status: 'running',
         type: modelConfig.type,
         timestamp: Date.now(),
       });
@@ -276,10 +276,15 @@ export default function ApiValidationPage() {
           return newResults;
         });
       },
-      () => shouldStopRef.current
+      () => false // Never stop single model tests
     );
 
-    setTesting(false);
+    // Remove from testing models set
+    setTestingModels(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(key);
+      return newSet;
+    });
   };
 
   if (loading) {
@@ -348,6 +353,7 @@ export default function ApiValidationPage() {
           onTestSingleModel={handleTestSingleModel}
           results={testResults}
           testing={testing}
+          testingModels={testingModels}
         />
       ) : (
         <ProviderResults results={testResults} models={allModels} />

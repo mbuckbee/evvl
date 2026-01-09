@@ -18,6 +18,7 @@ interface ModelTableProps {
   onTestSingleModel: (provider: Provider, model: string) => void;
   results: Map<string, TestResult>;
   testing: boolean;
+  testingModels: Set<string>;
 }
 
 export default function ModelTable({
@@ -28,6 +29,7 @@ export default function ModelTable({
   onTestSingleModel,
   results,
   testing,
+  testingModels,
 }: ModelTableProps) {
   const [expandedProviders, setExpandedProviders] = useState<Set<Provider>>(
     new Set(['openai', 'anthropic', 'openrouter', 'gemini'])
@@ -202,10 +204,10 @@ export default function ModelTable({
                         <td className="px-4 py-3">
                           <button
                             onClick={() => onTestSingleModel(model.provider, model.model)}
-                            disabled={testing}
-                            className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={testingModels.has(key)}
+                            className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
-                            Test
+                            {testingModels.has(key) ? 'Testing...' : 'Test'}
                           </button>
                         </td>
                       </tr>
