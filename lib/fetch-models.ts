@@ -64,10 +64,14 @@ export function filterModelsByProvider(models: OpenRouterModel[], prefix: string
 /**
  * Get OpenAI models from OpenRouter
  * Includes DALL-E image generation models
+ * Excludes open-source models (e.g., gpt-oss-*)
  * Sorted in descending order (newer versions first)
  */
 export function getOpenAIModels(models: OpenRouterModel[]) {
   const textModels = filterModelsByProvider(models, 'openai')
+    // Filter out OSS models - these are open-source models hosted on OpenRouter,
+    // not actual OpenAI models, and can't be called through OpenAI's API
+    .filter(model => !model.id.includes('/gpt-oss-') && !model.id.includes('-oss-'))
     .map(model => ({
       value: model.id,
       label: model.name.replace('OpenAI: ', ''),
