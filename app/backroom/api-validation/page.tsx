@@ -235,6 +235,53 @@ export default function ApiValidationPage() {
     setSelectedModels(newModels);
   };
 
+  // Handle testing a single model
+  const handleTestSingleModel = async (provider: Provider, modelId: string) => {
+    // Find the model config
+    const modelConfig = allModels.find(
+      m => m.provider === provider && m.model === modelId
+    );
+    if (!modelConfig) return;
+
+    // Set testing state
+    setTesting(true);
+    shouldStopRef.current = false;
+
+    const key = `${provider}:${modelId}`;
+
+    // Initialize result with pending status
+    setTestResults(prev => {
+      const newResults = new Map(prev);
+      newResults.set(key, {
+        provider: modelConfig.provider,
+        model: modelConfig.model,
+        modelLabel: modelConfig.label,
+        status: 'pending',
+        type: modelConfig.type,
+        timestamp: Date.now(),
+      });
+      return newResults;
+    });
+
+    // Run validation for single model
+    await runValidation(
+      [modelConfig],
+      apiKeys,
+      (result) => {
+        // Update result in map
+        setTestResults(prev => {
+          const newResults = new Map(prev);
+          const key = `${result.provider}:${result.model}`;
+          newResults.set(key, result);
+          return newResults;
+        });
+      },
+      () => shouldStopRef.current
+    );
+
+    setTesting(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -298,6 +345,7 @@ export default function ApiValidationPage() {
           selectedModels={selectedModels}
           onModelToggle={handleModelToggle}
           onSelectAllProvider={handleSelectAllProvider}
+          onTestSingleModel={handleTestSingleModel}
           results={testResults}
           testing={testing}
         />

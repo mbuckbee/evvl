@@ -15,6 +15,7 @@ interface ModelTableProps {
   selectedModels: Set<string>;
   onModelToggle: (provider: Provider, model: string) => void;
   onSelectAllProvider: (provider: Provider) => void;
+  onTestSingleModel: (provider: Provider, model: string) => void;
   results: Map<string, TestResult>;
   testing: boolean;
 }
@@ -24,6 +25,7 @@ export default function ModelTable({
   selectedModels,
   onModelToggle,
   onSelectAllProvider,
+  onTestSingleModel,
   results,
   testing,
 }: ModelTableProps) {
@@ -99,9 +101,6 @@ export default function ModelTable({
                 Select
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Provider
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                 Model Name
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
@@ -112,6 +111,9 @@ export default function ModelTable({
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-32">
                 Status
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-24">
+                Action
               </th>
             </tr>
           </thead>
@@ -173,9 +175,6 @@ export default function ModelTable({
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {provider.name}
-                        </td>
                         <td className="px-4 py-3">
                           <div className="text-sm font-medium text-gray-900">
                             {model.label}
@@ -199,6 +198,15 @@ export default function ModelTable({
                               {result.error}
                             </div>
                           )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => onTestSingleModel(model.provider, model.model)}
+                            disabled={testing}
+                            className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Test
+                          </button>
                         </td>
                       </tr>
                     );
