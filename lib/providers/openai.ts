@@ -67,15 +67,29 @@ export async function generateImage(request: OpenAIImageRequest): Promise<OpenAI
 
   const openai = new OpenAI({ apiKey: request.apiKey });
 
-  const response = await openai.images.generate({
+  // DALL-E 3 supports quality and style parameters, DALL-E 2 does not
+  const isDalle3 = request.model.includes('dall-e-3');
+
+  // Build request parameters based on model
+  const imageParams: any = {
     model: request.model,
     prompt: request.prompt,
     n: 1,
     size: request.size || '1024x1024',
-    quality: request.quality || 'standard',
-    style: request.style || 'vivid',
     response_format: 'url',
-  });
+  };
+
+  // Only add quality and style for DALL-E 3
+  if (isDalle3) {
+    if (request.quality) {
+      imageParams.quality = request.quality;
+    }
+    if (request.style) {
+      imageParams.style = request.style;
+    }
+  }
+
+  const response = await openai.images.generate(imageParams);
 
   const latency = Date.now() - startTime;
 
