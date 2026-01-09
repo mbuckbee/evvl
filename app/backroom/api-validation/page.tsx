@@ -191,6 +191,16 @@ export default function ApiValidationPage() {
     }
   };
 
+  // Handle provider click from API key status
+  const handleProviderClick = (provider: Provider) => {
+    // Switch to individual mode
+    setTestMode('individual');
+    // Select only this provider
+    setSelectedProviders(new Set([provider]));
+    // Clear any previous model selections
+    setSelectedModels(new Set());
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -220,7 +230,7 @@ export default function ApiValidationPage() {
       </p>
 
       {/* API Key Status */}
-      <ApiKeyStatus apiKeys={apiKeys} />
+      <ApiKeyStatus apiKeys={apiKeys} onProviderClick={handleProviderClick} />
 
       {/* Test Controls */}
       <TestControls

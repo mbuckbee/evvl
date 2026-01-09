@@ -12,9 +12,10 @@ import { PROVIDERS } from '@/lib/config';
 
 interface ApiKeyStatusProps {
   apiKeys: ApiKeys;
+  onProviderClick?: (provider: Provider) => void;
 }
 
-export default function ApiKeyStatus({ apiKeys }: ApiKeyStatusProps) {
+export default function ApiKeyStatus({ apiKeys, onProviderClick }: ApiKeyStatusProps) {
   const providerStatus = PROVIDERS.map(provider => ({
     ...provider,
     hasKey: !!apiKeys[provider.key],
@@ -36,12 +37,14 @@ export default function ApiKeyStatus({ apiKeys }: ApiKeyStatusProps) {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {providerStatus.map(provider => (
-          <div
+          <button
             key={provider.key}
-            className={`p-4 rounded-lg border-2 ${
+            onClick={() => provider.hasKey && onProviderClick?.(provider.key)}
+            disabled={!provider.hasKey}
+            className={`p-4 rounded-lg border-2 text-left transition-all ${
               provider.hasKey
-                ? 'border-green-200 bg-green-50'
-                : 'border-red-200 bg-red-50'
+                ? 'border-green-200 bg-green-50 hover:bg-green-100 hover:border-green-300 cursor-pointer'
+                : 'border-red-200 bg-red-50 cursor-not-allowed opacity-75'
             }`}
           >
             <div className="flex items-center gap-2 mb-2">
@@ -79,7 +82,12 @@ export default function ApiKeyStatus({ apiKeys }: ApiKeyStatusProps) {
             <p className="text-xs text-gray-600">
               {provider.hasKey ? 'Configured' : 'Not configured'}
             </p>
-          </div>
+            {provider.hasKey && (
+              <p className="text-xs text-green-700 mt-1 font-medium">
+                Click to test →
+              </p>
+            )}
+          </button>
         ))}
       </div>
 
