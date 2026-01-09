@@ -28,7 +28,7 @@ export default function RootLayout({
         {isProduction && (
           <>
             <Script
-              src="https://plausible.io/js/pa-_obU0K7gpnnNMGqGmG74x.js"
+              src="https://plausible.io/js/pa-cSp3b1xHvm1LHpsgjn6rM.js"
               strategy="afterInteractive"
               async
             />
