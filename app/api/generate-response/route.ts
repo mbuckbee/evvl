@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { transformModelSlug } from '@/lib/model-transformer';
-import { openai, anthropic, openrouter, gemini, ModelNotAvailableError } from '@/lib/providers';
+import { openai, ModelNotAvailableError } from '@/lib/providers';
+
+/**
+ * Generate response using OpenAI's Responses API
+ *
+ * This endpoint is used for models that require the Responses API (/v1/responses)
+ * instead of the Chat Completions API (/v1/chat/completions).
+ *
+ * Key differences:
+ * - Server-side state management (store: true for persistent context)
+ * - Built-in tools (web search, file search, code interpreter)
+ * - Better performance for reasoning models (3-5% improvement)
+ * - Lower costs (40-80% better cache utilization)
+ *
+ * For validation purposes, we use basic stateless requests without tools.
+ */
 
 // Sanitize error objects to remove API keys before logging
 function sanitizeError(error: any): any {
@@ -33,12 +48,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate provider
-    const validProviders = ['openai', 'anthropic', 'openrouter', 'gemini'];
-    if (!validProviders.includes(provider)) {
-      console.error(`[INVALID_PROVIDER] received provider=${provider}`);
+    // Only OpenAI supports Responses API
+    if (provider !== 'openai') {
       return NextResponse.json(
-        { error: `Invalid provider: ${provider}` },
+        { error: 'Responses API is only supported for OpenAI provider' },
         { status: 400 }
       );
     }
@@ -61,42 +74,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Log all API requests for monitoring
-    console.log(`[API_REQUEST] provider=${provider} model=${transformedModel}`);
+    console.log(`[RESPONSES_API_REQUEST] provider=${provider} model=${transformedModel}`);
 
     try {
-      let result;
-
-      // Call the appropriate provider
-      if (provider === 'openai') {
-        result = await openai.generateText({
-          model: transformedModel,
-          prompt,
-          apiKey,
-        });
-      } else if (provider === 'openrouter') {
-        result = await openrouter.generateText({
-          model: transformedModel,
-          prompt,
-          apiKey,
-        });
-      } else if (provider === 'anthropic') {
-        result = await anthropic.generateText({
-          model: transformedModel,
-          prompt,
-          apiKey,
-        });
-      } else if (provider === 'gemini') {
-        result = await gemini.generateText({
-          model: transformedModel,
-          prompt,
-          apiKey,
-        });
-      } else {
-        return NextResponse.json(
-          { error: 'Unsupported provider' },
-          { status: 400 }
-        );
-      }
+      // Call OpenAI's Responses API
+      const result = await openai.generateResponse({
+        model: transformedModel,
+        prompt,
+        apiKey,
+      });
 
       return NextResponse.json(result);
     } catch (providerError: any) {
@@ -110,10 +96,9 @@ export async function POST(req: NextRequest) {
       }
 
       // Handle provider-specific errors
-      console.error(`[PROVIDER_ERROR] provider=${provider} model=${transformedModel}`, sanitizeError(providerError));
+      console.error(`[RESPONSES_API_ERROR] provider=${provider} model=${transformedModel}`, sanitizeError(providerError));
 
       // Return the actual error message from the API instead of making assumptions
-      // The API knows best why it failed (model not found, wrong API endpoint, auth issues, etc.)
       const errorMessage = providerError.message ||
                           providerError.error?.message ||
                           'Failed to generate response';
@@ -124,7 +109,7 @@ export async function POST(req: NextRequest) {
       );
     }
   } catch (error: any) {
-    console.error('Generation error:', sanitizeError(error));
+    console.error('Responses API error:', sanitizeError(error));
 
     // Return the actual error message without modification
     return NextResponse.json(

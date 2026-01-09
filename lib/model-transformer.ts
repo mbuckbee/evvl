@@ -2,31 +2,36 @@
  * Transforms OpenRouter model slugs to formats expected by direct APIs
  */
 
+// Mapping table for OpenAI models: OpenRouter slug → Direct API slug
+// Only contains exceptions where the transformation is NOT just stripping "openai/"
+const OPENAI_MODEL_MAP: Record<string, string> = {
+  // GPT-5 Image series - OpenRouter uses marketing names, OpenAI API uses technical names
+  'openai/gpt-5-image': 'gpt-image-1',
+  'openai/gpt-5-image-mini': 'gpt-image-1-mini',
+  'gpt-5-image': 'gpt-image-1',
+  'gpt-5-image-mini': 'gpt-image-1-mini',
+
+  // GPT-5 Chat - OpenRouter uses abbreviated name, OpenAI API requires -latest suffix
+  'openai/gpt-5-chat': 'gpt-5-chat-latest',
+  'gpt-5-chat': 'gpt-5-chat-latest',
+};
+
 // Mapping table for Gemini models: OpenRouter slug → Direct API slug
-// Google's direct API uses different naming (gemini-X.Y-model vs google/gemini-model-X.Y)
+// Only contains exceptions where the transformation is NOT just stripping "google/"
+// Most models use the default transformation: google/model-name → model-name
 const GEMINI_MODEL_MAP: Record<string, string> = {
-  // Gemini 2.0 series (available as of Q1 2026)
-  'google/gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
+  // Exception: OpenRouter uses different word order
   'google/gemini-flash-2.0-exp': 'gemini-2.0-flash-exp',
-  'google/gemini-2.0-flash': 'gemini-2.0-flash',
-  'google/gemini-2.0-flash-lite': 'gemini-2.0-flash-lite',
 
-  // Gemini 2.5 series (stable models as of Q1 2026)
-  'google/gemini-2.5-pro': 'gemini-2.5-pro',
-  'google/gemini-2.5-flash': 'gemini-2.5-flash',
-  'google/gemini-2.5-flash-lite': 'gemini-2.5-flash-lite',
-  'google/gemini-2.5-flash-image': 'gemini-2.5-flash-image', // Image generation model (aka Nano Banana)
-
-  // Gemini 3.x series (preview/experimental as of Q1 2026)
-  'google/gemini-3-pro': 'gemini-3-pro',
-  'google/gemini-3-flash': 'gemini-3-flash',
-  'google/gemini-3-pro-image': 'gemini-3-pro-image-preview', // Image generation model
-  'google/gemini-3-pro-image-preview': 'gemini-3-pro-image-preview', // Image generation model
+  // Exception: OpenRouter uses dotted version, Google API uses dashed
   'google/gemini-3.0-pro': 'gemini-3-pro',
   'google/gemini-3.0-flash': 'gemini-3-flash',
 
-  // Legacy Gemini Pro (deprecated but might still work)
-  'google/gemini-pro': 'gemini-pro',
+  // Exception: -image suffix becomes -image-preview in API
+  'google/gemini-3-pro-image': 'gemini-3-pro-image-preview',
+
+  // Exception: Generic preview version redirects to stable
+  'google/gemini-2.5-pro-preview': 'gemini-2.5-pro',
 };
 
 // Mapping table for Anthropic models: OpenRouter slug → Direct API slug
@@ -87,9 +92,9 @@ export function transformModelSlug(
     return modelSlug;
   }
 
-  // Gemini: use mapping table for correct model names
+  // Gemini: check mapping table for exceptions, otherwise strip google/ prefix
   if (provider === 'gemini') {
-    // Check mapping table first
+    // Check mapping table first for any special cases
     const mappedModel = GEMINI_MODEL_MAP[modelSlug];
     if (mappedModel) {
       return mappedModel;
@@ -100,15 +105,20 @@ export function transformModelSlug(
       return modelSlug;
     }
 
-    // Unknown model - fail with clear error
-    throw new Error(
-      `Unknown Gemini model: ${modelSlug}. ` +
-      `Please add mapping to GEMINI_MODEL_MAP in lib/model-transformer.ts`
-    );
+    // Default: just strip the "google/" prefix
+    // This handles all standard Gemini models without needing explicit mappings
+    return modelSlug.replace(/^google\//, '');
   }
 
-  // OpenAI: simply strip the "openai/" prefix
+  // OpenAI: check mapping table for exceptions, otherwise strip the "openai/" prefix
   if (provider === 'openai') {
+    // Check mapping table first for any special cases
+    const mappedModel = OPENAI_MODEL_MAP[modelSlug];
+    if (mappedModel) {
+      return mappedModel;
+    }
+
+    // Default: just strip the "openai/" prefix
     return modelSlug.replace(/^openai\//, '');
   }
 

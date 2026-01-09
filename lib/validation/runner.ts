@@ -10,22 +10,6 @@ import { getTestPrompt } from './prompts';
 const TEST_TIMEOUT = 30000; // 30 seconds
 
 /**
- * Determine if a model supports image generation
- */
-export function isImageModel(provider: Provider, modelId: string): boolean {
-  if (provider === 'openai') {
-    return modelId.includes('dall-e');
-  }
-  if (provider === 'gemini') {
-    return modelId.includes('imagen') ||
-           modelId.includes('image-preview') ||
-           modelId.includes('image-generation');
-  }
-  // Anthropic and OpenRouter don't support direct image generation
-  return false;
-}
-
-/**
  * Test a single model
  */
 export async function testSingleModel(
@@ -40,12 +24,18 @@ export async function testSingleModel(
     model: config.model,
     modelLabel: config.label,
     status: 'running',
-    type: config.type,
+    type: config.type, // Type from AIML API: 'image', 'video', 'chat-completion', etc.
     timestamp: Date.now(),
   };
 
   try {
-    const endpoint = config.type === 'image' ? '/api/generate-image' : '/api/generate';
+    // Route to appropriate endpoint based on type
+    // - 'image': Use image generation endpoint
+    // - 'responses': Use Responses API endpoint (OpenAI only)
+    // - All other types: Use chat completions endpoint
+    const endpoint = config.type === 'image' ? '/api/generate-image' :
+                     config.type === 'responses' ? '/api/generate-response' :
+                     '/api/generate';
 
     // Create abort controller for timeout
     const controller = new AbortController();

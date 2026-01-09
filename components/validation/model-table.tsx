@@ -9,6 +9,28 @@
 import { useState } from 'react';
 import { ModelConfig, TestResult, Provider } from '@/lib/validation/types';
 import { PROVIDERS } from '@/lib/config';
+import { transformModelSlug } from '@/lib/model-transformer';
+
+/**
+ * Format model type from AIML API for display
+ * Maps AIML types to user-friendly labels with icons
+ */
+function formatModelType(type: string): string {
+  const typeMap: Record<string, string> = {
+    'image': '🎨 Image',
+    'video': '🎬 Video',
+    'audio': '🎵 Audio',
+    'chat-completion': '💬 Chat',
+    'responses': '🤖 Response',
+    'embedding': '🔢 Embedding',
+    'stt': '🎤 Speech-to-Text',
+    'tts': '🔊 Text-to-Speech',
+    'language-completion': '✍️ Completion',
+    'document': '📄 Document',
+  };
+
+  return typeMap[type] || `📋 ${type}`;
+}
 
 interface ModelTableProps {
   models: ModelConfig[];
@@ -106,7 +128,10 @@ export default function ModelTable({
                 Model Name
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Model ID
+                OpenRouter ID
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Transformed ID
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-20">
                 Type
@@ -188,8 +213,13 @@ export default function ModelTable({
                           </code>
                         </td>
                         <td className="px-4 py-3">
+                          <code className="text-xs text-blue-600">
+                            {transformModelSlug(model.provider, model.model)}
+                          </code>
+                        </td>
+                        <td className="px-4 py-3">
                           <span className="text-xs text-gray-600">
-                            {model.type === 'image' ? '🎨 Image' : '💬 Text'}
+                            {formatModelType(model.type)}
                           </span>
                         </td>
                         <td className="px-4 py-3">

@@ -21,6 +21,8 @@ export type {
   OpenAITextResponse,
   OpenAIImageRequest,
   OpenAIImageResponse,
+  OpenAIResponseRequest,
+  OpenAIResponseResponse,
 } from './openai';
 
 export type {

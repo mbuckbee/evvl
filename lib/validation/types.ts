@@ -7,7 +7,11 @@
 export type Provider = 'openai' | 'anthropic' | 'openrouter' | 'gemini';
 export type TestMode = 'quick' | 'full' | 'individual';
 export type TestStatus = 'pending' | 'running' | 'success' | 'failed' | 'skipped';
-export type ModelType = 'text' | 'image';
+
+// Model types from AIML API (not exhaustive, pass through any string)
+// Common types: 'image', 'video', 'audio', 'chat-completion', 'responses', 'embedding', 'stt', 'tts'
+// We use string instead of a union type to support new types without code changes
+export type ModelType = string;
 
 export interface TestResult {
   provider: Provider;

@@ -16,8 +16,11 @@ export async function POST(req: NextRequest) {
     let result;
 
     if (provider === 'openai') {
+      // Transform model slug (e.g., openai/gpt-5-image → gpt-image-1)
+      const transformedModel = transformModelSlug('openai', model);
+
       result = await openai.generateImage({
-        model,
+        model: transformedModel,
         prompt,
         apiKey,
         size,
@@ -44,9 +47,10 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Image generation error:', error);
 
+    // Return the actual error message without modification
     return NextResponse.json(
       { error: error.message || 'Failed to generate image' },
-      { status: 500 }
+      { status: error.status || 500 }
     );
   }
 }

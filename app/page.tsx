@@ -9,6 +9,7 @@ import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
 import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
 import { trackEvent } from '@/lib/analytics';
 import { apiClient, isApiError } from '@/lib/api';
+import { isImageModel } from '@/lib/model-utils';
 import TwoColumnLayout from '@/components/layout/two-column-layout';
 import Sidebar from '@/components/collections/sidebar';
 import ResponsePanel from '@/components/response/response-panel';
@@ -139,15 +140,12 @@ export default function Home() {
     const providerConfig = providers.find(p => p.key === provider);
 
     // Detect if this is an image generation model
-    const isImageModel = model.toLowerCase().includes('dall-e') ||
-                         model.toLowerCase().includes('stable-diffusion') ||
-                         model.toLowerCase().includes('imagen') ||
-                         (model.toLowerCase().includes('image') && model.toLowerCase().includes('gemini'));
+    const isImage = isImageModel(provider, model);
 
     try {
       let data;
 
-      if (isImageModel) {
+      if (isImage) {
         data = await apiClient.generateImage({
           prompt,
           provider,
@@ -168,12 +166,12 @@ export default function Home() {
         setOutput({
           id: outputId,
           modelConfig: { provider, model, label: providerConfig?.name || provider },
-          type: isImageModel ? 'image' : 'text',
+          type: isImage ? 'image' : 'text',
           content: '',
           error: data.error,
           timestamp: Date.now(),
         });
-      } else if (isImageModel && 'imageUrl' in data) {
+      } else if (isImage && 'imageUrl' in data) {
         // Image generation response
         setOutput({
           id: outputId,
@@ -184,7 +182,7 @@ export default function Home() {
           latency: data.latency,
           timestamp: Date.now(),
         });
-      } else if (!isImageModel && 'content' in data) {
+      } else if (!isImage && 'content' in data) {
         // Text generation response
         setOutput({
           id: outputId,
@@ -206,7 +204,7 @@ export default function Home() {
       setOutput({
         id: outputId,
         modelConfig: { provider, model, label: providerConfig?.name || provider },
-        type: isImageModel ? 'image' : 'text',
+        type: isImage ? 'image' : 'text',
         content: '',
         error: error.message || 'Network error',
         timestamp: Date.now(),
@@ -393,10 +391,7 @@ export default function Home() {
       const basePromptContent = selectedVersion?.content || '';
 
       // Detect if this is an image generation model
-      const isImageModel = config.model.includes('dall-e') ||
-                          config.model.includes('-image') ||
-                          config.model.includes('stable-diffusion') ||
-                          config.model.includes('midjourney');
+      const isImage = isImageModel(config.provider, config.model);
 
       // Set loading state and pre-allocate responses array
       setGeneratingConfigs(prev => ({ ...prev, [config.id]: true }));
@@ -409,7 +404,7 @@ export default function Home() {
         const promptContent = dataSet ? substituteVariables(basePromptContent, item.variables) : basePromptContent;
 
         try {
-          const data = isImageModel
+          const data = isImage
             ? await apiClient.generateImage({
                 prompt: promptContent,
                 provider: config.provider,
@@ -429,7 +424,7 @@ export default function Home() {
             newResponse = {
               id: uuidv4(),
               modelConfig: { provider: config.provider, model: config.model, label: config.name },
-              type: isImageModel ? 'image' : 'text',
+              type: isImage ? 'image' : 'text',
               content: '',
               error: data.error,
               timestamp: Date.now(),
@@ -471,7 +466,7 @@ export default function Home() {
           const errorResponse: AIOutput = {
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
-            type: isImageModel ? 'image' : 'text',
+            type: isImage ? 'image' : 'text',
             content: '',
             error: error.message || 'Network error',
             timestamp: Date.now(),
@@ -531,10 +526,7 @@ export default function Home() {
     const basePromptContent = selectedVersion.content;
 
     // Detect if this is an image generation model
-    const isImageModel = config.model.includes('dall-e') ||
-                        config.model.includes('-image') ||
-                        config.model.includes('stable-diffusion') ||
-                        config.model.includes('midjourney');
+    const isImage = isImageModel(config.provider, config.model);
 
     // Get data set if selected
     const dataSet = selectedDataSetId ? getDataSetById(selectedDataSetId) : null;
@@ -549,7 +541,7 @@ export default function Home() {
       const promptContent = dataSet ? substituteVariables(basePromptContent, item.variables) : basePromptContent;
 
       try {
-        const data = isImageModel
+        const data = isImage
           ? await apiClient.generateImage({
               prompt: promptContent,
               provider: config.provider,
@@ -569,7 +561,7 @@ export default function Home() {
           newResponse = {
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
-            type: isImageModel ? 'image' : 'text',
+            type: isImage ? 'image' : 'text',
             content: '',
             error: data.error,
             timestamp: Date.now(),
@@ -612,7 +604,7 @@ export default function Home() {
         const errorResponse: AIOutput = {
           id: uuidv4(),
           modelConfig: { provider: config.provider, model: config.model, label: config.name },
-          type: isImageModel ? 'image' : 'text',
+          type: isImage ? 'image' : 'text',
           content: '',
           error: error.message || 'Network error',
           timestamp: Date.now(),
@@ -681,10 +673,7 @@ export default function Home() {
     const basePromptContent = selectedVersion?.content || '';
 
     // Detect if this is an image generation model
-    const isImageModel = config.model.includes('dall-e') ||
-                        config.model.includes('-image') ||
-                        config.model.includes('stable-diffusion') ||
-                        config.model.includes('midjourney');
+    const isImage = isImageModel(config.provider, config.model);
 
     // Get data set if selected
     const dataSet = selectedDataSetId ? getDataSetById(selectedDataSetId) : null;
@@ -699,7 +688,7 @@ export default function Home() {
       const promptContent = dataSet ? substituteVariables(basePromptContent, item.variables) : basePromptContent;
 
       try {
-        const data = isImageModel
+        const data = isImage
           ? await apiClient.generateImage({
               prompt: promptContent,
               provider: config.provider,
@@ -719,7 +708,7 @@ export default function Home() {
           newResponse = {
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
-            type: isImageModel ? 'image' : 'text',
+            type: isImage ? 'image' : 'text',
             content: '',
             error: data.error,
             timestamp: Date.now(),
@@ -762,7 +751,7 @@ export default function Home() {
         const errorResponse: AIOutput = {
           id: uuidv4(),
           modelConfig: { provider: config.provider, model: config.model, label: config.name },
-          type: isImageModel ? 'image' : 'text',
+          type: isImage ? 'image' : 'text',
           content: '',
           error: error.message || 'Network error',
           timestamp: Date.now(),

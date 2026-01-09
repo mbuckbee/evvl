@@ -16,8 +16,8 @@ import {
   TestResult,
   TestMode,
 } from '@/lib/validation/types';
-import { isImageModel, runValidation, getModelsForMode } from '@/lib/validation/runner';
-import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getGeminiModels, getPopularOpenRouterModels } from '@/lib/fetch-models';
+import { runValidation, getModelsForMode } from '@/lib/validation/runner';
+import { fetchAIMLModels, fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getGeminiModels, getPopularOpenRouterModels } from '@/lib/fetch-models';
 import { loadApiKeys } from '@/lib/storage';
 import { getTestModel } from '@/lib/config';
 import ApiKeyStatus from '@/components/validation/api-key-status';
@@ -53,47 +53,50 @@ export default function ApiValidationPage() {
         const keys = loadApiKeys();
         setApiKeys(keys);
 
-        // Fetch models from OpenRouter
+        // Fetch models from AIML API for direct providers (more stable model names)
+        const aimlModels = await fetchAIMLModels();
+
+        // Fetch models from OpenRouter API only for OpenRouter provider
         const openRouterModels = await fetchOpenRouterModels();
 
         // Filter models by provider
-        const openAIModels = getOpenAIModels(openRouterModels);
-        const anthropicModels = getAnthropicModels(openRouterModels);
-        const geminiModels = getGeminiModels(openRouterModels);
+        const openAIModels = getOpenAIModels(aimlModels);
+        const anthropicModels = getAnthropicModels(aimlModels);
+        const geminiModels = getGeminiModels(aimlModels);
         const openRouterPopular = getPopularOpenRouterModels(openRouterModels);
 
         // Convert to ModelConfig format
+        // Pass through the actual type from AIML API without conversion
+        // Types include: 'image', 'video', 'audio', 'chat-completion', 'responses', 'embedding', etc.
         const models: ModelConfig[] = [];
 
-        // OpenAI models
+        // OpenAI models (pass through AIML type directly)
         openAIModels.forEach(m => {
-          const modelId = m.value;
           models.push({
             provider: 'openai',
-            model: modelId,
+            model: m.value,
             label: m.label,
-            type: isImageModel('openai', modelId) ? 'image' : 'text',
+            type: m.type, // Direct passthrough from AIML API
           });
         });
 
-        // Anthropic models
+        // Anthropic models (pass through AIML type directly)
         anthropicModels.forEach(m => {
           models.push({
             provider: 'anthropic',
             model: m.value,
             label: m.label,
-            type: 'text',
+            type: m.type, // Direct passthrough from AIML API
           });
         });
 
-        // Gemini models
+        // Gemini models (pass through AIML type directly)
         geminiModels.forEach(m => {
-          const modelId = m.value;
           models.push({
             provider: 'gemini',
-            model: modelId,
+            model: m.value,
             label: m.label,
-            type: isImageModel('gemini', modelId) ? 'image' : 'text',
+            type: m.type, // Direct passthrough from AIML API
           });
         });
 

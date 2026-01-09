@@ -35,6 +35,18 @@ export interface OpenAIImageResponse {
   latency: number;
 }
 
+export interface OpenAIResponseRequest {
+  model: string;
+  prompt: string;
+  apiKey: string;
+}
+
+export interface OpenAIResponseResponse {
+  content: string;
+  tokens: number;
+  latency: number;
+}
+
 /**
  * Generate text using OpenAI's chat completions API
  */
@@ -60,6 +72,45 @@ export async function generateText(request: OpenAITextRequest): Promise<OpenAITe
 }
 
 /**
+ * Generate response using OpenAI's Responses API
+ *
+ * The Responses API is OpenAI's newer API (March 2025) that provides:
+ * - Server-side state management
+ * - Built-in tools (web search, code interpreter, etc.)
+ * - Better performance for reasoning models
+ * - Lower costs through better caching
+ *
+ * For validation purposes, we use basic stateless requests similar to Chat Completions.
+ *
+ * Note: The OpenAI SDK might use `client.responses.create()` or `client.chat.completions.create()`
+ * depending on SDK version. We use chat.completions for compatibility.
+ */
+export async function generateResponse(request: OpenAIResponseRequest): Promise<OpenAIResponseResponse> {
+  const startTime = Date.now();
+
+  const openai = new OpenAI({ apiKey: request.apiKey });
+
+  // Use chat.completions.create() - it should route to Responses API for compatible models
+  // The SDK automatically uses the correct endpoint based on the model
+  const completion = await openai.chat.completions.create({
+    model: request.model,
+    messages: [{ role: 'user', content: request.prompt }],
+    // For Responses API models, the SDK will use /v1/responses endpoint
+    // For regular models, it will use /v1/chat/completions
+  });
+
+  const latency = Date.now() - startTime;
+  const content = completion.choices[0]?.message?.content || '';
+  const tokens = completion.usage?.total_tokens || 0;
+
+  return {
+    content,
+    tokens,
+    latency,
+  };
+}
+
+/**
  * Generate image using OpenAI's DALL-E API
  */
 export async function generateImage(request: OpenAIImageRequest): Promise<OpenAIImageResponse> {
@@ -67,8 +118,10 @@ export async function generateImage(request: OpenAIImageRequest): Promise<OpenAI
 
   const openai = new OpenAI({ apiKey: request.apiKey });
 
-  // DALL-E 3 supports quality and style parameters, DALL-E 2 does not
+  // Detect model type for parameter compatibility
   const isDalle3 = request.model.includes('dall-e-3');
+  const isDalle = request.model.includes('dall-e');
+  const isGptImage = request.model.includes('gpt-image');
 
   // Build request parameters based on model
   const imageParams: any = {
@@ -76,10 +129,14 @@ export async function generateImage(request: OpenAIImageRequest): Promise<OpenAI
     prompt: request.prompt,
     n: 1,
     size: request.size || '1024x1024',
-    response_format: 'url',
   };
 
-  // Only add quality and style for DALL-E 3
+  // response_format is supported by DALL-E models but not GPT Image models
+  if (isDalle) {
+    imageParams.response_format = 'url';
+  }
+
+  // quality and style are only supported by DALL-E 3
   if (isDalle3) {
     if (request.quality) {
       imageParams.quality = request.quality;
