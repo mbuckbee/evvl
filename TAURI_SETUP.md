@@ -4,7 +4,7 @@ Evvl is available as both a web app and a desktop application. The desktop versi
 
 ## Architecture
 
-- **Web App (evvl.vercel.app)**: Routes API calls through Next.js API routes on Vercel
+- **Web App (app.evvl.com)**: Routes API calls through Next.js API routes on Vercel
 - **Desktop App (Tauri)**: Makes direct API calls to OpenAI, Anthropic, OpenRouter, and Google from your machine
 
 Both versions share the same UI and functionality. The API client automatically detects whether it's running in Tauri and routes requests accordingly.

@@ -343,6 +343,7 @@ MIT
 
 ## Links
 
-- **Web App**: [evvl.vercel.app](https://evvl.vercel.app) *(coming soon)*
+- **Web App**: [app.evvl.com](https://app.evvl.com)
+- **Marketing Site**: [evvl.com](https://evvl.com)
 - **GitHub**: [github.com/yourusername/evvl](https://github.com/yourusername/evvl)
 - **Issues**: [github.com/yourusername/evvl/issues](https://github.com/yourusername/evvl/issues)
