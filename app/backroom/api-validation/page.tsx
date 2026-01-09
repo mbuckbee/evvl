@@ -24,6 +24,7 @@ import ApiKeyStatus from '@/components/validation/api-key-status';
 import TestControls from '@/components/validation/test-controls';
 import TestSummary from '@/components/validation/test-summary';
 import ProviderResults from '@/components/validation/provider-results';
+import ModelTable from '@/components/validation/model-table';
 
 export default function ApiValidationPage() {
   // State
@@ -201,6 +202,39 @@ export default function ApiValidationPage() {
     setSelectedModels(new Set());
   };
 
+  // Handle model checkbox toggle
+  const handleModelToggle = (provider: Provider, model: string) => {
+    const key = `${provider}:${model}`;
+    const newModels = new Set(selectedModels);
+    if (newModels.has(key)) {
+      newModels.delete(key);
+    } else {
+      newModels.add(key);
+    }
+    setSelectedModels(newModels);
+  };
+
+  // Handle select all for a specific provider
+  const handleSelectAllProvider = (provider: Provider) => {
+    const providerModels = allModels.filter(m =>
+      m.provider === provider && selectedProviders.has(provider)
+    );
+    const providerKeys = providerModels.map(m => `${m.provider}:${m.model}`);
+
+    // Check if all provider models are already selected
+    const allSelected = providerKeys.every(key => selectedModels.has(key));
+
+    const newModels = new Set(selectedModels);
+    if (allSelected) {
+      // Deselect all provider models
+      providerKeys.forEach(key => newModels.delete(key));
+    } else {
+      // Select all provider models
+      providerKeys.forEach(key => newModels.add(key));
+    }
+    setSelectedModels(newModels);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -249,14 +283,27 @@ export default function ApiValidationPage() {
       />
 
       {/* Test Summary */}
-      <TestSummary
-        results={testResults}
-        testing={testing}
-        totalModels={testResults.size}
-      />
+      {testResults.size > 0 && (
+        <TestSummary
+          results={testResults}
+          testing={testing}
+          totalModels={testResults.size}
+        />
+      )}
 
-      {/* Provider Results */}
-      <ProviderResults results={testResults} models={allModels} />
+      {/* Model Table (Individual Mode) or Provider Results (Quick/Full Mode) */}
+      {testMode === 'individual' ? (
+        <ModelTable
+          models={allModels.filter(m => selectedProviders.has(m.provider))}
+          selectedModels={selectedModels}
+          onModelToggle={handleModelToggle}
+          onSelectAllProvider={handleSelectAllProvider}
+          results={testResults}
+          testing={testing}
+        />
+      ) : (
+        <ProviderResults results={testResults} models={allModels} />
+      )}
     </div>
   );
 }
