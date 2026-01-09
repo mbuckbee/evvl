@@ -6,6 +6,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { TestMode, ModelConfig, Provider } from '@/lib/validation/types';
 import { PROVIDERS } from '@/lib/config';
 
@@ -38,6 +39,11 @@ export default function TestControls({
   testing,
   hasResults,
 }: TestControlsProps) {
+  // Track which provider sections are expanded
+  const [expandedProviders, setExpandedProviders] = useState<Set<Provider>>(
+    new Set(['openai', 'anthropic', 'openrouter', 'gemini'])
+  );
+
   // Get models for selected providers
   const availableModels = allModels.filter(m =>
     mode === 'individual' ? selectedProviders.has(m.provider) : true
@@ -45,6 +51,17 @@ export default function TestControls({
 
   // Count selected models
   const selectedCount = mode === 'individual' ? selectedModels.size : 0;
+
+  // Toggle provider section expansion
+  const toggleProviderExpansion = (provider: Provider) => {
+    const newExpanded = new Set(expandedProviders);
+    if (newExpanded.has(provider)) {
+      newExpanded.delete(provider);
+    } else {
+      newExpanded.add(provider);
+    }
+    setExpandedProviders(newExpanded);
+  };
 
   // Handle select all / deselect all
   const handleToggleAll = () => {
@@ -56,6 +73,25 @@ export default function TestControls({
       const allKeys = new Set(availableModels.map(m => `${m.provider}:${m.model}`));
       onModelsChange(allKeys);
     }
+  };
+
+  // Handle select all for a specific provider
+  const handleSelectAllProvider = (provider: Provider) => {
+    const providerModels = availableModels.filter(m => m.provider === provider);
+    const providerKeys = providerModels.map(m => `${m.provider}:${m.model}`);
+
+    // Check if all provider models are already selected
+    const allSelected = providerKeys.every(key => selectedModels.has(key));
+
+    const newModels = new Set(selectedModels);
+    if (allSelected) {
+      // Deselect all provider models
+      providerKeys.forEach(key => newModels.delete(key));
+    } else {
+      // Select all provider models
+      providerKeys.forEach(key => newModels.add(key));
+    }
+    onModelsChange(newModels);
   };
 
   // Handle provider checkbox
@@ -184,7 +220,7 @@ export default function TestControls({
             </button>
           </div>
 
-          <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-4 space-y-4">
+          <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-200">
             {PROVIDERS.filter(p => selectedProviders.has(p.key)).map(provider => {
               const providerModels = availableModels.filter(
                 m => m.provider === provider.key
@@ -192,43 +228,80 @@ export default function TestControls({
 
               if (providerModels.length === 0) return null;
 
+              const isExpanded = expandedProviders.has(provider.key);
+              const providerKeys = providerModels.map(m => `${m.provider}:${m.model}`);
+              const allProviderSelected = providerKeys.every(key => selectedModels.has(key));
+              const someProviderSelected = providerKeys.some(key => selectedModels.has(key));
+
               return (
                 <div key={provider.key}>
-                  <div className="font-medium text-gray-900 mb-2">
-                    {provider.name} ({providerModels.length} models)
+                  {/* Provider Header - Clickable */}
+                  <div className="bg-gray-50">
+                    <button
+                      onClick={() => toggleProviderExpansion(provider.key)}
+                      className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">
+                          {isExpanded ? '▼' : '▶'}
+                        </span>
+                        <span className="font-medium text-gray-900">
+                          {provider.name} ({providerModels.length} models)
+                        </span>
+                        {someProviderSelected && (
+                          <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                            {providerKeys.filter(k => selectedModels.has(k)).length} selected
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectAllProvider(provider.key);
+                        }}
+                        disabled={testing}
+                        className="text-sm text-blue-600 hover:text-blue-700 px-3 py-1 hover:bg-blue-50 rounded"
+                      >
+                        {allProviderSelected ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </button>
                   </div>
-                  <div className="space-y-1">
-                    {providerModels.map(model => {
-                      const key = `${model.provider}:${model.model}`;
-                      return (
-                        <label
-                          key={key}
-                          className="flex items-start gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedModels.has(key)}
-                            onChange={() =>
-                              handleModelToggle(model.provider, model.model)
-                            }
-                            disabled={testing}
-                            className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">
-                              {model.label}
+
+                  {/* Provider Models - Collapsible */}
+                  {isExpanded && (
+                    <div className="p-4 space-y-1">
+                      {providerModels.map(model => {
+                        const key = `${model.provider}:${model.model}`;
+                        return (
+                          <label
+                            key={key}
+                            className="flex items-start gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedModels.has(key)}
+                              onChange={() =>
+                                handleModelToggle(model.provider, model.model)
+                              }
+                              disabled={testing}
+                              className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">
+                                {model.label}
+                              </div>
+                              <div className="text-xs text-gray-500 font-mono truncate">
+                                {model.model}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {model.type === 'image' ? '🎨 Image' : '💬 Text'}
+                              </div>
                             </div>
-                            <div className="text-xs text-gray-500 font-mono truncate">
-                              {model.model}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {model.type === 'image' ? '🎨 Image' : '💬 Text'}
-                            </div>
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
