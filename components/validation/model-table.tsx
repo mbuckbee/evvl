@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { ModelConfig, TestResult, Provider } from '@/lib/validation/types';
 import { PROVIDERS } from '@/lib/config';
 import { transformModelSlug } from '@/lib/model-transformer';
@@ -154,9 +154,9 @@ export default function ModelTable({
               const allProviderSelected = providerKeys.every(key => selectedModels.has(key));
 
               return (
-                <>
+                <React.Fragment key={provider.key}>
                   {/* Provider Header Row */}
-                  <tr key={`${provider.key}-header`} className="bg-gray-50">
+                  <tr className="bg-gray-50">
                     <td className="px-4 py-3">
                       <input
                         type="checkbox"
@@ -243,7 +243,7 @@ export default function ModelTable({
                       </tr>
                     );
                   })}
-                </>
+                </React.Fragment>
               );
             })}
           </tbody>

@@ -80,28 +80,29 @@ export async function generateText(request: OpenAITextRequest): Promise<OpenAITe
  * - Better performance for reasoning models
  * - Lower costs through better caching
  *
- * For validation purposes, we use basic stateless requests similar to Chat Completions.
+ * For validation purposes, we use basic stateless requests.
  *
- * Note: The OpenAI SDK might use `client.responses.create()` or `client.chat.completions.create()`
- * depending on SDK version. We use chat.completions for compatibility.
+ * Key differences from Chat Completions:
+ * - Use client.responses.create() instead of client.chat.completions.create()
+ * - Use 'input' parameter instead of 'messages'
+ * - Access response via response.output_text (SDK convenience property)
  */
 export async function generateResponse(request: OpenAIResponseRequest): Promise<OpenAIResponseResponse> {
   const startTime = Date.now();
 
   const openai = new OpenAI({ apiKey: request.apiKey });
 
-  // Use chat.completions.create() - it should route to Responses API for compatible models
-  // The SDK automatically uses the correct endpoint based on the model
-  const completion = await openai.chat.completions.create({
+  // Use the Responses API endpoint (not Chat Completions)
+  const response = await openai.responses.create({
     model: request.model,
-    messages: [{ role: 'user', content: request.prompt }],
-    // For Responses API models, the SDK will use /v1/responses endpoint
-    // For regular models, it will use /v1/chat/completions
+    input: request.prompt,  // Use 'input' not 'messages'
   });
 
   const latency = Date.now() - startTime;
-  const content = completion.choices[0]?.message?.content || '';
-  const tokens = completion.usage?.total_tokens || 0;
+  // Use output_text convenience property from SDK
+  const content = response.output_text || '';
+  // Responses API may not return usage stats in the same format
+  const tokens = (response as any).usage?.total_tokens || 0;
 
   return {
     content,

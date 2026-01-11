@@ -141,8 +141,11 @@ export function filterModelsByProvider(models: OpenRouterModel[], prefix: string
  * - 'language-completion': Legacy completion models
  * - 'image': Image generation models (added separately with hardcoded list)
  *
- * Excluded types:
- * - 'video', 'audio', 'stt', 'tts': Need specialized endpoints we don't support yet
+ * Excluded:
+ * - 'video', 'audio', 'stt', 'tts', 'embedding', 'document': Need specialized endpoints we don't support
+ * - Models starting with 'fallback-': Proxy/fallback variants we don't need to test
+ * - Models with '-oss-' or 'gpt-oss-': Open-source models not in OpenAI API
+ * - Models ending with '-high': OpenRouter-exclusive reasoning variants
  *
  * Sorted in descending order (newer versions first)
  * Returns models with type information from AIML API
@@ -157,10 +160,13 @@ export function getOpenAIModels(models: AIMLModel[]) {
     .filter(model => !model.id.includes('gpt-oss-') && !model.id.includes('-oss-'))
     // Filter out OpenRouter-exclusive reasoning effort variants ending in -high
     .filter(model => !model.id.includes('-high'))
+    // Filter out fallback variants (proxy models we don't need to test)
+    .filter(model => !model.id.startsWith('fallback-'))
     // Filter out image generation models (they'll be added separately)
     .filter(model => model.type !== 'image')
-    // Filter out video, audio, etc. - these need different endpoints we don't support yet
-    // Include: 'chat-completion', 'responses', 'language-completion'
+    // Filter out unsupported types: video, audio, stt, tts, embedding, document
+    // These need specialized endpoints we don't support yet
+    // Only include: 'chat-completion', 'responses', 'language-completion'
     .filter(model => model.type === 'chat-completion' ||
                      model.type === 'responses' ||
                      model.type === 'language-completion')

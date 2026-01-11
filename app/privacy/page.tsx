@@ -85,18 +85,20 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold mb-3 text-gray-900">Analytics and Tracking</h2>
+          <h2 className="text-2xl font-bold mb-3 text-gray-900">Analytics and Tracking (Web App Only)</h2>
           <p className="text-gray-700 mb-3">
-            We use Plausible Analytics, a privacy-friendly analytics service, to understand how visitors use Evvl.
-            Plausible does not use cookies and does not collect any personal information. It only tracks anonymous
-            page views and basic usage statistics.
+            The web application uses privacy-focused analytics to understand basic usage patterns:
+          </p>
+          <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4 mb-3">
+            <li><strong>Plausible Analytics:</strong> Privacy-friendly analytics that doesn&apos;t use cookies or collect personal data. Only anonymous page views. <a href="https://plausible.io/privacy" className="text-blue-600 hover:text-blue-700" target="_blank" rel="noopener noreferrer">Learn more</a></li>
+            <li><strong>Vercel Analytics:</strong> Basic performance and usage metrics. <a href="https://vercel.com/docs/analytics/privacy-policy" className="text-blue-600 hover:text-blue-700" target="_blank" rel="noopener noreferrer">Learn more</a></li>
+            <li><strong>Vercel Speed Insights:</strong> Page load performance monitoring. <a href="https://vercel.com/docs/speed-insights" className="text-blue-600 hover:text-blue-700" target="_blank" rel="noopener noreferrer">Learn more</a></li>
+          </ul>
+          <p className="text-gray-700 mb-3">
+            We do not use advertising networks or any other third-party tracking tools.
           </p>
           <p className="text-gray-700">
-            We do not use advertising networks or any other third-party tracking tools. You can learn more about
-            Plausible&apos;s privacy practices at{' '}
-            <a href="https://plausible.io/privacy" className="text-blue-600 hover:text-blue-700" target="_blank" rel="noopener noreferrer">
-              plausible.io/privacy
-            </a>.
+            <strong>Desktop Application:</strong> The desktop app has zero analytics—no tracking of any kind. All data stays entirely on your device.
           </p>
         </section>
 
