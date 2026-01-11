@@ -6,7 +6,7 @@ import { Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects, getPromptsByProjectId, getModelConfigsByProjectId, getDataSetById, getDataSetsByProjectId, saveProject } from '@/lib/storage';
 import { ApiKeys, AIOutput, Prompt, ProjectModelConfig, Project, DataSet } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
-import { fetchOpenRouterModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
+import { fetchOpenRouterModels, fetchAIMLModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
 import { trackEvent } from '@/lib/analytics';
 import { apiClient, isApiError } from '@/lib/api';
 import { isImageModel } from '@/lib/model-utils';
@@ -68,15 +68,22 @@ export default function Home() {
       }
     }
 
-    // Load dynamic models from OpenRouter API
+    // Load dynamic models from AIML API (for direct providers) and OpenRouter (for OpenRouter provider)
     async function loadModels() {
-      const models = await fetchOpenRouterModels();
+      // Fetch from both APIs in parallel
+      const [aimlModels, openRouterModels] = await Promise.all([
+        fetchAIMLModels(),
+        fetchOpenRouterModels(),
+      ]);
 
-      if (models.length > 0) {
-        const openaiModels = getOpenAIModels(models);
-        const anthropicModels = getAnthropicModels(models);
-        const openrouterModels = getPopularOpenRouterModels(models);
-        const geminiModels = getGeminiModels(models);
+      // Use AIML models for direct providers (OpenAI, Anthropic, Gemini)
+      // Use OpenRouter models only for the OpenRouter provider
+      const openaiModels = aimlModels.length > 0 ? getOpenAIModels(aimlModels) : [];
+      const anthropicModels = aimlModels.length > 0 ? getAnthropicModels(aimlModels) : [];
+      const geminiModels = aimlModels.length > 0 ? getGeminiModels(aimlModels) : [];
+      const openrouterModels = openRouterModels.length > 0 ? getPopularOpenRouterModels(openRouterModels) : [];
+
+      if (openaiModels.length > 0 || anthropicModels.length > 0 || openrouterModels.length > 0 || geminiModels.length > 0) {
 
         const updatedProviders = PROVIDERS.map(p => {
           if (p.key === 'openai' && openaiModels.length > 0) {
