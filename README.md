@@ -321,6 +321,80 @@ lsof -ti:3333 | xargs kill -9
 npm run tauri:dev
 ```
 
+## Releasing Desktop Apps
+
+Desktop app releases are automated via GitHub Actions. When you push a version tag, the workflow builds installers for all platforms and publishes them to the public releases repo.
+
+### Release Process
+
+**1. Update version numbers:**
+
+Edit both files to match your new version:
+- `package.json` → `"version": "X.Y.Z"`
+- `src-tauri/tauri.conf.json` → `"version": "X.Y.Z"`
+
+**2. Commit and tag:**
+
+```bash
+git add package.json src-tauri/tauri.conf.json
+git commit -m "Bump version to X.Y.Z"
+git push
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+**3. Wait for build (~10-15 minutes):**
+
+Monitor progress at: [GitHub Actions](../../actions/workflows/release.yml)
+
+### What Gets Built
+
+| Platform | Artifacts |
+|----------|-----------|
+| macOS (Apple Silicon) | `.dmg` installer |
+| macOS (Intel) | `.dmg` installer |
+| Windows | `.exe` (NSIS) and `.msi` installers |
+| Linux | `.AppImage` and `.deb` packages |
+
+### Release Repositories
+
+- **Private repo** (`evvl`): Source code and internal releases
+- **Public repo** (`evvl-releases`): Public download releases
+
+### downloads.json
+
+Each release includes a `downloads.json` file with all download URLs:
+
+```bash
+curl -sL https://github.com/mbuckbee/evvl-releases/releases/latest/download/downloads.json
+```
+
+```json
+{
+  "version": "0.1.2",
+  "tag": "v0.1.2",
+  "releaseDate": "2026-01-11",
+  "downloads": {
+    "macos-arm64": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.2/Evvl_0.1.2_aarch64.dmg",
+    "macos-x64": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.2/Evvl_0.1.2_x64.dmg",
+    "windows-exe": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.2/Evvl_0.1.2_x64-setup.exe",
+    "windows-msi": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.2/Evvl_0.1.2_x64_en-US.msi",
+    "linux-appimage": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.2/Evvl_0.1.2_amd64.AppImage",
+    "linux-deb": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.2/Evvl_0.1.2_amd64.deb"
+  }
+}
+```
+
+The marketing site fetches this JSON to display current download links.
+
+### Workflow Configuration
+
+The release workflow requires a `PUBLIC_RELEASE_TOKEN` secret with write access to:
+- `mbuckbee/evvl-releases` (public downloads)
+- `mbuckbee/evvl-marketing` (optional, for future use)
+
+See `.github/workflows/release.yml` for full configuration.
+
 ## Contributing
 
 1. Fork the repository
