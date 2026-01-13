@@ -5,8 +5,9 @@ import { ClockIcon, CpuChipIcon, PhotoIcon, DocumentTextIcon, Cog6ToothIcon, XMa
 import Image from 'next/image';
 import Link from 'next/link';
 import { loadApiKeys, loadModelConfigs, deleteModelConfig, getModelConfigById, getDataSetsByProjectId } from '@/lib/storage';
-import { ProjectModelConfig, Prompt, ApiKeys, DataSet } from '@/lib/types';
+import { ProjectModelConfig, Prompt, ApiKeys, DataSet, Provider } from '@/lib/types';
 import ConfigEditor from '@/components/model-configs/config-editor';
+import { PROVIDERS } from '@/lib/config';
 
 import { AIOutput } from '@/lib/types';
 
@@ -61,6 +62,8 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
   const [openVersionDropdowns, setOpenVersionDropdowns] = useState<Record<string, boolean>>({});
   const [dataSets, setDataSets] = useState<DataSet[]>([]);
   const [isDataSetDropdownOpen, setIsDataSetDropdownOpen] = useState(false);
+  const [selectedDefaultProvider, setSelectedDefaultProvider] = useState<Provider | null>(null);
+  const [showProviderConfigEditor, setShowProviderConfigEditor] = useState(false);
 
   const selectedDataSetId = propSelectedDataSetId ?? null;
 
@@ -237,12 +240,84 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
 
         {/* Model Configuration Cards or Table */}
         <div className="flex-1 overflow-y-auto p-6">
-          {filteredConfigs.length === 0 && !showNewConfigEditor ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center text-gray-600 dark:text-gray-300">
-                <p className="text-lg mb-2">No model configs yet</p>
-                <p className="text-sm">Create a model config to get started</p>
+          {filteredConfigs.length === 0 && !showNewConfigEditor && !showProviderConfigEditor ? (
+            <div className="h-full">
+              <div className="text-center mb-6">
+                <p className="text-lg text-gray-600 dark:text-gray-300 mb-1">Choose a provider to get started</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Select an AI provider to create your first model configuration</p>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                {PROVIDERS.map((provider) => {
+                  const iconName = providerIconMap[provider.key] || 'openrouter';
+                  const hasKey = !!apiKeys[provider.key];
+                  return (
+                    <button
+                      key={provider.key}
+                      onClick={() => {
+                        if (!hasKey) {
+                          // Redirect to settings if API key not configured
+                          window.location.href = '/settings';
+                        } else {
+                          setSelectedDefaultProvider(provider.key);
+                          setShowProviderConfigEditor(true);
+                        }
+                      }}
+                      className="border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 p-6 hover:border-blue-500 dark:hover:border-blue-400 transition-colors text-left group"
+                    >
+                      <div className="flex items-center gap-4 mb-3">
+                        <Image
+                          src={`/series_icon/light/${iconName}.svg`}
+                          alt={provider.name}
+                          width={40}
+                          height={40}
+                          className="dark:hidden w-10 h-10"
+                        />
+                        <Image
+                          src={`/series_icon/dark/${iconName}.svg`}
+                          alt={provider.name}
+                          width={40}
+                          height={40}
+                          className="hidden dark:block w-10 h-10"
+                        />
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                            {provider.name}
+                          </h4>
+                          {!hasKey && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400">API key not configured</p>
+                          )}
+                          {hasKey && (
+                            <p className="text-xs text-green-600 dark:text-green-400">Ready to use</p>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {provider.key === 'openai' && 'GPT-4, GPT-3.5, DALL-E and more'}
+                        {provider.key === 'anthropic' && 'Claude 3.5 Sonnet, Claude 3 Opus, Haiku'}
+                        {provider.key === 'openrouter' && '100+ models including Llama, Mixtral, DeepSeek'}
+                        {provider.key === 'gemini' && 'Gemini Pro, Gemini Flash, image generation'}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : showProviderConfigEditor && projectId ? (
+            <div className="border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <ConfigEditor
+                projectId={projectId}
+                config={undefined}
+                defaultProvider={selectedDefaultProvider || undefined}
+                onSave={() => {
+                  setModelConfigs(loadModelConfigs());
+                  setShowProviderConfigEditor(false);
+                  setSelectedDefaultProvider(null);
+                }}
+                onCancel={() => {
+                  setShowProviderConfigEditor(false);
+                  setSelectedDefaultProvider(null);
+                }}
+              />
             </div>
           ) : layout === 'table' ? (
             /* Table View - Each row is a dataset item (or single row if no dataset) with all model responses */

@@ -20,13 +20,14 @@ const providerIconMap: Record<string, string> = {
 interface ConfigEditorProps {
   projectId: string;
   config?: ProjectModelConfig;
+  defaultProvider?: Provider;
   onSave?: (config: ProjectModelConfig) => void;
   onCancel?: () => void;
 }
 
-export default function ConfigEditor({ projectId, config, onSave, onCancel }: ConfigEditorProps) {
+export default function ConfigEditor({ projectId, config, defaultProvider, onSave, onCancel }: ConfigEditorProps) {
   const [name, setName] = useState(config?.name || '');
-  const [provider, setProvider] = useState<Provider>(config?.provider || 'openai');
+  const [provider, setProvider] = useState<Provider>(config?.provider || defaultProvider || 'openai');
   const [model, setModel] = useState(config?.model || '');
   const [providers, setProviders] = useState<ProviderConfig[]>(PROVIDERS);
   const [providerDropdownOpen, setProviderDropdownOpen] = useState(false);
