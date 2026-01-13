@@ -402,6 +402,28 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
             </div>
           );
         })}
+
+        {/* Sponsored link */}
+        <a
+          href="https://knowatoa.com?ref=evvl"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block px-4 py-3 mt-10 text-sm text-center text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors"
+        >
+          <div className="flex items-center justify-center gap-2">
+            <img
+              src="/knowatoa-icon-light.svg"
+              alt="Knowatoa"
+              className="w-16 h-16 rounded dark:hidden"
+            />
+            <img
+              src="/knowatoa-icon-dark.svg"
+              alt="Knowatoa"
+              className="w-16 h-16 rounded hidden dark:block"
+            />
+          </div>
+          <p className="mt-2">If you found this project useful, you'll probably also appreciate Knowatoa.</p>
+        </a>
       </div>
 
       {/* Footer */}
