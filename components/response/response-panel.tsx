@@ -262,7 +262,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                           setShowProviderConfigEditor(true);
                         }
                       }}
-                      className="border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 p-6 hover:border-blue-500 dark:hover:border-blue-400 transition-colors text-left group"
+                      className="border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 p-6 hover:border-blue-500 dark:hover:border-blue-400 transition-colors text-left group"
                     >
                       <div className="flex items-center gap-4 mb-3">
                         <Image
