@@ -58,6 +58,15 @@ export async function GET(req: NextRequest) {
       // Timestamps
       lastKeyAdded,
       lastGeneration,
+
+      // Share analytics
+      shareCreatedTotal,
+      shareCreatedWithImages,
+      shareViewedTotal,
+      shareRateLimitedTotal,
+      shareModerationBlockedTotal,
+      lastShareCreated,
+      lastShareViewed,
     ] = await Promise.all([
       kv.get('analytics:api_key_added:total'),
       kv.get('analytics:api_key_added:provider:openai'),
@@ -81,6 +90,15 @@ export async function GET(req: NextRequest) {
 
       kv.get('analytics:api_key_added:last'),
       kv.get('analytics:generation_success:last'),
+
+      // Share analytics
+      kv.get('share:analytics:created:total'),
+      kv.get('share:analytics:created:with_images'),
+      kv.get('share:analytics:viewed:total'),
+      kv.get('share:analytics:rate_limited:total'),
+      kv.get('share:analytics:moderation_blocked:total'),
+      kv.get('share:analytics:created:last'),
+      kv.get('share:analytics:viewed:last'),
     ]);
 
     const stats = {
@@ -118,6 +136,21 @@ export async function GET(req: NextRequest) {
           },
         },
         lastGeneration: lastGeneration as string | null,
+      },
+      shares: {
+        created: {
+          total: (shareCreatedTotal || 0) as number,
+          withImages: (shareCreatedWithImages || 0) as number,
+          last: lastShareCreated as string | null,
+        },
+        viewed: {
+          total: (shareViewedTotal || 0) as number,
+          last: lastShareViewed as string | null,
+        },
+        blocked: {
+          rateLimited: (shareRateLimitedTotal || 0) as number,
+          moderation: (shareModerationBlockedTotal || 0) as number,
+        },
       },
     };
 

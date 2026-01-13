@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { loadApiKeys, loadModelConfigs, deleteModelConfig, getModelConfigById, getDataSetsByProjectId } from '@/lib/storage';
 import { ProjectModelConfig, Prompt, ApiKeys, DataSet, Provider } from '@/lib/types';
 import ConfigEditor from '@/components/model-configs/config-editor';
+import ShareButton from '@/components/share/share-button';
 import { PROVIDERS } from '@/lib/config';
 
 import { AIOutput } from '@/lib/types';
@@ -148,6 +149,27 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Responses</h2>
 
           <div className="flex items-center gap-3">
+            {/* Share Button - always visible, disabled when no responses */}
+            <ShareButton
+              promptName={currentPrompt?.name || 'Untitled'}
+              promptContent={currentPrompt?.versions.find(v => v.id === currentPrompt.currentVersionId)?.content || ''}
+              systemPrompt={currentPrompt?.versions.find(v => v.id === currentPrompt.currentVersionId)?.systemPrompt}
+              responses={configResponses ? Object.entries(configResponses).flatMap(([configId, outputs]) => {
+                const config = filteredConfigs.find(c => c.id === configId);
+                return outputs.map(output => ({
+                  provider: config?.provider || 'unknown',
+                  model: config?.model || 'unknown',
+                  modelName: config?.name || config?.model || 'Unknown Model',
+                  type: output.type || 'text',
+                  content: output.content,
+                  imageUrl: output.imageUrl,
+                  latency: output.latency,
+                  tokens: output.tokens
+                }));
+              }) : []}
+              disabled={!configResponses || Object.keys(configResponses).length === 0}
+            />
+
             {/* Add Model Config Button */}
             {projectId && onNewModelConfig && (
               <button
