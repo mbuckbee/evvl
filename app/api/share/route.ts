@@ -127,11 +127,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateSha
       hasImages
     });
 
-    // Build share URL
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-                   request.headers.get('origin') ||
-                   'https://evvl.dev';
-    const shareUrl = `${baseUrl}/s/${shareId}`;
+    // Build share URL - use separate domain for user-generated content isolation
+    const shareDomain = process.env.SHARE_DOMAIN || 'https://evvl.io';
+    const shareUrl = `${shareDomain}/s/${shareId}`;
 
     return NextResponse.json({
       success: true,
