@@ -128,7 +128,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateSha
     });
 
     // Build share URL - use separate domain for user-generated content isolation
-    const shareDomain = process.env.SHARE_DOMAIN || 'https://evvl.io';
+    const shareDomain = process.env.SHARE_DOMAIN || 'https://share.evvl.io';
     const shareUrl = `${shareDomain}/s/${shareId}`;
 
     return NextResponse.json({
