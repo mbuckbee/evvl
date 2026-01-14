@@ -398,6 +398,7 @@ export default function Home() {
     // Run inference for each model config in parallel
     const configPromises = configsWithKeys.map(async (config) => {
       const apiKey = apiKeys[config.provider];
+      if (!apiKey) return; // TypeScript guard - configsWithKeys already filters this
 
       // Get the selected version for this config
       const selectedVersionId = selectedVersions[config.id];
