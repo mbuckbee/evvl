@@ -31,7 +31,7 @@ export default function ShareNotFound() {
             Share Not Found
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-md">
-            This shared evaluation has expired or doesn't exist. Shares are automatically deleted after 7 days.
+            This shared evaluation has expired or does not exist. Shares are automatically deleted after 7 days.
           </p>
           <Link
             href="/"

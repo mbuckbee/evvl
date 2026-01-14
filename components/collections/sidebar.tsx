@@ -422,7 +422,7 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
               className="w-16 h-16 rounded hidden dark:block"
             />
           </div>
-          <p className="mt-2">If you found this project useful, you'll probably also appreciate Knowatoa.</p>
+          <p className="mt-2">If you found this project useful, you will probably also appreciate Knowatoa.</p>
         </a>
       </div>
 
