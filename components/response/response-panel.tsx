@@ -152,8 +152,8 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
             {/* Share Button - always visible, disabled when no responses */}
             <ShareButton
               promptName={currentPrompt?.name || 'Untitled'}
-              promptContent={currentPrompt?.versions.find(v => v.id === currentPrompt.currentVersionId)?.content || ''}
-              systemPrompt={currentPrompt?.versions.find(v => v.id === currentPrompt.currentVersionId)?.systemPrompt}
+              promptContent={currentPrompt?.versions?.find(v => v.id === currentPrompt?.currentVersionId)?.content || ''}
+              systemPrompt={currentPrompt?.versions?.find(v => v.id === currentPrompt?.currentVersionId)?.systemPrompt}
               responses={configResponses ? Object.entries(configResponses).flatMap(([configId, outputs]) => {
                 const config = filteredConfigs.find(c => c.id === configId);
                 return outputs.map(output => ({
