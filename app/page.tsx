@@ -78,10 +78,12 @@ export default function Home() {
 
       // Use AIML models for direct providers (OpenAI, Anthropic, Gemini)
       // Use OpenRouter models only for the OpenRouter provider
-      const openaiModels = aimlModels.length > 0 ? getOpenAIModels(aimlModels) : [];
-      const anthropicModels = aimlModels.length > 0 ? getAnthropicModels(aimlModels) : [];
-      const geminiModels = aimlModels.length > 0 ? getGeminiModels(aimlModels) : [];
-      const openrouterModels = openRouterModels.length > 0 ? getPopularOpenRouterModels(openRouterModels) : [];
+      const safeAimlModels = aimlModels || [];
+      const safeOpenRouterModels = openRouterModels || [];
+      const openaiModels = safeAimlModels.length > 0 ? getOpenAIModels(safeAimlModels) : [];
+      const anthropicModels = safeAimlModels.length > 0 ? getAnthropicModels(safeAimlModels) : [];
+      const geminiModels = safeAimlModels.length > 0 ? getGeminiModels(safeAimlModels) : [];
+      const openrouterModels = safeOpenRouterModels.length > 0 ? getPopularOpenRouterModels(safeOpenRouterModels) : [];
 
       if (openaiModels.length > 0 || anthropicModels.length > 0 || openrouterModels.length > 0 || geminiModels.length > 0) {
 
@@ -227,6 +229,7 @@ export default function Home() {
     setShowProjectEditor(true);
     setShowPromptEditor(false);
     setShowConfigEditor(false);
+    setShowDataSetEditor(false);
   };
 
   const handleProjectSelect = (projectId: string, shouldEdit?: boolean) => {
@@ -378,10 +381,23 @@ export default function Home() {
     const dataSet = selectedDataSetId ? getDataSetById(selectedDataSetId) : null;
     const dataSetItems = (dataSet?.items && dataSet.items.length > 0) ? dataSet.items : [{ id: '', variables: {} }]; // If no dataset or empty dataset, run once with no substitution
 
+    // Filter configs that have API keys
+    const configsWithKeys = modelConfigs.filter(config => apiKeys[config.provider]);
+
+    // Set ALL generating states at once BEFORE starting any async operations
+    // This prevents race conditions where some configs show "save and refresh" during generation
+    const initialGeneratingState: Record<string, boolean> = {};
+    const initialResponsesState: Record<string, any[]> = {};
+    configsWithKeys.forEach(config => {
+      initialGeneratingState[config.id] = true;
+      initialResponsesState[config.id] = new Array(dataSetItems.length);
+    });
+    setGeneratingConfigs(prev => ({ ...prev, ...initialGeneratingState }));
+    setConfigResponses(prev => ({ ...prev, ...initialResponsesState }));
+
     // Run inference for each model config in parallel
-    const configPromises = modelConfigs.map(async (config) => {
+    const configPromises = configsWithKeys.map(async (config) => {
       const apiKey = apiKeys[config.provider];
-      if (!apiKey) return; // Skip if no API key
 
       // Get the selected version for this config
       const selectedVersionId = selectedVersions[config.id];
@@ -399,12 +415,6 @@ export default function Home() {
 
       // Detect if this is an image generation model
       const isImage = isImageModel(config.provider, config.model);
-
-      // Set loading state and pre-allocate responses array
-      setGeneratingConfigs(prev => ({ ...prev, [config.id]: true }));
-      // Pre-allocate array with the correct size to maintain order (use empty array to avoid rendering issues)
-      const initialArray = new Array(dataSetItems.length);
-      setConfigResponses(prev => ({ ...prev, [config.id]: initialArray as any }));
 
       // Generate all dataset items in parallel
       const itemPromises = dataSetItems.map(async (item, itemIndex) => {

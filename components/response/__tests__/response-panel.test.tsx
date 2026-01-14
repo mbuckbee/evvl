@@ -425,8 +425,8 @@ describe('ResponsePanel', () => {
         />
       );
 
-      expect(screen.getByText('No model configs yet')).toBeInTheDocument();
-      expect(screen.getByText('Create a model config to get started')).toBeInTheDocument();
+      expect(screen.getByText('Choose a provider to get started')).toBeInTheDocument();
+      expect(screen.getByText('Select an AI provider to create your first model configuration')).toBeInTheDocument();
     });
 
     it('should show button to create new model config', () => {

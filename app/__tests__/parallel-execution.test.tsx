@@ -27,6 +27,7 @@ jest.mock('@/lib/migration', () => ({
 }));
 jest.mock('@/lib/fetch-models', () => ({
   fetchOpenRouterModels: jest.fn().mockResolvedValue([]),
+  fetchAIMLModels: jest.fn().mockResolvedValue([]),
   getOpenAIModels: jest.fn().mockReturnValue([]),
   getAnthropicModels: jest.fn().mockReturnValue([]),
   getPopularOpenRouterModels: jest.fn().mockReturnValue([]),
@@ -276,6 +277,6 @@ describe('Parallel Execution Setup', () => {
     render(<HomePage />);
 
     // Verify empty project displays message
-    expect(screen.getByText('No model configs yet')).toBeInTheDocument();
+    expect(screen.getByText('Choose a provider to get started')).toBeInTheDocument();
   });
 });

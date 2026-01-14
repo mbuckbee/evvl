@@ -156,7 +156,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
               systemPrompt={currentPrompt?.versions?.find(v => v.id === currentPrompt?.currentVersionId)?.systemPrompt}
               responses={configResponses ? Object.entries(configResponses).flatMap(([configId, outputs]) => {
                 const config = filteredConfigs.find(c => c.id === configId);
-                return outputs.map(output => ({
+                return (outputs || []).filter(output => output != null).map(output => ({
                   provider: config?.provider || 'unknown',
                   model: config?.model || 'unknown',
                   modelName: config?.name || config?.model || 'Unknown Model',

@@ -198,7 +198,8 @@ describe('POST /api/generate', () => {
             }),
           });
 
-          expect(response.status).toBe(500);
+          // Route returns 400 for provider errors by default
+          expect(response.status).toBe(400);
           const data = await response.json();
           expect(data.error).toBe('OpenAI API error');
         },
@@ -261,7 +262,8 @@ describe('POST /api/generate', () => {
             }),
           });
 
-          expect(response.status).toBe(500);
+          // Route returns 400 for provider errors by default
+          expect(response.status).toBe(400);
           const data = await response.json();
           expect(data.error).toBe('Anthropic API error');
         },

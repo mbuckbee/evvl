@@ -39,6 +39,7 @@ jest.mock('@/lib/storage');
 // Mock fetch-models module
 jest.mock('@/lib/fetch-models', () => ({
   fetchOpenRouterModels: jest.fn(),
+  fetchAIMLModels: jest.fn(),
   getOpenAIModels: jest.fn(),
   getAnthropicModels: jest.fn(),
   getPopularOpenRouterModels: jest.fn(),
@@ -262,7 +263,7 @@ describe('Home (Project-based Workflow)', () => {
 
       render(<Home />);
 
-      expect(screen.getByText('No model configs yet')).toBeInTheDocument();
+      expect(screen.getByText('Choose a provider to get started')).toBeInTheDocument();
     });
   });
 });
