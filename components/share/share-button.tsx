@@ -177,7 +177,7 @@ export default function ShareButton({
                     type="text"
                     value={shareUrl}
                     readOnly
-                    className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100"
                   />
                   <button
                     onClick={handleCopy}

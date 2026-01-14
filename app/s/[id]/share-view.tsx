@@ -109,7 +109,7 @@ function ResponseCard({ response }: { response: SharedResponse }) {
             </div>
           </div>
         ) : (
-          <div className="prose prose-sm dark:prose-invert max-w-none">
+          <div className="prose prose-sm prose-gray dark:prose-invert max-w-none text-gray-900 dark:text-gray-100">
             <ReactMarkdown>{response.content}</ReactMarkdown>
           </div>
         )}
