@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Cog6ToothIcon } from '@heroicons/react/24/outline';
-import { saveApiKeys, loadApiKeys, clearApiKeys } from '@/lib/storage';
+import { saveApiKeys, loadApiKeys, clearApiKeys, clearAllData } from '@/lib/storage';
 import { getRuntimeEnvironment, RuntimeEnvironment } from '@/lib/environment';
 import { ApiKeys } from '@/lib/types';
 import Link from 'next/link';
@@ -12,6 +12,8 @@ export default function SettingsPage() {
   const router = useRouter();
   const [keys, setKeys] = useState<ApiKeys>({});
   const [saved, setSaved] = useState(false);
+  const [clearedKeys, setClearedKeys] = useState(false);
+  const [clearedAll, setClearedAll] = useState(false);
   const [environment, setEnvironment] = useState<RuntimeEnvironment>('web');
 
   useEffect(() => {
@@ -29,9 +31,25 @@ export default function SettingsPage() {
     }, 1500);
   };
 
-  const handleClear = () => {
-    clearApiKeys();
-    setKeys({});
+  const handleClearKeys = () => {
+    if (confirm('Are you sure you want to clear all API keys? This cannot be undone.')) {
+      clearApiKeys();
+      setKeys({});
+      setClearedKeys(true);
+      setTimeout(() => setClearedKeys(false), 3000);
+    }
+  };
+
+  const handleClearAll = () => {
+    if (confirm('Are you sure you want to clear ALL data? This will delete all projects, prompts, datasets, evaluation history, and API keys. This cannot be undone.')) {
+      clearAllData();
+      setKeys({});
+      setClearedAll(true);
+      setTimeout(() => {
+        setClearedAll(false);
+        window.location.reload();
+      }, 2000);
+    }
   };
 
   const handleTest = (provider: 'openai' | 'anthropic' | 'openrouter' | 'gemini') => {
@@ -62,6 +80,30 @@ export default function SettingsPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="w-[80%] mx-auto px-4 py-12">
+          {clearedKeys && (
+            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                  API keys have been cleared.
+                </p>
+              </div>
+            </div>
+          )}
+          {clearedAll && (
+            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                  All data has been cleared.
+                </p>
+              </div>
+            </div>
+          )}
           <h1 className="text-4xl font-bold mb-6 text-gray-900 dark:text-white">Settings</h1>
 
           {/* Privacy Note */}
@@ -234,22 +276,14 @@ export default function SettingsPage() {
             href="/"
             className="px-6 py-2 border-2 border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 rounded-lg font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-1"
           >
-            <span>←</span> Back to Eval
+            <span>←</span> Back to Projects
           </Link>
-          <div className="flex gap-3">
-            <button
-              onClick={handleClear}
-              className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              Clear All
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-6 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
-            >
-              Save Keys
-            </button>
-          </div>
+          <button
+            onClick={handleSave}
+            className="w-36 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+          >
+            Save Keys
+          </button>
         </div>
 
         {saved && (
@@ -265,6 +299,38 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+          {/* Danger Zone */}
+          <div className="mt-8 p-6 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 rounded-lg">
+            <h2 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4">Danger Zone</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">Clear API Keys</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Remove all saved API keys from this browser.</p>
+                </div>
+                <button
+                  onClick={handleClearKeys}
+                  className="w-36 px-4 py-2 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  Clear Keys
+                </button>
+              </div>
+              <div className="border-t border-gray-200 dark:border-gray-700" />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">Clear All Data</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Delete all projects, prompts, datasets, evaluation history, and API keys.</p>
+                </div>
+                <button
+                  onClick={handleClearAll}
+                  className="w-36 px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg font-medium hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
+                >
+                  Clear All Data
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

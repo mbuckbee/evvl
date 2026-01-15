@@ -57,14 +57,25 @@ export default function Home() {
 
     // Set active project to first available project
     const activeId = getActiveProjectId();
+    let projectId: string | null = null;
     if (activeId) {
       setActiveProjectIdState(activeId);
+      projectId = activeId;
     } else {
       // If no active project, use the first project
       const projects = loadProjects();
       if (projects.length > 0) {
         setActiveProjectIdState(projects[0].id);
         setActiveProjectId(projects[0].id);
+        projectId = projects[0].id;
+      }
+    }
+
+    // Select first data set if project has any
+    if (projectId) {
+      const dataSets = getDataSetsByProjectId(projectId);
+      if (dataSets.length > 0) {
+        setSelectedDataSetId(dataSets[0].id);
       }
     }
 
@@ -237,9 +248,12 @@ export default function Home() {
     setActiveProjectIdState(projectId);
     setActiveProjectId(projectId);
 
-    // Clear responses and reset dataset when switching projects
+    // Clear responses when switching projects
     setConfigResponses({});
-    setSelectedDataSetId(null);
+
+    // Select first data set if project has any, otherwise null
+    const dataSets = getDataSetsByProjectId(projectId);
+    setSelectedDataSetId(dataSets.length > 0 ? dataSets[0].id : null);
 
     if (shouldEdit) {
       // Show project editor

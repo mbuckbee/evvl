@@ -9,10 +9,14 @@ import {
   loadUIState,
   saveUIState,
   saveProject,
+  savePrompt,
+  saveDataSet,
+  saveModelConfig,
   getPromptsByProjectId,
   getModelConfigsByProjectId,
   getDataSetsByProjectId,
 } from '@/lib/storage';
+import { createExampleProject } from '@/lib/example-project';
 import { migrateEvalHistory, isMigrationComplete } from '@/lib/migration';
 
 interface SidebarProps {
@@ -46,23 +50,20 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
     const uiState = loadUIState();
     setOpenProjects(uiState.openProjects || []);
 
-    // If no projects exist, create a default one
+    // If no projects exist, create an example project with sample data
     if (loadedProjects.length === 0) {
-      const defaultProject: Project = {
-        id: uuidv4(),
-        name: 'My Project',
-        description: 'Get started by creating prompts and model configs',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        promptIds: [],
-        modelConfigIds: [],
-        dataSetIds: [],
-      };
-      saveProject(defaultProject);
-      setProjects([defaultProject]);
-      setOpenProjects([defaultProject.id]);
-      // Default to prompts section open for the default project
-      setOpenSections([`${defaultProject.id}-prompts`]);
+      const { project, prompt, dataSet, modelConfigs } = createExampleProject();
+
+      // Save all example data
+      saveProject(project);
+      savePrompt(prompt);
+      saveDataSet(dataSet);
+      modelConfigs.forEach(config => saveModelConfig(config));
+
+      setProjects([project]);
+      setOpenProjects([project.id]);
+      // Default to prompts section open for the example project
+      setOpenSections([`${project.id}-prompts`]);
     }
   }, []);
 

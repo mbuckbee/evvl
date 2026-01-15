@@ -421,3 +421,23 @@ export function loadUIState(): UIState {
     panelSizes: [280, 500], // Default panel sizes
   };
 }
+
+// Clear all data (danger zone)
+export function clearAllData(): void {
+  if (typeof window !== 'undefined') {
+    // Clear all evvl-related localStorage keys
+    localStorage.removeItem(API_KEYS_KEY);
+    localStorage.removeItem(EVAL_HISTORY_KEY);
+    localStorage.removeItem(COLUMNS_KEY);
+    localStorage.removeItem(PROJECTS_KEY);
+    localStorage.removeItem(PROMPTS_KEY);
+    localStorage.removeItem(MODEL_CONFIGS_KEY);
+    localStorage.removeItem(DATA_SETS_KEY);
+    localStorage.removeItem(EVALUATION_RUNS_KEY);
+    localStorage.removeItem(ACTIVE_PROJECT_KEY);
+    localStorage.removeItem(UI_STATE_KEY);
+    // Also clear migration flags so example project is created on next load
+    localStorage.removeItem('evvl_migration_complete_v2');
+    localStorage.removeItem('evvl_migration_timestamp');
+  }
+}

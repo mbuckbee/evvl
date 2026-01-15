@@ -190,21 +190,12 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                     onClick={() => setIsDataSetDropdownOpen(!isDataSetDropdownOpen)}
                     className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
-                    <span>{selectedDataSetId ? dataSets.find(ds => ds.id === selectedDataSetId)?.name : 'No data set'}</span>
+                    <span>{selectedDataSetId ? dataSets.find(ds => ds.id === selectedDataSetId)?.name : 'Select dataset'}</span>
                     <ChevronDownIcon className="h-4 w-4" />
                   </button>
 
                   {isDataSetDropdownOpen && (
                     <div className="absolute top-full right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-10">
-                      <button
-                        onClick={() => {
-                          if (onDataSetChange) onDataSetChange(null);
-                          setIsDataSetDropdownOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        No data set
-                      </button>
                       {dataSets.map(dataSet => (
                         <button
                           key={dataSet.id}
@@ -221,6 +212,17 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                           {dataSet.name}
                         </button>
                       ))}
+                      {projectId && onNewDataSet && (
+                        <button
+                          onClick={() => {
+                            onNewDataSet(projectId);
+                            setIsDataSetDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-t border-gray-200 dark:border-gray-700"
+                        >
+                          + Create data set
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
