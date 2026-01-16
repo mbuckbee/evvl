@@ -2,11 +2,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { Project, Prompt, PromptVersion, DataSet, DataSetItem, ProjectModelConfig, Provider } from './types';
 
 // Example prompt content
-export const EXAMPLE_PROMPT_TEMPLATE = `Classify the following product review as 👍 Positive, 👎 Negative, or 😐 Neutral. Respond with only one word.
+export const EXAMPLE_PROMPT_TEMPLATE = `Classify the following product review as ✅ Positive, ❌ Negative, or ⚪ Neutral. Respond with only one word.
 
 Review: {{review}}`;
 
-export const EXAMPLE_SYSTEM_PROMPT = 'You are a sentiment analysis assistant. Classify reviews accurately using only: 👍 Positive, 👎 Negative, or 😐 Neutral.';
+export const EXAMPLE_SYSTEM_PROMPT = 'You are a sentiment analysis assistant. Classify reviews accurately using only: ✅ Positive, ❌ Negative, or ⚪ Neutral.';
 
 // Example data set content - 10 short product reviews
 export const EXAMPLE_DATA_SET_ITEMS: Array<{ name: string; review: string }> = [
