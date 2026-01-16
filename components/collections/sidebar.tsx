@@ -62,8 +62,12 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
 
       setProjects([project]);
       setOpenProjects([project.id]);
-      // Default to prompts section open for the example project
-      setOpenSections([`${project.id}-prompts`]);
+      // Open all sections for the example project
+      setOpenSections([
+        `${project.id}-prompts`,
+        `${project.id}-configs`,
+        `${project.id}-datasets`,
+      ]);
     }
   }, []);
 
@@ -100,11 +104,21 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
       // Open the project
       setOpenProjects(prev => [...prev, projectId]);
 
-      // Expand the Prompts section by default when opening
-      const promptsSection = `${projectId}-prompts`;
-      if (!openSections.includes(promptsSection)) {
-        setOpenSections(prev => [...prev, promptsSection]);
-      }
+      // Expand all sections by default when opening a project
+      const sectionsToOpen = [
+        `${projectId}-prompts`,
+        `${projectId}-configs`,
+        `${projectId}-datasets`,
+      ];
+      setOpenSections(prev => {
+        const newSections = [...prev];
+        sectionsToOpen.forEach(section => {
+          if (!newSections.includes(section)) {
+            newSections.push(section);
+          }
+        });
+        return newSections;
+      });
 
       // Load the project (not editing)
       if (onProjectSelect) {
