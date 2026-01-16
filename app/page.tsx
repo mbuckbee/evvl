@@ -71,8 +71,14 @@ export default function Home() {
       }
     }
 
-    // Select first data set if project has any
+    // Select first prompt and data set if project has any
     if (projectId) {
+      const prompts = getPromptsByProjectId(projectId);
+      if (prompts.length > 0) {
+        setEditingPromptId(prompts[0].id);
+        setShowPromptEditor(true);
+      }
+
       const dataSets = getDataSetsByProjectId(projectId);
       if (dataSets.length > 0) {
         setSelectedDataSetId(dataSets[0].id);

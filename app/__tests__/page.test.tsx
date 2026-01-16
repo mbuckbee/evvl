@@ -206,7 +206,8 @@ describe('Home (Project-based Workflow)', () => {
     it('should display project name in sidebar', () => {
       render(<Home />);
 
-      expect(screen.getByText('Test Project')).toBeInTheDocument();
+      // Project name may appear multiple times (sidebar and editor), check at least one exists
+      expect(screen.getAllByText('Test Project').length).toBeGreaterThan(0);
     });
 
     it('should load prompts for the project', async () => {

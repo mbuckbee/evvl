@@ -126,7 +126,7 @@ describe('Parallel Execution Setup', () => {
     expect(storage.getDataSetsByProjectId).toHaveBeenCalledWith('project-1');
 
     // Verify project name is displayed
-    expect(screen.getByText('Test Project')).toBeInTheDocument();
+    expect(screen.getAllByText('Test Project').length).toBeGreaterThan(0);
   });
 
   it('should load prompt with variable placeholders for dataset', async () => {
@@ -140,7 +140,7 @@ describe('Parallel Execution Setup', () => {
     expect(storage.getPromptsByProjectId).toHaveBeenCalledWith('project-1');
 
     // Verify project name is displayed
-    expect(screen.getByText('Test Project')).toBeInTheDocument();
+    expect(screen.getAllByText('Test Project').length).toBeGreaterThan(0);
   });
 
   it('should load model config ready for parallel execution', async () => {
@@ -167,8 +167,8 @@ describe('Parallel Execution Setup', () => {
     expect(storage.getModelConfigsByProjectId).toHaveBeenCalledWith('project-1');
     expect(storage.getDataSetsByProjectId).toHaveBeenCalledWith('project-1');
 
-    // Verify project is displayed and ready
-    expect(screen.getByText('Test Project')).toBeInTheDocument();
+    // Verify project is displayed and ready (may appear multiple times)
+    expect(screen.getAllByText('Test Project').length).toBeGreaterThan(0);
   });
 
   it('should support multiple dataset items for batch execution', async () => {

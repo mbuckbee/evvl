@@ -209,7 +209,7 @@ describe('End-to-End User Workflows', () => {
       expect(storage.getPromptsByProjectId).toHaveBeenCalledWith('project-1');
 
       // Verify project name is displayed in sidebar
-      expect(screen.getByText('Test Project')).toBeInTheDocument();
+      expect(screen.getAllByText('Test Project').length).toBeGreaterThan(0);
     });
 
     it('should display dataset with multiple items', async () => {
@@ -282,7 +282,7 @@ describe('End-to-End User Workflows', () => {
       expect(storage.getPromptsByProjectId).toHaveBeenCalledWith('project-1');
 
       // Verify project name is visible in sidebar
-      expect(screen.getByText('Test Project')).toBeInTheDocument();
+      expect(screen.getAllByText('Test Project').length).toBeGreaterThan(0);
     });
   });
 
@@ -362,7 +362,7 @@ describe('End-to-End User Workflows', () => {
       expect(storage.getPromptsByProjectId).toHaveBeenCalledWith('project-1');
 
       // Verify project name is visible in sidebar
-      expect(screen.getByText('Test Project')).toBeInTheDocument();
+      expect(screen.getAllByText('Test Project').length).toBeGreaterThan(0);
     });
 
     it('should load project with multiple model configs', async () => {
@@ -508,7 +508,7 @@ describe('End-to-End User Workflows', () => {
       expect(storage.getPromptsByProjectId).toHaveBeenCalledWith('project-1');
 
       // Verify project name is displayed in sidebar
-      expect(screen.getByText('Test Project')).toBeInTheDocument();
+      expect(screen.getAllByText('Test Project').length).toBeGreaterThan(0);
     });
   });
 
@@ -568,7 +568,7 @@ describe('End-to-End User Workflows', () => {
       expect(storage.getModelConfigsByProjectId).toHaveBeenCalledWith('project-1');
 
       // Verify project name is in sidebar
-      expect(screen.getByText('Test Project')).toBeInTheDocument();
+      expect(screen.getAllByText('Test Project').length).toBeGreaterThan(0);
     });
 
     it('should load all model configs in project', async () => {
