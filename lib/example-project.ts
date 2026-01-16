@@ -2,26 +2,24 @@ import { v4 as uuidv4 } from 'uuid';
 import { Project, Prompt, PromptVersion, DataSet, DataSetItem, ProjectModelConfig, Provider } from './types';
 
 // Example prompt content
-export const EXAMPLE_PROMPT_TEMPLATE = `Summarize the following text in 2-3 sentences:
+export const EXAMPLE_PROMPT_TEMPLATE = `Classify the following product review as Positive, Negative, or Neutral. Respond with only one word.
 
-{{content}}`;
+Review: {{review}}`;
 
-export const EXAMPLE_SYSTEM_PROMPT = 'You are a helpful assistant that creates concise summaries.';
+export const EXAMPLE_SYSTEM_PROMPT = 'You are a sentiment analysis assistant. Classify reviews accurately using only: Positive, Negative, or Neutral.';
 
-// Example data set content - three diverse sample articles
-export const EXAMPLE_DATA_SET_ITEMS: Array<{ name: string; content: string }> = [
-  {
-    name: 'AI in Business',
-    content: `Artificial intelligence is rapidly transforming how businesses operate. Companies are increasingly adopting AI-powered tools for customer service, data analysis, and process automation. While this technology promises significant efficiency gains, it also raises important questions about workforce displacement and the need for new skills training programs.`
-  },
-  {
-    name: 'Renewable Energy',
-    content: `The global shift toward renewable energy accelerated in 2024, with solar and wind power installations reaching record levels. Many countries have committed to aggressive decarbonization targets, driving investment in clean energy infrastructure. However, challenges remain around energy storage and grid modernization to handle intermittent power sources.`
-  },
-  {
-    name: 'Remote Work',
-    content: `Remote work has fundamentally changed the commercial real estate market. Office vacancy rates in major cities remain elevated as companies embrace hybrid work models. This shift is prompting building owners to reimagine office spaces, focusing on collaborative areas and amenities that give employees reasons to come in rather than rows of individual desks.`
-  }
+// Example data set content - 10 short product reviews
+export const EXAMPLE_DATA_SET_ITEMS: Array<{ name: string; review: string }> = [
+  { name: 'Review 1', review: 'Love this product, works perfectly!' },
+  { name: 'Review 2', review: 'Broke after two days, total waste of money' },
+  { name: 'Review 3', review: "It's okay, nothing special" },
+  { name: 'Review 4', review: 'Best purchase I have ever made' },
+  { name: 'Review 5', review: 'Does not work as advertised, very disappointed' },
+  { name: 'Review 6', review: 'Exactly what I needed, highly recommend' },
+  { name: 'Review 7', review: 'Arrived damaged and customer service was unhelpful' },
+  { name: 'Review 8', review: 'Good quality for the price' },
+  { name: 'Review 9', review: 'Would not buy again' },
+  { name: 'Review 10', review: 'Exceeded my expectations, amazing value' },
 ];
 
 // Default model configs - shared between example project and new project creation
@@ -79,7 +77,7 @@ export function createExampleProject(): ExampleProjectData {
   const dataSetItems: DataSetItem[] = EXAMPLE_DATA_SET_ITEMS.map((item) => ({
     id: uuidv4(),
     name: item.name,
-    variables: { content: item.content },
+    variables: { review: item.review },
   }));
 
   const dataSet: DataSet = {
