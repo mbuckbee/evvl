@@ -74,6 +74,9 @@ describe('Sidebar', () => {
     (storage.loadUIState as jest.Mock).mockReturnValue({ openProjects: [] });
     (storage.saveUIState as jest.Mock).mockImplementation(() => {});
     (storage.saveProject as jest.Mock).mockImplementation(() => {});
+    (storage.savePrompt as jest.Mock).mockImplementation(() => {});
+    (storage.saveDataSet as jest.Mock).mockImplementation(() => {});
+    (storage.saveModelConfig as jest.Mock).mockImplementation(() => {});
     (storage.getPromptsByProjectId as jest.Mock).mockReturnValue([mockPrompt]);
     (storage.getModelConfigsByProjectId as jest.Mock).mockReturnValue([mockConfig]);
     (storage.getDataSetsByProjectId as jest.Mock).mockReturnValue([mockDataSet]);
@@ -86,17 +89,21 @@ describe('Sidebar', () => {
       expect(screen.getByText('Test Project')).toBeInTheDocument();
     });
 
-    it('should create default project if none exist', () => {
+    it('should create example project with sample data if none exist', () => {
       (storage.loadProjects as jest.Mock).mockReturnValue([]);
 
       render(<Sidebar />);
 
       expect(storage.saveProject).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: 'My Project',
-          description: 'Get started by creating prompts and model configs',
+          name: 'Example Project',
+          description: 'A sample project demonstrating prompt evaluation with text summarization',
         })
       );
+      // Should also create sample prompt, dataset, and model configs
+      expect(storage.savePrompt).toHaveBeenCalled();
+      expect(storage.saveDataSet).toHaveBeenCalled();
+      expect(storage.saveModelConfig).toHaveBeenCalled();
     });
 
     it('should toggle project open/closed when clicking chevron', async () => {

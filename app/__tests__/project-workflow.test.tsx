@@ -131,9 +131,9 @@ describe('End-to-End User Workflows', () => {
       });
 
       expect(savedProject).toBeTruthy();
-      expect(savedProject?.name).toBe('My Project');
+      expect(savedProject?.name).toBe('Example Project');
 
-      // Step 2: Verify project was created with default setup
+      // Step 2: Verify project was created with default setup (example project includes sample data)
       expect(savedProject?.description).toBeTruthy();
     });
   });

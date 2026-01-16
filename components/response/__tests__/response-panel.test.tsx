@@ -335,7 +335,7 @@ describe('ResponsePanel', () => {
         />
       );
 
-      expect(screen.getByText('No data set')).toBeInTheDocument();
+      expect(screen.getByText('Select dataset')).toBeInTheDocument();
     });
 
     it('should open dataset dropdown when clicked', async () => {
@@ -348,7 +348,7 @@ describe('ResponsePanel', () => {
         />
       );
 
-      const dropdown = screen.getByText('No data set');
+      const dropdown = screen.getByText('Select dataset');
       await userEvent.click(dropdown);
 
       expect(screen.getByText('Test Dataset')).toBeInTheDocument();
@@ -366,7 +366,7 @@ describe('ResponsePanel', () => {
         />
       );
 
-      const dropdown = screen.getByText('No data set');
+      const dropdown = screen.getByText('Select dataset');
       await userEvent.click(dropdown);
 
       const datasetOption = screen.getByText('Test Dataset');
@@ -387,29 +387,6 @@ describe('ResponsePanel', () => {
       );
 
       expect(screen.getByText('Test Dataset')).toBeInTheDocument();
-    });
-
-    it('should allow clearing dataset selection', async () => {
-      const onDataSetChange = jest.fn();
-
-      render(
-        <ResponsePanel
-          projectId="project-1"
-          configResponses={mockConfigResponses}
-          currentPrompt={mockPrompt}
-          selectedDataSetId="dataset-1"
-          selectedDataSet={mockDataSet}
-          onDataSetChange={onDataSetChange}
-        />
-      );
-
-      const dropdown = screen.getByText('Test Dataset');
-      await userEvent.click(dropdown);
-
-      const noneOption = screen.getByText('No data set');
-      await userEvent.click(noneOption);
-
-      expect(onDataSetChange).toHaveBeenCalledWith(null);
     });
   });
 

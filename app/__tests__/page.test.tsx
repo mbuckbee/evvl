@@ -149,7 +149,7 @@ describe('Home (Project-based Workflow)', () => {
       });
 
       expect(savedProject).toBeTruthy();
-      expect(savedProject?.name).toBe('My Project');
+      expect(savedProject?.name).toBe('Example Project');
     });
   });
 

@@ -44,7 +44,8 @@ describe('SettingsPage', () => {
     expect(screen.getByLabelText('Anthropic API Key')).toBeInTheDocument();
     expect(screen.getByLabelText('OpenRouter API Key')).toBeInTheDocument();
     expect(screen.getByText('Save Keys')).toBeInTheDocument();
-    expect(screen.getByText('Clear All')).toBeInTheDocument();
+    expect(screen.getByText('Clear Keys')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear All Data' })).toBeInTheDocument();
   });
 
   it('should load existing API keys on mount', () => {
@@ -133,7 +134,7 @@ describe('SettingsPage', () => {
     jest.useRealTimers();
   });
 
-  it('should clear all API keys when Clear All button is clicked', async () => {
+  it('should clear all API keys when Clear Keys button is clicked', async () => {
     const user = userEvent.setup();
     const mockKeys = {
       openai: 'sk-test-openai',
@@ -147,11 +148,17 @@ describe('SettingsPage', () => {
     const openaiInput = screen.getByLabelText('OpenAI API Key') as HTMLInputElement;
     expect(openaiInput.value).toBe('sk-test-openai');
 
-    const clearButton = screen.getByText('Clear All');
+    // Mock window.confirm to return true
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+
+    const clearButton = screen.getByText('Clear Keys');
     await user.click(clearButton);
 
+    expect(confirmSpy).toHaveBeenCalled();
     expect(storage.clearApiKeys).toHaveBeenCalled();
     expect(openaiInput.value).toBe('');
+
+    confirmSpy.mockRestore();
   });
 
   it('should have text type inputs for API keys', () => {
