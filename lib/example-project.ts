@@ -83,8 +83,8 @@ export function createExampleProject(): ExampleProjectData {
   const dataSet: DataSet = {
     id: dataSetId,
     projectId,
-    name: 'Sample Articles',
-    description: 'Example articles for testing text summarization',
+    name: 'Reviews',
+    description: 'Product reviews for sentiment classification',
     items: dataSetItems,
     createdAt: now,
     updatedAt: now,
