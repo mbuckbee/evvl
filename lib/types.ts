@@ -120,7 +120,6 @@ export interface DataSet {
   id: string;
   projectId: string;
   name: string;
-  description?: string;
   items: DataSetItem[];
   createdAt: number;
   updatedAt: number;

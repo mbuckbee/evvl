@@ -84,7 +84,6 @@ export function createExampleProject(): ExampleProjectData {
     id: dataSetId,
     projectId,
     name: 'Reviews',
-    description: 'Product reviews for sentiment classification',
     items: dataSetItems,
     createdAt: now,
     updatedAt: now,
