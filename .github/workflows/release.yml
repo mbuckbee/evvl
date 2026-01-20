@@ -97,6 +97,8 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Tauri updater signing
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
@@ -107,7 +109,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: src-tauri/target/*/release/bundle/dmg/*.dmg
+          path: |
+            src-tauri/target/*/release/bundle/dmg/*.dmg
+            src-tauri/target/*/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/*/release/bundle/macos/*.app.tar.gz.sig
           if-no-files-found: error
 
       - name: Upload artifacts (Windows)
@@ -117,6 +122,8 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: |
             src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.nsis.zip
+            src-tauri/target/release/bundle/nsis/*.nsis.zip.sig
             src-tauri/target/release/bundle/msi/*.msi
           if-no-files-found: error
 
@@ -128,6 +135,8 @@ jobs:
           path: |
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/appimage/*.AppImage.tar.gz
+            src-tauri/target/release/bundle/appimage/*.AppImage.tar.gz.sig
           if-no-files-found: error
 
   publish-release:
@@ -168,13 +177,23 @@ jobs:
           VERSION="${TAG#v}"
           mkdir -p release-files
 
-          # Rename each file to friendly name
+          # Installer files (for manual download)
           find artifacts -name "*aarch64*.dmg" -type f -exec cp {} "release-files/Evvl_${VERSION}_macOS_M_Series.dmg" \;
           find artifacts -name "*x64*.dmg" -type f -exec cp {} "release-files/Evvl_${VERSION}_macOS_Intel.dmg" \;
           find artifacts -name "*-setup.exe" -type f -exec cp {} "release-files/Evvl_${VERSION}_Windows_Setup.exe" \;
           find artifacts -name "*.msi" -type f -exec cp {} "release-files/Evvl_${VERSION}_Windows.msi" \;
-          find artifacts -name "*.AppImage" -type f -exec cp {} "release-files/Evvl_${VERSION}_Linux.AppImage" \;
+          find artifacts -name "*.AppImage" ! -name "*.tar.gz" -type f -exec cp {} "release-files/Evvl_${VERSION}_Linux.AppImage" \;
           find artifacts -name "*.deb" -type f -exec cp {} "release-files/Evvl_${VERSION}_Linux.deb" \;
+
+          # Update files (for auto-updater)
+          find artifacts -name "*aarch64*.app.tar.gz" -type f -exec cp {} "release-files/Evvl_${VERSION}_macOS_M_Series.app.tar.gz" \;
+          find artifacts -name "*aarch64*.app.tar.gz.sig" -type f -exec cp {} "release-files/Evvl_${VERSION}_macOS_M_Series.app.tar.gz.sig" \;
+          find artifacts -name "*x64*.app.tar.gz" -type f -exec cp {} "release-files/Evvl_${VERSION}_macOS_Intel.app.tar.gz" \;
+          find artifacts -name "*x64*.app.tar.gz.sig" -type f -exec cp {} "release-files/Evvl_${VERSION}_macOS_Intel.app.tar.gz.sig" \;
+          find artifacts -name "*.nsis.zip" -type f -exec cp {} "release-files/Evvl_${VERSION}_Windows.nsis.zip" \;
+          find artifacts -name "*.nsis.zip.sig" -type f -exec cp {} "release-files/Evvl_${VERSION}_Windows.nsis.zip.sig" \;
+          find artifacts -name "*.AppImage.tar.gz" -type f -exec cp {} "release-files/Evvl_${VERSION}_Linux.AppImage.tar.gz" \;
+          find artifacts -name "*.AppImage.tar.gz.sig" -type f -exec cp {} "release-files/Evvl_${VERSION}_Linux.AppImage.tar.gz.sig" \;
 
           echo "Renamed files:"
           ls -la release-files/
@@ -212,6 +231,50 @@ jobs:
           EOF
 
           cat release-files/downloads.json
+
+      - name: Generate latest.json for auto-updater
+        env:
+          TAG: ${{ needs.create-release.outputs.tag_name }}
+          REPO: ${{ env.PUBLIC_REPO }}
+        run: |
+          VERSION="${TAG#v}"
+          BASE="https://github.com/${REPO}/releases/download/${TAG}"
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          # Read signatures
+          MACOS_ARM_SIG=$(cat release-files/Evvl_${VERSION}_macOS_M_Series.app.tar.gz.sig 2>/dev/null || echo "")
+          MACOS_X64_SIG=$(cat release-files/Evvl_${VERSION}_macOS_Intel.app.tar.gz.sig 2>/dev/null || echo "")
+          WINDOWS_SIG=$(cat release-files/Evvl_${VERSION}_Windows.nsis.zip.sig 2>/dev/null || echo "")
+          LINUX_SIG=$(cat release-files/Evvl_${VERSION}_Linux.AppImage.tar.gz.sig 2>/dev/null || echo "")
+
+          cat > release-files/latest.json << EOF
+          {
+            "version": "${VERSION}",
+            "notes": "Evvl ${TAG} - See release notes at https://github.com/${REPO}/releases/tag/${TAG}",
+            "pub_date": "${PUB_DATE}",
+            "platforms": {
+              "darwin-aarch64": {
+                "url": "${BASE}/Evvl_${VERSION}_macOS_M_Series.app.tar.gz",
+                "signature": "${MACOS_ARM_SIG}"
+              },
+              "darwin-x86_64": {
+                "url": "${BASE}/Evvl_${VERSION}_macOS_Intel.app.tar.gz",
+                "signature": "${MACOS_X64_SIG}"
+              },
+              "windows-x86_64": {
+                "url": "${BASE}/Evvl_${VERSION}_Windows.nsis.zip",
+                "signature": "${WINDOWS_SIG}"
+              },
+              "linux-x86_64": {
+                "url": "${BASE}/Evvl_${VERSION}_Linux.AppImage.tar.gz",
+                "signature": "${LINUX_SIG}"
+              }
+            }
+          }
+          EOF
+
+          echo "latest.json for auto-updater:"
+          cat release-files/latest.json
 
       - name: Publish to Public Repo
         uses: softprops/action-gh-release@v2

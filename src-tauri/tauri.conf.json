@@ -38,6 +38,15 @@
     "macOS": {
       "signingIdentity": null,
       "hardenedRuntime": true
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/mbuckbee/evvl-releases/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIxODRFMTE3Mzc1RUMwRUYKUldUdndGNDNGK0dFc1RaYkdJWTE2U2gxSW0vZWFKWjJvQ0hCeHI2bTRMQVpmSkY5OC8weE5vVkcK"
     }
   }
 }
