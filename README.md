@@ -323,7 +323,7 @@ npm run tauri:dev
 
 ## Releasing Desktop Apps
 
-Desktop app releases are automated via GitHub Actions. When you push a version tag, the workflow builds installers for all platforms and publishes them to the public releases repo.
+Desktop app releases are automated via GitHub Actions. When you push a version tag, the workflow builds, signs, notarizes, and publishes installers for all platforms.
 
 ### Release Process
 
@@ -349,21 +349,116 @@ Monitor progress at: [GitHub Actions](../../actions/workflows/release.yml)
 
 ### What Gets Built
 
-| Platform | Artifacts |
-|----------|-----------|
-| macOS (Apple Silicon) | `.dmg` installer |
-| macOS (Intel) | `.dmg` installer |
-| Windows | `.exe` (NSIS) and `.msi` installers |
-| Linux | `.AppImage` and `.deb` packages |
+| Platform | Installer | Update Package |
+|----------|-----------|----------------|
+| macOS (M1/M2/M3/M4) | `Evvl_X.Y.Z_macOS_M_Series.dmg` | `.app.tar.gz` + `.sig` |
+| macOS (Intel) | `Evvl_X.Y.Z_macOS_Intel.dmg` | `.app.tar.gz` + `.sig` |
+| Windows | `Evvl_X.Y.Z_Windows_Setup.exe`, `.msi` | `.nsis.zip` + `.sig` |
+| Linux | `Evvl_X.Y.Z_Linux.AppImage`, `.deb` | `.AppImage.tar.gz` + `.sig` |
 
 ### Release Repositories
 
 - **Private repo** (`evvl`): Source code and internal releases
-- **Public repo** (`evvl-releases`): Public download releases
+- **Public repo** (`evvl-releases`): Public download releases with friendly filenames
 
-### downloads.json
+---
 
-Each release includes a `downloads.json` file with all download URLs:
+## Code Signing & Notarization
+
+### macOS Code Signing
+
+All macOS builds are signed with an Apple Developer ID Application certificate and notarized with Apple. This ensures users don't see security warnings when installing.
+
+**Required certificates:**
+- Developer ID Application certificate (from Apple Developer Program)
+- DeveloperIDG2CA intermediate certificate (installed in Keychain)
+
+**Local development signing:**
+
+Set these environment variables in `~/.zshrc`:
+
+```bash
+export APPLE_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
+export APPLE_ID="your@email.com"
+export APPLE_PASSWORD="xxxx-xxxx-xxxx-xxxx"  # App-specific password
+export APPLE_TEAM_ID="YOUR_TEAM_ID"
+```
+
+Then run `npm run tauri:build` to build, sign, and notarize locally.
+
+### Windows Code Signing
+
+Windows builds are currently unsigned. Users will see SmartScreen warnings on first install, which they can bypass by clicking "More info" → "Run anyway".
+
+For production deployments, consider obtaining an EV (Extended Validation) code signing certificate from providers like DigiCert or Sectigo.
+
+---
+
+## Auto-Updates
+
+Evvl supports automatic updates via Tauri's updater plugin. When a new version is released, users are prompted to update.
+
+### How It Works
+
+1. The app checks `latest.json` from the releases repo on startup
+2. If a newer version exists, the user sees an update prompt
+3. Updates are signed with Ed25519 keys and verified before installation
+4. The app downloads the appropriate update package for the user's platform
+
+### Configuration
+
+**src-tauri/tauri.conf.json:**
+```json
+{
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/mbuckbee/evvl-releases/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6..."
+    }
+  },
+  "bundle": {
+    "createUpdaterArtifacts": true
+  }
+}
+```
+
+### latest.json
+
+Each release includes a `latest.json` file for the auto-updater:
+
+```json
+{
+  "version": "0.1.6",
+  "notes": "Evvl v0.1.6 - See release notes...",
+  "pub_date": "2026-01-20T12:00:00Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "url": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.6/Evvl_0.1.6_macOS_M_Series.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6..."
+    },
+    "darwin-x86_64": {
+      "url": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.6/Evvl_0.1.6_macOS_Intel.app.tar.gz",
+      "signature": "..."
+    },
+    "windows-x86_64": {
+      "url": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.6/Evvl_0.1.6_Windows.nsis.zip",
+      "signature": "..."
+    },
+    "linux-x86_64": {
+      "url": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.6/Evvl_0.1.6_Linux.AppImage.tar.gz",
+      "signature": "..."
+    }
+  }
+}
+```
+
+---
+
+## downloads.json
+
+Each release includes a `downloads.json` file for the marketing site:
 
 ```bash
 curl -sL https://github.com/mbuckbee/evvl-releases/releases/latest/download/downloads.json
@@ -371,29 +466,95 @@ curl -sL https://github.com/mbuckbee/evvl-releases/releases/latest/download/down
 
 ```json
 {
-  "version": "0.1.2",
-  "tag": "v0.1.2",
-  "releaseDate": "2026-01-11",
+  "version": "0.1.6",
+  "tag": "v0.1.6",
+  "releaseDate": "2026-01-20",
   "downloads": {
-    "macos-arm64": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.2/Evvl_0.1.2_aarch64.dmg",
-    "macos-x64": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.2/Evvl_0.1.2_x64.dmg",
-    "windows-exe": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.2/Evvl_0.1.2_x64-setup.exe",
-    "windows-msi": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.2/Evvl_0.1.2_x64_en-US.msi",
-    "linux-appimage": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.2/Evvl_0.1.2_amd64.AppImage",
-    "linux-deb": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.2/Evvl_0.1.2_amd64.deb"
+    "macos-m-series": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.6/Evvl_0.1.6_macOS_M_Series.dmg",
+    "macos-intel": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.6/Evvl_0.1.6_macOS_Intel.dmg",
+    "windows-exe": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.6/Evvl_0.1.6_Windows_Setup.exe",
+    "windows-msi": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.6/Evvl_0.1.6_Windows.msi",
+    "linux-appimage": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.6/Evvl_0.1.6_Linux.AppImage",
+    "linux-deb": "https://github.com/mbuckbee/evvl-releases/releases/download/v0.1.6/Evvl_0.1.6_Linux.deb"
+  },
+  "filenames": {
+    "macos-m-series": "Evvl_0.1.6_macOS_M_Series.dmg",
+    "macos-intel": "Evvl_0.1.6_macOS_Intel.dmg",
+    "windows-exe": "Evvl_0.1.6_Windows_Setup.exe",
+    "windows-msi": "Evvl_0.1.6_Windows.msi",
+    "linux-appimage": "Evvl_0.1.6_Linux.AppImage",
+    "linux-deb": "Evvl_0.1.6_Linux.deb"
   }
 }
 ```
 
-The marketing site fetches this JSON to display current download links.
+---
 
-### Workflow Configuration
+## GitHub Secrets
 
-The release workflow requires a `PUBLIC_RELEASE_TOKEN` secret with write access to:
-- `mbuckbee/evvl-releases` (public downloads)
-- `mbuckbee/evvl-marketing` (optional, for future use)
+The release workflow requires these secrets configured in the repository:
 
-See `.github/workflows/release.yml` for full configuration.
+### Required Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `PUBLIC_RELEASE_TOKEN` | GitHub PAT with write access to `evvl-releases` repo |
+| `TAURI_SIGNING_PRIVATE_KEY` | Ed25519 private key for signing updates |
+
+### macOS Code Signing Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `APPLE_CERTIFICATE` | Base64-encoded `.p12` certificate file |
+| `APPLE_CERTIFICATE_PASSWORD` | Password used when exporting the .p12 |
+| `APPLE_SIGNING_IDENTITY` | e.g., `Developer ID Application: Name (TEAM_ID)` |
+| `APPLE_ID` | Apple Developer account email |
+| `APPLE_PASSWORD` | App-specific password for notarization |
+| `APPLE_TEAM_ID` | 10-character team identifier |
+
+### Creating the Certificate Secret
+
+```bash
+# Export certificate from Keychain as .p12 file, then:
+base64 -i ~/Desktop/certificate.p12 | pbcopy
+# Paste into APPLE_CERTIFICATE secret
+```
+
+---
+
+## Critical Files to Backup
+
+These files are essential for signing releases and should be securely backed up:
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `evvl.key` | `~/.tauri/evvl.key` | **CRITICAL**: Tauri update signing private key. If lost, existing users cannot receive updates. |
+| `evvl.key.pub` | `~/.tauri/evvl.key.pub` | Public key (also in `tauri.conf.json`) |
+| Apple `.p12` | Keychain / exported file | macOS code signing certificate |
+
+### Regenerating Update Keys
+
+If the private key is lost, you must generate new keys and increment the version:
+
+```bash
+npx tauri signer generate -w ~/.tauri/evvl-new.key
+```
+
+Then update `tauri.conf.json` with the new public key. Users on older versions will need to manually download the new version.
+
+---
+
+## Key Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `src-tauri/tauri.conf.json` | Tauri config: version, updater endpoints, signing, bundle settings |
+| `src-tauri/Cargo.toml` | Rust dependencies including updater plugin |
+| `src-tauri/src/lib.rs` | Tauri plugins registration (updater, dialog, etc.) |
+| `.github/workflows/release.yml` | Automated build, sign, and release workflow |
+| `scripts/build-tauri.sh` | Build script that excludes server-only routes for static export |
+
+See `.github/workflows/release.yml` for full workflow configuration.
 
 ## Contributing
 
