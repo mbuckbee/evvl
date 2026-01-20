@@ -210,7 +210,7 @@ describe('POST /api/share', () => {
           const data = await response.json();
           expect(data.success).toBe(true);
           expect(data.shareId).toBe('test123456');
-          expect(data.shareUrl).toContain('/s/test123456');
+          expect(data.shareUrl).toBe('https://test123456.evvl.io');
           expect(data.expiresAt).toBeGreaterThan(Date.now());
         },
       });

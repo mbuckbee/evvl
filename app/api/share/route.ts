@@ -127,9 +127,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateSha
       hasImages
     });
 
-    // Build share URL - use separate domain for user-generated content isolation
-    const shareDomain = process.env.SHARE_DOMAIN || 'https://share.evvl.io';
-    const shareUrl = `${shareDomain}/s/${shareId}`;
+    // Build share URL - use wildcard subdomain for spam isolation
+    // Each share gets its own subdomain: {shareId}.evvl.io
+    const shareBaseDomain = process.env.SHARE_BASE_DOMAIN || 'evvl.io';
+    const shareUrl = `https://${shareId}.${shareBaseDomain}`;
 
     return NextResponse.json({
       success: true,
