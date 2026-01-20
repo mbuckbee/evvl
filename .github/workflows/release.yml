@@ -161,48 +161,57 @@ jobs:
       - name: List artifacts
         run: find artifacts -type f
 
+      - name: Rename artifacts to friendly names
+        env:
+          TAG: ${{ needs.create-release.outputs.tag_name }}
+        run: |
+          VERSION="${TAG#v}"
+          mkdir -p release-files
+
+          # Rename each file to friendly name
+          find artifacts -name "*aarch64*.dmg" -type f -exec cp {} "release-files/Evvl_${VERSION}_macOS_M_Series.dmg" \;
+          find artifacts -name "*x64*.dmg" -type f -exec cp {} "release-files/Evvl_${VERSION}_macOS_Intel.dmg" \;
+          find artifacts -name "*-setup.exe" -type f -exec cp {} "release-files/Evvl_${VERSION}_Windows_Setup.exe" \;
+          find artifacts -name "*.msi" -type f -exec cp {} "release-files/Evvl_${VERSION}_Windows.msi" \;
+          find artifacts -name "*.AppImage" -type f -exec cp {} "release-files/Evvl_${VERSION}_Linux.AppImage" \;
+          find artifacts -name "*.deb" -type f -exec cp {} "release-files/Evvl_${VERSION}_Linux.deb" \;
+
+          echo "Renamed files:"
+          ls -la release-files/
+
       - name: Generate downloads.json
         env:
           TAG: ${{ needs.create-release.outputs.tag_name }}
           REPO: ${{ env.PUBLIC_REPO }}
         run: |
-          # Find actual filenames
-          MACOS_ARM=$(find artifacts -name "*aarch64*.dmg" -type f | head -1 | xargs basename)
-          MACOS_X64=$(find artifacts -name "*x64*.dmg" -type f | head -1 | xargs basename)
-          WIN_EXE=$(find artifacts -name "*-setup.exe" -type f | head -1 | xargs basename)
-          WIN_MSI=$(find artifacts -name "*.msi" -type f | head -1 | xargs basename)
-          LINUX_APPIMAGE=$(find artifacts -name "*.AppImage" -type f | head -1 | xargs basename)
-          LINUX_DEB=$(find artifacts -name "*.deb" -type f | head -1 | xargs basename)
-
-          # Base URL for downloads
+          VERSION="${TAG#v}"
           BASE="https://github.com/${REPO}/releases/download/${TAG}"
 
-          # Generate JSON
-          cat > downloads.json << EOF
+          cat > release-files/downloads.json << EOF
           {
-            "version": "${TAG#v}",
+            "version": "${VERSION}",
             "tag": "${TAG}",
             "releaseDate": "$(date -u +%Y-%m-%d)",
             "downloads": {
-              "macos-arm64": "${BASE}/${MACOS_ARM}",
-              "macos-x64": "${BASE}/${MACOS_X64}",
-              "windows-exe": "${BASE}/${WIN_EXE}",
-              "windows-msi": "${BASE}/${WIN_MSI}",
-              "linux-appimage": "${BASE}/${LINUX_APPIMAGE}",
-              "linux-deb": "${BASE}/${LINUX_DEB}"
+              "macos-m-series": "${BASE}/Evvl_${VERSION}_macOS_M_Series.dmg",
+              "macos-intel": "${BASE}/Evvl_${VERSION}_macOS_Intel.dmg",
+              "windows-exe": "${BASE}/Evvl_${VERSION}_Windows_Setup.exe",
+              "windows-msi": "${BASE}/Evvl_${VERSION}_Windows.msi",
+              "linux-appimage": "${BASE}/Evvl_${VERSION}_Linux.AppImage",
+              "linux-deb": "${BASE}/Evvl_${VERSION}_Linux.deb"
             },
             "filenames": {
-              "macos-arm64": "${MACOS_ARM}",
-              "macos-x64": "${MACOS_X64}",
-              "windows-exe": "${WIN_EXE}",
-              "windows-msi": "${WIN_MSI}",
-              "linux-appimage": "${LINUX_APPIMAGE}",
-              "linux-deb": "${LINUX_DEB}"
+              "macos-m-series": "Evvl_${VERSION}_macOS_M_Series.dmg",
+              "macos-intel": "Evvl_${VERSION}_macOS_Intel.dmg",
+              "windows-exe": "Evvl_${VERSION}_Windows_Setup.exe",
+              "windows-msi": "Evvl_${VERSION}_Windows.msi",
+              "linux-appimage": "Evvl_${VERSION}_Linux.AppImage",
+              "linux-deb": "Evvl_${VERSION}_Linux.deb"
             }
           }
           EOF
 
-          cat downloads.json
+          cat release-files/downloads.json
 
       - name: Publish to Public Repo
         uses: softprops/action-gh-release@v2
@@ -216,11 +225,10 @@ jobs:
 
             | Platform | Download |
             |----------|----------|
-            | macOS (Apple Silicon) | `.dmg` file below |
-            | macOS (Intel) | `.dmg` file below |
-            | Windows | `.exe` or `.msi` file below |
-            | Linux | `.AppImage` or `.deb` file below |
+            | macOS (M1/M2/M3/M4) | `macOS_M_Series.dmg` |
+            | macOS (Intel) | `macOS_Intel.dmg` |
+            | Windows | `Windows_Setup.exe` or `Windows.msi` |
+            | Linux | `Linux.AppImage` or `Linux.deb` |
           files: |
-            artifacts/**/*
-            downloads.json
+            release-files/*
           fail_on_unmatched_files: true
