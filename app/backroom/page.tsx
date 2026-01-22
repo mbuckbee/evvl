@@ -321,7 +321,15 @@ export default function BackroomPage() {
       {/* Downloads by Platform */}
       {downloadStats && downloadStats.totalDownloads > 0 && (
         <div className="card p-8 mb-6">
-          <h2 className="text-2xl font-bold mb-4 text-gray-900">Downloads by Platform</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">Downloads by Platform</h2>
+            <Link
+              href="/backroom/downloads"
+              className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+            >
+              View all download data →
+            </Link>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <div className="text-sm font-medium text-gray-600 mb-1">macOS</div>
@@ -335,37 +343,6 @@ export default function BackroomPage() {
               <div className="text-sm font-medium text-gray-600 mb-1">Linux</div>
               <div className="text-3xl font-bold text-orange-600">{downloadStats.byPlatform.linux}</div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Recent Releases */}
-      {downloadStats && downloadStats.byRelease.length > 0 && (
-        <div className="card p-8 mb-6">
-          <h2 className="text-2xl font-bold mb-4 text-gray-900">Recent Releases</h2>
-          <div className="space-y-4">
-            {downloadStats.byRelease.slice(0, 5).map((release) => (
-              <div key={release.version} className="border-b border-gray-200 pb-4 last:border-0 last:pb-0">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <span className="font-medium text-gray-900">{release.version}</span>
-                    {release.name !== release.version && (
-                      <span className="text-gray-500 ml-2">- {release.name}</span>
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {new Date(release.publishedAt).toLocaleDateString()}
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="font-medium text-purple-600">{release.downloads} downloads</span>
-                  <span className="text-gray-400">|</span>
-                  <span className="text-gray-500">
-                    {release.assets.map((a) => `${a.name} (${a.downloads})`).join(', ')}
-                  </span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       )}
