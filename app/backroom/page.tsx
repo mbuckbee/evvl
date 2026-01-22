@@ -321,13 +321,22 @@ export default function BackroomPage() {
         Anonymous usage statistics for Evvl
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         {/* Total Downloads */}
         <div className="card p-6">
           <div className="text-sm font-medium text-gray-600 mb-1">Total Downloads</div>
           <div className="text-4xl font-bold text-purple-600">{downloadStats?.totalDownloads || 0}</div>
           <div className="text-sm text-gray-500 mt-2">
             {downloadStats?.latestVersion ? `Latest: ${downloadStats.latestVersion}` : 'No releases yet'}
+          </div>
+        </div>
+
+        {/* Update Checks */}
+        <div className="card p-6">
+          <div className="text-sm font-medium text-gray-600 mb-1">Update Checks</div>
+          <div className="text-4xl font-bold text-green-600">{updateStats?.totals.total || 0}</div>
+          <div className="text-sm text-gray-500 mt-2">
+            {updateStats?.summary.avgDaily ? `~${updateStats.summary.avgDaily}/day` : 'Desktop app'}
           </div>
         </div>
 
