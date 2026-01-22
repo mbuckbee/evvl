@@ -156,7 +156,7 @@ export default function DownloadsPage() {
       </p>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="card p-6">
           <div className="text-sm font-medium text-gray-600 mb-1">Total Downloads</div>
           <div className="text-4xl font-bold text-purple-600">{downloadStats.totalDownloads}</div>
@@ -168,14 +168,6 @@ export default function DownloadsPage() {
         <div className="card p-6">
           <div className="text-sm font-medium text-gray-600 mb-1">Latest Version</div>
           <div className="text-4xl font-bold text-blue-600">{downloadStats.latestVersion || 'N/A'}</div>
-        </div>
-        <div className="card p-6">
-          <div className="text-sm font-medium text-gray-600 mb-1">Avg per Release</div>
-          <div className="text-4xl font-bold text-green-600">
-            {downloadStats.byRelease.length > 0
-              ? Math.round(downloadStats.totalDownloads / downloadStats.byRelease.length)
-              : 0}
-          </div>
         </div>
       </div>
 
@@ -297,52 +289,6 @@ export default function DownloadsPage() {
                   </td>
                 </tr>
               </tfoot>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Individual Assets */}
-      <div className="card p-8 mb-6">
-        <h2 className="text-2xl font-bold mb-6 text-gray-900">All Assets</h2>
-        {downloadStats.byRelease.length === 0 ? (
-          <p className="text-gray-500">No assets found.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Filename</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Version</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Platform</th>
-                  <th className="text-right py-3 px-4 font-semibold text-gray-700">Downloads</th>
-                </tr>
-              </thead>
-              <tbody>
-                {downloadStats.byRelease.flatMap((release) =>
-                  release.assets.map((asset) => (
-                    <tr key={`${release.version}-${asset.name}`} className="border-b border-gray-100">
-                      <td className="py-3 px-4">
-                        <span className="font-mono text-sm text-gray-700">{asset.name}</span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">{release.version}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          asset.platform === 'mac' ? 'bg-purple-100 text-purple-700' :
-                          asset.platform === 'windows' ? 'bg-blue-100 text-blue-700' :
-                          asset.platform === 'linux' ? 'bg-orange-100 text-orange-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {asset.platform}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-semibold text-gray-900">
-                        {asset.downloads}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
             </table>
           </div>
         )}
