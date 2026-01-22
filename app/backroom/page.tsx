@@ -64,11 +64,25 @@ interface DownloadStats {
   error?: string;
 }
 
+interface UpdateStats {
+  totals: {
+    total: number;
+    byPlatform: Record<string, number>;
+    byVersion: Record<string, number>;
+  };
+  summary: {
+    totalDays: number;
+    periodTotal: number;
+    avgDaily: number;
+  };
+}
+
 export default function BackroomPage() {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [downloadStats, setDownloadStats] = useState<DownloadStats | null>(null);
+  const [updateStats, setUpdateStats] = useState<UpdateStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -85,6 +99,22 @@ export default function BackroomPage() {
       }
     } catch (err) {
       console.error('Failed to fetch download stats');
+    }
+  };
+
+  const fetchUpdateStats = async (authPassword: string) => {
+    try {
+      const response = await fetch('/api/analytics/updates', {
+        headers: {
+          'Authorization': `Bearer ${authPassword}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUpdateStats(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch update stats');
     }
   };
 
@@ -106,8 +136,9 @@ export default function BackroomPage() {
         setIsAuthenticated(true);
         // Store in sessionStorage to persist during page refreshes
         sessionStorage.setItem('backroom_password', password);
-        // Also fetch download stats
+        // Also fetch download and update stats
         fetchDownloadStats(password);
+        fetchUpdateStats(password);
       } else {
         setError('Invalid password');
       }
@@ -131,6 +162,7 @@ export default function BackroomPage() {
           },
         }),
         fetchDownloadStats(savedPassword),
+        fetchUpdateStats(savedPassword),
       ]);
 
       if (statsResponse.ok) {
@@ -344,6 +376,65 @@ export default function BackroomPage() {
               <div className="text-3xl font-bold text-orange-600">{downloadStats.byPlatform.linux}</div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Update Checks */}
+      {updateStats && updateStats.totals.total > 0 && (
+        <div className="card p-8 mb-6">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">Update Checks (Desktop App)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div>
+              <div className="text-sm font-medium text-gray-600 mb-1">Total Checks</div>
+              <div className="text-3xl font-bold text-gray-900">{updateStats.totals.total}</div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-600 mb-1">Avg per Day</div>
+              <div className="text-3xl font-bold text-blue-600">{updateStats.summary.avgDaily}</div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-600 mb-1">Days Tracked</div>
+              <div className="text-3xl font-bold text-gray-600">{updateStats.summary.totalDays}</div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-600 mb-1">Period Total</div>
+              <div className="text-3xl font-bold text-green-600">{updateStats.summary.periodTotal}</div>
+            </div>
+          </div>
+
+          {/* Version breakdown */}
+          {Object.keys(updateStats.totals.byVersion).length > 0 && (
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Checks by Version</h3>
+              <div className="flex flex-wrap gap-3">
+                {Object.entries(updateStats.totals.byVersion)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([version, count]) => (
+                    <div key={version} className="bg-gray-100 px-3 py-1 rounded-full text-sm">
+                      <span className="font-medium text-gray-700">{version}</span>
+                      <span className="text-gray-500 ml-1">({count})</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Platform breakdown */}
+          {Object.keys(updateStats.totals.byPlatform).length > 0 && (
+            <div className="border-t border-gray-200 pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Checks by Platform</h3>
+              <div className="flex flex-wrap gap-3">
+                {Object.entries(updateStats.totals.byPlatform)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([platform, count]) => (
+                    <div key={platform} className="bg-gray-100 px-3 py-1 rounded-full text-sm">
+                      <span className="font-medium text-gray-700">{platform}</span>
+                      <span className="text-gray-500 ml-1">({count})</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
