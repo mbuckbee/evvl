@@ -86,25 +86,60 @@ interface UpdateStats {
   };
 }
 
+interface DailyDownloadSnapshot {
+  date: string;
+  total: number;
+  mac: number;
+  windows: number;
+  linux: number;
+  dailyTotal: number;
+  dailyMac: number;
+  dailyWindows: number;
+  dailyLinux: number;
+  timestamp: string;
+}
+
+interface DownloadHistory {
+  history: DailyDownloadSnapshot[];
+  summary: {
+    totalDays: number;
+    totalDownloads: number;
+    avgDaily: number;
+    byPlatform: {
+      mac: number;
+      windows: number;
+      linux: number;
+    };
+  };
+}
+
 export default function BackroomPage() {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [downloadStats, setDownloadStats] = useState<DownloadStats | null>(null);
+  const [downloadHistory, setDownloadHistory] = useState<DownloadHistory | null>(null);
   const [updateStats, setUpdateStats] = useState<UpdateStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const fetchDownloadStats = async (authPassword: string) => {
     try {
-      const response = await fetch('/api/analytics/downloads', {
-        headers: {
-          'Authorization': `Bearer ${authPassword}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
+      const [statsResponse, historyResponse] = await Promise.all([
+        fetch('/api/analytics/downloads', {
+          headers: { 'Authorization': `Bearer ${authPassword}` },
+        }),
+        fetch('/api/analytics/downloads/history?days=30', {
+          headers: { 'Authorization': `Bearer ${authPassword}` },
+        }),
+      ]);
+      if (statsResponse.ok) {
+        const data = await statsResponse.json();
         setDownloadStats(data);
+      }
+      if (historyResponse.ok) {
+        const historyData = await historyResponse.json();
+        setDownloadHistory(historyData);
       }
     } catch (err) {
       console.error('Failed to fetch download stats');
@@ -317,10 +352,61 @@ export default function BackroomPage() {
       </div>
 
       <h1 className="text-4xl font-bold mb-3 text-gray-900">Backroom Analytics</h1>
-      <p className="text-lg text-gray-600 mb-10">
+      <p className="text-lg text-gray-600 mb-6">
         Anonymous usage statistics for Evvl
       </p>
 
+      {/* Today Stats */}
+      <h2 className="text-lg font-semibold text-gray-700 mb-3">Today</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        {/* Today's Downloads */}
+        <div className="card p-6 bg-purple-50 border-purple-200">
+          <div className="text-sm font-medium text-purple-700 mb-1">Downloads</div>
+          <div className="text-4xl font-bold text-purple-600">
+            {(() => {
+              const today = new Date().toISOString().split('T')[0];
+              const todaySnapshot = downloadHistory?.history.find(h => h.date === today);
+              return todaySnapshot?.dailyTotal || 0;
+            })()}
+          </div>
+          <div className="text-sm text-purple-500 mt-2">Today</div>
+        </div>
+
+        {/* Today's Update Checks */}
+        <div className="card p-6 bg-green-50 border-green-200">
+          <div className="text-sm font-medium text-green-700 mb-1">Update Checks</div>
+          <div className="text-4xl font-bold text-green-600">
+            {(() => {
+              const today = new Date().toISOString().split('T')[0];
+              const todayStats = updateStats?.history.find(h => h.date === today);
+              return todayStats?.total || 0;
+            })()}
+          </div>
+          <div className="text-sm text-green-500 mt-2">Today</div>
+        </div>
+
+        {/* Placeholder cards for consistency */}
+        <div className="card p-6 bg-gray-50 border-gray-200">
+          <div className="text-sm font-medium text-gray-500 mb-1">API Keys Added</div>
+          <div className="text-4xl font-bold text-gray-400">-</div>
+          <div className="text-sm text-gray-400 mt-2">Not tracked daily</div>
+        </div>
+
+        <div className="card p-6 bg-gray-50 border-gray-200">
+          <div className="text-sm font-medium text-gray-500 mb-1">Generations</div>
+          <div className="text-4xl font-bold text-gray-400">-</div>
+          <div className="text-sm text-gray-400 mt-2">Not tracked daily</div>
+        </div>
+
+        <div className="card p-6 bg-gray-50 border-gray-200">
+          <div className="text-sm font-medium text-gray-500 mb-1">API Key Tests</div>
+          <div className="text-4xl font-bold text-gray-400">-</div>
+          <div className="text-sm text-gray-400 mt-2">Not tracked daily</div>
+        </div>
+      </div>
+
+      {/* All Time Stats */}
+      <h2 className="text-lg font-semibold text-gray-700 mb-3">All Time</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         {/* Total Downloads */}
         <div className="card p-6">
@@ -342,7 +428,7 @@ export default function BackroomPage() {
 
         {/* Total API Keys Added */}
         <div className="card p-6">
-          <div className="text-sm font-medium text-gray-600 mb-1">Total API Keys Added</div>
+          <div className="text-sm font-medium text-gray-600 mb-1">API Keys Added</div>
           <div className="text-4xl font-bold text-gray-900">{apiKeys.total}</div>
           <div className="text-sm text-gray-500 mt-2">
             Removed: {apiKeys.removed}
@@ -351,7 +437,7 @@ export default function BackroomPage() {
 
         {/* Total Generations */}
         <div className="card p-6">
-          <div className="text-sm font-medium text-gray-600 mb-1">Total Generations</div>
+          <div className="text-sm font-medium text-gray-600 mb-1">Generations</div>
           <div className="text-4xl font-bold text-gray-900">{totalGenerations}</div>
           <div className="text-sm text-gray-500 mt-2">
             Success rate: {successRate}%
