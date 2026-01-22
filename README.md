@@ -547,7 +547,7 @@ export APPLE_TEAM_ID="YOUR_TEAM_ID"          # 10-character team ID
 
 # Tauri Update Signing (for local builds with signing)
 export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/evvl.key)"
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="evvl2025"  # Password set during key generation
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD='@#$apPPke.bk!'  # Password set during key generation
 ```
 
 ### GitHub Repository Secrets
@@ -558,7 +558,7 @@ Configure these in Settings → Secrets and variables → Actions:
 |--------|-------------|---------------|
 | `PUBLIC_RELEASE_TOKEN` | GitHub PAT with write access to `evvl-releases` repo | GitHub → Settings → Developer settings → PATs |
 | `TAURI_SIGNING_PRIVATE_KEY` | Contents of `evvl.key` file | `cat ~/.tauri/evvl.key` |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for signing key: `evvl2025` | Set during key generation |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for signing key: `@#$apPPke.bk!` | Set during key generation |
 | `APPLE_CERTIFICATE` | Base64-encoded `.p12` certificate | `base64 -i certificate.p12 \| pbcopy` |
 | `APPLE_CERTIFICATE_PASSWORD` | Password used when exporting .p12 | Set during certificate export |
 | `APPLE_SIGNING_IDENTITY` | e.g., `Developer ID Application: Name (TEAM_ID)` | Keychain Access → certificate name |
