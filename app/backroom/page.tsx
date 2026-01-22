@@ -42,12 +42,51 @@ interface Stats {
   };
 }
 
+interface DownloadStats {
+  totalDownloads: number;
+  byPlatform: {
+    mac: number;
+    windows: number;
+    linux: number;
+  };
+  byRelease: {
+    version: string;
+    name: string;
+    publishedAt: string;
+    downloads: number;
+    assets: {
+      name: string;
+      downloads: number;
+      platform: 'mac' | 'windows' | 'linux' | 'other';
+    }[];
+  }[];
+  latestVersion: string | null;
+  error?: string;
+}
+
 export default function BackroomPage() {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [downloadStats, setDownloadStats] = useState<DownloadStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const fetchDownloadStats = async (authPassword: string) => {
+    try {
+      const response = await fetch('/api/analytics/downloads', {
+        headers: {
+          'Authorization': `Bearer ${authPassword}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDownloadStats(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch download stats');
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +106,8 @@ export default function BackroomPage() {
         setIsAuthenticated(true);
         // Store in sessionStorage to persist during page refreshes
         sessionStorage.setItem('backroom_password', password);
+        // Also fetch download stats
+        fetchDownloadStats(password);
       } else {
         setError('Invalid password');
       }
@@ -83,14 +124,17 @@ export default function BackroomPage() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/analytics/stats', {
-        headers: {
-          'Authorization': `Bearer ${savedPassword}`,
-        },
-      });
+      const [statsResponse] = await Promise.all([
+        fetch('/api/analytics/stats', {
+          headers: {
+            'Authorization': `Bearer ${savedPassword}`,
+          },
+        }),
+        fetchDownloadStats(savedPassword),
+      ]);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (statsResponse.ok) {
+        const data = await statsResponse.json();
         setStats(data);
       }
     } catch (err) {
@@ -236,7 +280,16 @@ export default function BackroomPage() {
         Anonymous usage statistics for Evvl
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Total Downloads */}
+        <div className="card p-6">
+          <div className="text-sm font-medium text-gray-600 mb-1">Total Downloads</div>
+          <div className="text-4xl font-bold text-purple-600">{downloadStats?.totalDownloads || 0}</div>
+          <div className="text-sm text-gray-500 mt-2">
+            {downloadStats?.latestVersion ? `Latest: ${downloadStats.latestVersion}` : 'No releases yet'}
+          </div>
+        </div>
+
         {/* Total API Keys Added */}
         <div className="card p-6">
           <div className="text-sm font-medium text-gray-600 mb-1">Total API Keys Added</div>
@@ -264,6 +317,58 @@ export default function BackroomPage() {
           </div>
         </div>
       </div>
+
+      {/* Downloads by Platform */}
+      {downloadStats && downloadStats.totalDownloads > 0 && (
+        <div className="card p-8 mb-6">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">Downloads by Platform</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <div className="text-sm font-medium text-gray-600 mb-1">macOS</div>
+              <div className="text-3xl font-bold text-purple-600">{downloadStats.byPlatform.mac}</div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-600 mb-1">Windows</div>
+              <div className="text-3xl font-bold text-blue-600">{downloadStats.byPlatform.windows}</div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-600 mb-1">Linux</div>
+              <div className="text-3xl font-bold text-orange-600">{downloadStats.byPlatform.linux}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Releases */}
+      {downloadStats && downloadStats.byRelease.length > 0 && (
+        <div className="card p-8 mb-6">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">Recent Releases</h2>
+          <div className="space-y-4">
+            {downloadStats.byRelease.slice(0, 5).map((release) => (
+              <div key={release.version} className="border-b border-gray-200 pb-4 last:border-0 last:pb-0">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <span className="font-medium text-gray-900">{release.version}</span>
+                    {release.name !== release.version && (
+                      <span className="text-gray-500 ml-2">- {release.name}</span>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {new Date(release.publishedAt).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="font-medium text-purple-600">{release.downloads} downloads</span>
+                  <span className="text-gray-400">|</span>
+                  <span className="text-gray-500">
+                    {release.assets.map((a) => `${a.name} (${a.downloads})`).join(', ')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* API Keys by Provider */}
       <div className="card p-8 mb-6">

@@ -227,6 +227,11 @@ export default function Home() {
         model,
       });
     } catch (error: any) {
+      trackEvent('generation_error', {
+        provider,
+        model,
+        error_type: error.message || 'Network error',
+      });
       setOutput({
         id: outputId,
         modelConfig: { provider, model, label: providerConfig?.name || provider },
@@ -491,6 +496,12 @@ export default function Home() {
             return; // Skip if no valid response
           }
 
+          // Track successful generation
+          trackEvent('generation_success', {
+            provider: config.provider,
+            model: config.model,
+          });
+
           // Update UI immediately with this response at the correct index
           setConfigResponses(prev => {
             const currentResponses = [...(prev[config.id] || [])];
@@ -501,6 +512,13 @@ export default function Home() {
             };
           });
         } catch (error: any) {
+          // Track generation error
+          trackEvent('generation_error', {
+            provider: config.provider,
+            model: config.model,
+            error_type: error.message || 'Network error',
+          });
+
           const errorResponse: AIOutput = {
             id: uuidv4(),
             modelConfig: { provider: config.provider, model: config.model, label: config.name },
@@ -628,6 +646,12 @@ export default function Home() {
           return; // Skip if no valid response
         }
 
+        // Track successful generation
+        trackEvent('generation_success', {
+          provider: config.provider,
+          model: config.model,
+        });
+
         // Update UI immediately with this response at the correct index
         setConfigResponses(prev => {
           const currentResponses = prev[config.id] || [];
@@ -639,6 +663,13 @@ export default function Home() {
           };
         });
       } catch (error: any) {
+        // Track generation error
+        trackEvent('generation_error', {
+          provider: config.provider,
+          model: config.model,
+          error_type: error.message || 'Network error',
+        });
+
         const errorResponse: AIOutput = {
           id: uuidv4(),
           modelConfig: { provider: config.provider, model: config.model, label: config.name },
@@ -775,6 +806,12 @@ export default function Home() {
           return; // Skip if no valid response
         }
 
+        // Track successful generation
+        trackEvent('generation_success', {
+          provider: config.provider,
+          model: config.model,
+        });
+
         // Update UI immediately with this response at the correct index
         setConfigResponses(prev => {
           const currentResponses = prev[config.id] || [];
@@ -786,6 +823,13 @@ export default function Home() {
           };
         });
       } catch (error: any) {
+        // Track generation error
+        trackEvent('generation_error', {
+          provider: config.provider,
+          model: config.model,
+          error_type: error.message || 'Network error',
+        });
+
         const errorResponse: AIOutput = {
           id: uuidv4(),
           modelConfig: { provider: config.provider, model: config.model, label: config.name },

@@ -2,7 +2,11 @@
  * Client-side analytics helper
  * Sends anonymous usage events to /api/analytics
  * No personal data, API keys, or prompts are sent
+ *
+ * NOTE: Analytics are only tracked in the web app, not in the Tauri desktop app
  */
+
+import { isTauriEnvironment } from './environment';
 
 export type AnalyticsEvent =
   | 'api_key_added'
@@ -20,6 +24,11 @@ export interface AnalyticsData {
 }
 
 export async function trackEvent(event: AnalyticsEvent, data?: AnalyticsData): Promise<void> {
+  // Skip analytics in Tauri desktop app - privacy first
+  if (isTauriEnvironment()) {
+    return;
+  }
+
   try {
     // Fire and forget - don't block user interactions
     fetch('/api/analytics', {
