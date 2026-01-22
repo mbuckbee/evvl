@@ -14,7 +14,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={GeistSans.className}>
+    <html lang="en" className={GeistSans.className} suppressHydrationWarning>
+      <head>
+        {/* Sync dark mode with system preference */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                  document.documentElement.classList.add('dark');
+                }
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                  if (e.matches) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                });
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="h-screen">
         <main className="h-full">{children}</main>
         {/* Analytics - Web only, not in Tauri desktop app */}

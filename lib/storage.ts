@@ -143,6 +143,7 @@ const UI_STATE_KEY = 'evvl_ui_state';
 
 interface UIState {
   openProjects: string[];
+  openSections: string[];
   selectedPromptId?: string;
   selectedModelConfigs: string[];
   panelSizes: number[];
@@ -417,6 +418,7 @@ export function loadUIState(): UIState {
   }
   return {
     openProjects: [],
+    openSections: [],
     selectedModelConfigs: [],
     panelSizes: [280, 500], // Default panel sizes
   };

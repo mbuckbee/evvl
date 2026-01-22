@@ -65,8 +65,8 @@ export function createExampleProject(): ExampleProjectData {
   const prompt: Prompt = {
     id: promptId,
     projectId,
-    name: 'Text Summarizer',
-    description: 'Summarizes text content in 2-3 sentences',
+    name: 'Review Classifier',
+    description: 'Classifies product reviews by sentiment',
     versions: [promptVersion],
     currentVersionId: versionId,
     createdAt: now,
@@ -103,7 +103,7 @@ export function createExampleProject(): ExampleProjectData {
   const project: Project = {
     id: projectId,
     name: 'Example Project',
-    description: 'A sample project demonstrating prompt evaluation with text summarization',
+    description: 'A sample project demonstrating prompt evaluation with review classification',
     createdAt: now,
     updatedAt: now,
     promptIds: [promptId],

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { PlusIcon, FolderIcon, DocumentTextIcon, ChevronRightIcon, ChevronDownIcon, SparklesIcon, CogIcon, TableCellsIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, FolderIcon, DocumentTextIcon, ChevronRightIcon, ChevronDownIcon, SparklesIcon, CogIcon, TableCellsIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import Link from 'next/link';
 import { Project, Prompt, ProjectModelConfig, DataSet } from '@/lib/types';
 import {
   loadProjects,
@@ -49,6 +50,7 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
     // Load UI state
     const uiState = loadUIState();
     setOpenProjects(uiState.openProjects || []);
+    setOpenSections(uiState.openSections || []);
 
     // If no projects exist, create an example project with sample data
     if (loadedProjects.length === 0) {
@@ -63,34 +65,45 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
       setProjects([project]);
       setOpenProjects([project.id]);
       // Open all sections for the example project
-      setOpenSections([
+      const exampleSections = [
         `${project.id}-prompts`,
         `${project.id}-configs`,
         `${project.id}-datasets`,
-      ]);
+      ];
+      setOpenSections(exampleSections);
+
+      // Save UI state immediately for the example project
+      const uiState = loadUIState();
+      saveUIState({
+        ...uiState,
+        openProjects: [project.id],
+        openSections: exampleSections,
+      });
     }
   }, []);
 
-  // Save UI state when open projects change
-  useEffect(() => {
-    const uiState = loadUIState();
-    saveUIState({ ...uiState, openProjects });
-  }, [openProjects]);
-
   const toggleProject = (projectId: string) => {
-    setOpenProjects(prev =>
-      prev.includes(projectId)
+    setOpenProjects(prev => {
+      const newOpenProjects = prev.includes(projectId)
         ? prev.filter(id => id !== projectId)
-        : [...prev, projectId]
-    );
+        : [...prev, projectId];
+      // Save to localStorage
+      const uiState = loadUIState();
+      saveUIState({ ...uiState, openProjects: newOpenProjects });
+      return newOpenProjects;
+    });
   };
 
   const toggleSection = (sectionKey: string) => {
-    setOpenSections(prev =>
-      prev.includes(sectionKey)
+    setOpenSections(prev => {
+      const newOpenSections = prev.includes(sectionKey)
         ? prev.filter(key => key !== sectionKey)
-        : [...prev, sectionKey]
-    );
+        : [...prev, sectionKey];
+      // Save to localStorage
+      const uiState = loadUIState();
+      saveUIState({ ...uiState, openSections: newOpenSections });
+      return newOpenSections;
+    });
   };
 
   const handleProjectClick = (projectId: string) => {
@@ -99,10 +112,15 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
 
     if (isOpen) {
       // Close the project
-      setOpenProjects(prev => prev.filter(id => id !== projectId));
+      const newOpenProjects = openProjects.filter(id => id !== projectId);
+      setOpenProjects(newOpenProjects);
+      // Save to localStorage
+      const uiState = loadUIState();
+      saveUIState({ ...uiState, openProjects: newOpenProjects });
     } else {
       // Open the project
-      setOpenProjects(prev => [...prev, projectId]);
+      const newOpenProjects = [...openProjects, projectId];
+      setOpenProjects(newOpenProjects);
 
       // Expand all sections by default when opening a project
       const sectionsToOpen = [
@@ -110,15 +128,17 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
         `${projectId}-configs`,
         `${projectId}-datasets`,
       ];
-      setOpenSections(prev => {
-        const newSections = [...prev];
-        sectionsToOpen.forEach(section => {
-          if (!newSections.includes(section)) {
-            newSections.push(section);
-          }
-        });
-        return newSections;
+      const newOpenSections = [...openSections];
+      sectionsToOpen.forEach(section => {
+        if (!newOpenSections.includes(section)) {
+          newOpenSections.push(section);
+        }
       });
+      setOpenSections(newOpenSections);
+
+      // Save to localStorage
+      const uiState = loadUIState();
+      saveUIState({ ...uiState, openProjects: newOpenProjects, openSections: newOpenSections });
 
       // Load the project (not editing)
       if (onProjectSelect) {
@@ -184,12 +204,18 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-900">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      {/* App Header - Draggable region for window movement */}
+      <div
+        data-tauri-drag-region
+        className="px-4 py-3 border-b border-gray-200 dark:border-gray-700"
+      >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Projects
-          </h2>
+          <h1
+            data-tauri-drag-region
+            className="text-xl font-bold text-gray-900 dark:text-white cursor-default"
+          >
+            Evvl
+          </h1>
           <button
             onClick={handleNewProjectClick}
             className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -198,6 +224,13 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
             New
           </button>
         </div>
+      </div>
+
+      {/* Projects Section Header */}
+      <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800">
+        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          Projects
+        </h2>
       </div>
 
       {/* Projects List */}
@@ -285,7 +318,7 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
                                 e.preventDefault();
                                 handlePromptClick(prompt.id, e);
                               }}
-                              className="w-full flex items-center gap-2 px-4 pl-14 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                              className="w-full flex items-center gap-2 px-4 pl-20 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
                               title="Click to edit"
                             >
                               <DocumentTextIcon className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-200 flex-shrink-0" />
@@ -295,7 +328,7 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
                             </button>
                           ))
                         ) : (
-                          <div className="px-4 pl-14 py-2 text-xs text-gray-600 dark:text-gray-300 italic">
+                          <div className="px-4 pl-20 py-2 text-xs text-gray-600 dark:text-gray-300 italic">
                             No prompts yet
                           </div>
                         )}
@@ -340,7 +373,7 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
                                 e.preventDefault();
                                 handleModelConfigClick(config.id, e);
                               }}
-                              className="w-full flex items-center gap-2 px-4 pl-14 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                              className="w-full flex items-center gap-2 px-4 pl-20 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
                               title="Click to edit"
                             >
                               <CogIcon className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-200 flex-shrink-0" />
@@ -350,7 +383,7 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
                             </button>
                           ))
                         ) : (
-                          <div className="px-4 pl-14 py-2 text-xs text-gray-600 dark:text-gray-300 italic">
+                          <div className="px-4 pl-20 py-2 text-xs text-gray-600 dark:text-gray-300 italic">
                             No model configs yet
                           </div>
                         )}
@@ -395,7 +428,7 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
                                 e.preventDefault();
                                 handleDataSetClick(dataSet.id, e);
                               }}
-                              className="w-full flex items-center gap-2 px-4 pl-14 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                              className="w-full flex items-center gap-2 px-4 pl-20 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
                               title="Click to edit"
                             >
                               <TableCellsIcon className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-200 flex-shrink-0" />
@@ -405,7 +438,7 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
                             </button>
                           ))
                         ) : (
-                          <div className="px-4 pl-14 py-2 text-xs text-gray-600 dark:text-gray-300 italic">
+                          <div className="px-4 pl-20 py-2 text-xs text-gray-600 dark:text-gray-300 italic">
                             No data sets yet
                           </div>
                         )}
@@ -442,16 +475,25 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-300">
-        <div className="flex items-center justify-between">
-          <span>
-            {projects.reduce((acc, p) =>
-              acc + getPromptsByProjectId(p.id).length +
-              getModelConfigsByProjectId(p.id).length +
-              getDataSetsByProjectId(p.id).length, 0
-            )} items
-          </span>
-          <span>{projects.length} projects</span>
+      <div className="border-t border-gray-200 dark:border-gray-700">
+        <Link
+          href="/settings"
+          className="flex items-center gap-2 px-4 py-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          <Cog6ToothIcon className="h-5 w-5" />
+          <span>Settings</span>
+        </Link>
+        <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex items-center justify-between">
+            <span>
+              {projects.reduce((acc, p) =>
+                acc + getPromptsByProjectId(p.id).length +
+                getModelConfigsByProjectId(p.id).length +
+                getDataSetsByProjectId(p.id).length, 0
+              )} items
+            </span>
+            <span>{projects.length} projects</span>
+          </div>
         </div>
       </div>
     </div>

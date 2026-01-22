@@ -925,22 +925,6 @@ export default function Home() {
 
   return (
     <div className="h-screen flex flex-col">
-      {/* Navigation stays at top */}
-      <nav className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-            Evvl
-          </h1>
-          <a
-            href="/settings"
-            className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            <Cog6ToothIcon className="h-5 w-5" />
-            <span>Settings</span>
-          </a>
-        </div>
-      </nav>
-
       {/* Two-column layout: sidebar | (top panel / bottom panel) */}
       <div className="flex-1 overflow-hidden">
         <TwoColumnLayout
