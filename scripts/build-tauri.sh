@@ -10,6 +10,9 @@ BACKUP_DIR=".tauri-build-backup"
 # Directories to exclude (server-only features)
 EXCLUDE_DIRS=(
   "app/api/share"
+  "app/api/analytics"
+  "app/api/cron"
+  "app/api/updates"
   "app/s"
 )
 

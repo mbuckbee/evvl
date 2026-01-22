@@ -522,25 +522,92 @@ base64 -i ~/Desktop/certificate.p12 | pbcopy
 
 ---
 
-## Critical Files to Backup
+## Secrets & Credentials Reference
 
-These files are essential for signing releases and should be securely backed up:
+This section documents ALL secrets, credentials, and sensitive data used by Evvl. **Keep this information secure!**
 
-| File | Location | Purpose |
-|------|----------|---------|
-| `evvl.key` | `~/.tauri/evvl.key` | **CRITICAL**: Tauri update signing private key. If lost, existing users cannot receive updates. |
-| `evvl.key.pub` | `~/.tauri/evvl.key.pub` | Public key (also in `tauri.conf.json`) |
-| Apple `.p12` | Keychain / exported file | macOS code signing certificate |
+### Critical Files to Backup
 
-### Regenerating Update Keys
+| File | Location | Purpose | If Lost |
+|------|----------|---------|---------|
+| `evvl.key` | `~/.tauri/evvl.key` or project root | Tauri update signing private key | Existing users cannot auto-update; must regenerate and users manually download |
+| `evvl.key.pub` | `~/.tauri/evvl.key.pub` | Public key (also in `tauri.conf.json`) | Can regenerate from private key |
+| Apple `.p12` | Keychain / exported file | macOS code signing certificate | Request new from Apple Developer Portal |
 
-If the private key is lost, you must generate new keys and increment the version:
+### Environment Variables (Local Development)
+
+Add these to `~/.zshrc` for local builds:
 
 ```bash
-npx tauri signer generate -w ~/.tauri/evvl-new.key
+# Apple Code Signing & Notarization
+export APPLE_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
+export APPLE_ID="your@email.com"
+export APPLE_PASSWORD="xxxx-xxxx-xxxx-xxxx"  # App-specific password from appleid.apple.com
+export APPLE_TEAM_ID="YOUR_TEAM_ID"          # 10-character team ID
+
+# Tauri Update Signing (for local builds with signing)
+export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/evvl.key)"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="evvl2025"  # Password set during key generation
 ```
 
-Then update `tauri.conf.json` with the new public key. Users on older versions will need to manually download the new version.
+### GitHub Repository Secrets
+
+Configure these in Settings → Secrets and variables → Actions:
+
+| Secret | Description | How to Obtain |
+|--------|-------------|---------------|
+| `PUBLIC_RELEASE_TOKEN` | GitHub PAT with write access to `evvl-releases` repo | GitHub → Settings → Developer settings → PATs |
+| `TAURI_SIGNING_PRIVATE_KEY` | Contents of `evvl.key` file | `cat ~/.tauri/evvl.key` |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for signing key: `evvl2025` | Set during key generation |
+| `APPLE_CERTIFICATE` | Base64-encoded `.p12` certificate | `base64 -i certificate.p12 \| pbcopy` |
+| `APPLE_CERTIFICATE_PASSWORD` | Password used when exporting .p12 | Set during certificate export |
+| `APPLE_SIGNING_IDENTITY` | e.g., `Developer ID Application: Name (TEAM_ID)` | Keychain Access → certificate name |
+| `APPLE_ID` | Apple Developer account email | Your Apple ID email |
+| `APPLE_PASSWORD` | App-specific password for notarization | appleid.apple.com → App-Specific Passwords |
+| `APPLE_TEAM_ID` | 10-character team identifier | developer.apple.com → Membership |
+
+### Vercel Environment Variables
+
+Configure in Vercel Dashboard → Settings → Environment Variables:
+
+| Variable | Description | Required For |
+|----------|-------------|--------------|
+| `KV_REST_API_URL` | Vercel KV connection URL | Analytics, sharing |
+| `KV_REST_API_TOKEN` | Vercel KV auth token | Analytics, sharing |
+| `BACKROOM_PASSWORD` | Password for /backroom analytics | Admin access |
+| `CRON_SECRET` | Secret for cron job authentication | Daily snapshots |
+
+### Where Credentials Are Used
+
+| Credential | Used In | Purpose |
+|------------|---------|---------|
+| Tauri signing key | `npm run tauri:build`, GitHub Actions | Sign update packages so users can verify authenticity |
+| Apple certificates | `npm run tauri:build`, GitHub Actions | Code sign macOS apps to avoid Gatekeeper warnings |
+| Apple notarization | `npm run tauri:build`, GitHub Actions | Submit to Apple for malware scan and notarization |
+| GitHub PAT | GitHub Actions release workflow | Push releases to public `evvl-releases` repo |
+| Vercel KV | Web app API routes | Store analytics, shares, daily snapshots |
+| Backroom password | `/backroom` routes | Protect analytics dashboard |
+
+### Regenerating Secrets
+
+**Tauri Signing Key** (if lost or compromised):
+```bash
+npx tauri signer generate -w ~/.tauri/evvl-new.key -p "" --ci
+# Update tauri.conf.json with new public key
+# Update GitHub secret TAURI_SIGNING_PRIVATE_KEY
+# Users on old versions must manually download new version
+```
+
+**Apple App-Specific Password**:
+1. Go to appleid.apple.com
+2. Sign in → Security → App-Specific Passwords
+3. Generate new password
+4. Update `APPLE_PASSWORD` in ~/.zshrc and GitHub secrets
+
+**GitHub PAT**:
+1. GitHub → Settings → Developer settings → Personal access tokens
+2. Generate new token with `repo` scope for `evvl-releases`
+3. Update `PUBLIC_RELEASE_TOKEN` in GitHub secrets
 
 ---
 
