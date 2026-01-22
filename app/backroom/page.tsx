@@ -64,12 +64,21 @@ interface DownloadStats {
   error?: string;
 }
 
+interface DailyUpdateStats {
+  date: string;
+  total: number;
+  byPlatform: Record<string, number>;
+  byVersion: Record<string, number>;
+  byArch: Record<string, number>;
+}
+
 interface UpdateStats {
   totals: {
     total: number;
     byPlatform: Record<string, number>;
     byVersion: Record<string, number>;
   };
+  history: DailyUpdateStats[];
   summary: {
     totalDays: number;
     periodTotal: number;
@@ -401,6 +410,48 @@ export default function BackroomPage() {
               <div className="text-3xl font-bold text-green-600">{updateStats.summary.periodTotal}</div>
             </div>
           </div>
+
+          {/* Daily Update Checks Chart */}
+          {updateStats.history && updateStats.history.length > 0 && (
+            <div className="border-t border-gray-200 pt-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">Daily Update Checks (Last 30 Days)</h3>
+              <div className="relative">
+                <div className="flex items-end justify-between gap-1 h-32 border-b border-gray-200">
+                  {updateStats.history.map((day) => {
+                    const maxDaily = Math.max(...updateStats.history.map(d => d.total), 1);
+                    const height = (day.total / maxDaily) * 100;
+
+                    return (
+                      <div
+                        key={day.date}
+                        className="flex-1 flex flex-col items-center justify-end group relative"
+                      >
+                        <div
+                          className="w-full max-w-[16px] bg-green-500 rounded-t-sm hover:bg-green-600 transition-colors"
+                          style={{ height: `${Math.max(height, 2)}%` }}
+                        />
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
+                          <div className="bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+                            <div className="font-semibold">{new Date(day.date).toLocaleDateString()}</div>
+                            <div>Checks: {day.total}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* X-axis labels */}
+                <div className="flex justify-between mt-2 text-xs text-gray-500">
+                  {updateStats.history.filter((_, i) => i % 7 === 0 || i === updateStats.history.length - 1).map((day) => (
+                    <div key={day.date}>
+                      {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Version breakdown */}
           {Object.keys(updateStats.totals.byVersion).length > 0 && (
