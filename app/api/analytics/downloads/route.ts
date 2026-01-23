@@ -46,16 +46,28 @@ interface DownloadStats {
 
 function detectPlatform(filename: string): 'mac' | 'windows' | 'linux' | 'other' {
   const lower = filename.toLowerCase();
-  if (lower.includes('.dmg') || lower.includes('darwin') || lower.includes('macos') || lower.includes('.app')) {
+
+  // macOS: .dmg, .app.tar.gz, darwin, macos, aarch64 (Apple Silicon)
+  if (lower.includes('.dmg') || lower.includes('darwin') || lower.includes('macos') ||
+      lower.includes('.app.tar.gz') || lower.includes('aarch64')) {
     return 'mac';
   }
-  if (lower.includes('.exe') || lower.includes('.msi') || lower.includes('windows') || lower.includes('win')) {
+  // Windows: .exe, .msi, windows, win64, win32
+  if (lower.includes('.exe') || lower.includes('.msi') || lower.includes('windows') ||
+      lower.includes('win64') || lower.includes('win32')) {
     return 'windows';
   }
+  // Linux: .deb, .rpm, .appimage, linux
   if (lower.includes('.deb') || lower.includes('.rpm') || lower.includes('.appimage') || lower.includes('linux')) {
     return 'linux';
   }
   return 'other';
+}
+
+function isMetadataFile(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  // Exclude updater metadata files from download counts
+  return lower === 'latest.json' || lower.endsWith('.sig') || lower.endsWith('.json');
 }
 
 export async function GET(request: NextRequest) {
@@ -98,21 +110,23 @@ export async function GET(request: NextRequest) {
 
     const byRelease = releases.map((release) => {
       let releaseDownloads = 0;
-      const assets = release.assets.map((asset) => {
-        const platform = detectPlatform(asset.name);
-        releaseDownloads += asset.download_count;
-        totalDownloads += asset.download_count;
+      const assets = release.assets
+        .filter((asset) => !isMetadataFile(asset.name)) // Exclude metadata files
+        .map((asset) => {
+          const platform = detectPlatform(asset.name);
+          releaseDownloads += asset.download_count;
+          totalDownloads += asset.download_count;
 
-        if (platform === 'mac') byPlatform.mac += asset.download_count;
-        if (platform === 'windows') byPlatform.windows += asset.download_count;
-        if (platform === 'linux') byPlatform.linux += asset.download_count;
+          if (platform === 'mac') byPlatform.mac += asset.download_count;
+          if (platform === 'windows') byPlatform.windows += asset.download_count;
+          if (platform === 'linux') byPlatform.linux += asset.download_count;
 
-        return {
-          name: asset.name,
-          downloads: asset.download_count,
-          platform,
-        };
-      });
+          return {
+            name: asset.name,
+            downloads: asset.download_count,
+            platform,
+          };
+        });
 
       return {
         version: release.tag_name,
