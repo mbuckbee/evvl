@@ -46,3 +46,4 @@ next-env.d.ts
 *.key.pub
 evvl.key
 evvl.key.pub
+tauri-build-info.json
