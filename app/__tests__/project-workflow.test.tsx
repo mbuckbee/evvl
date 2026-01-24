@@ -33,7 +33,7 @@ jest.mock('@/lib/migration', () => ({
 }));
 jest.mock('@/lib/fetch-models', () => ({
   fetchOpenRouterModels: jest.fn().mockResolvedValue([]),
-  fetchAIMLModels: jest.fn().mockResolvedValue([]),
+  fetchProviderModels: jest.fn().mockResolvedValue(null),
   getOpenAIModels: jest.fn().mockReturnValue([]),
   getAnthropicModels: jest.fn().mockReturnValue([]),
   getPopularOpenRouterModels: jest.fn().mockReturnValue([]),

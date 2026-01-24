@@ -6,7 +6,7 @@ import { Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects, getPromptsByProjectId, getModelConfigsByProjectId, getDataSetById, getDataSetsByProjectId, saveProject } from '@/lib/storage';
 import { ApiKeys, AIOutput, Prompt, ProjectModelConfig, Project, DataSet, Provider } from '@/lib/types';
 import { PROVIDERS, getDefaultModel, ProviderConfig, isLocalProvider } from '@/lib/config';
-import { fetchOpenRouterModels, fetchAIMLModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
+import { fetchOpenRouterModels, fetchProviderModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
 import { trackEvent } from '@/lib/analytics';
 import { apiClient, isApiError } from '@/lib/api';
 import { isImageModel } from '@/lib/model-utils';
@@ -102,21 +102,28 @@ export default function Home() {
       }
     }
 
-    // Load dynamic models from AIML API (for direct providers) and OpenRouter (for OpenRouter provider)
+    // Load dynamic models from /api/provider-models (for direct providers) and OpenRouter API (for OpenRouter provider)
     async function loadModels() {
       // Fetch from both APIs in parallel
-      const [aimlModels, openRouterModels] = await Promise.all([
-        fetchAIMLModels(),
+      const [providerModelsData, openRouterModels] = await Promise.all([
+        fetchProviderModels(),
         fetchOpenRouterModels(),
       ]);
 
-      // Use AIML models for direct providers (OpenAI, Anthropic, Gemini)
+      // Use provider-models for direct providers (OpenAI, Anthropic, Gemini)
       // Use OpenRouter models only for the OpenRouter provider
-      const safeAimlModels = aimlModels || [];
       const safeOpenRouterModels = openRouterModels || [];
-      const openaiModels = safeAimlModels.length > 0 ? getOpenAIModels(safeAimlModels) : [];
-      const anthropicModels = safeAimlModels.length > 0 ? getAnthropicModels(safeAimlModels) : [];
-      const geminiModels = safeAimlModels.length > 0 ? getGeminiModels(safeAimlModels) : [];
+
+      // Extract models from provider-models response
+      const openaiModels = providerModelsData?.providers.openai.available
+        ? getOpenAIModels(providerModelsData.providers.openai.models)
+        : [];
+      const anthropicModels = providerModelsData?.providers.anthropic.available
+        ? getAnthropicModels(providerModelsData.providers.anthropic.models)
+        : [];
+      const geminiModels = providerModelsData?.providers.gemini.available
+        ? getGeminiModels(providerModelsData.providers.gemini.models)
+        : [];
       const openrouterModels = safeOpenRouterModels.length > 0 ? getPopularOpenRouterModels(safeOpenRouterModels) : [];
 
       if (openaiModels.length > 0 || anthropicModels.length > 0 || openrouterModels.length > 0 || geminiModels.length > 0) {

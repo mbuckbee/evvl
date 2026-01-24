@@ -1,22 +1,17 @@
 /**
- * Fetch models from AIML API and OpenRouter
+ * Fetch models from provider APIs
  *
- * ARCHITECTURE CHANGE (Jan 2026):
- * We now use AIML API (https://api.aimlapi.com/models) as the source for direct providers
- * (OpenAI, Anthropic, Gemini) instead of OpenRouter. This change was made because:
+ * ARCHITECTURE (Jan 2026):
+ * We fetch models directly from each provider's API via our /api/provider-models endpoint.
+ * This endpoint uses server-side API keys and caches results for 1 hour.
  *
- * 1. OpenRouter frequently changes model slugs, causing constant mapping issues
- *    Example: OpenRouter uses "gpt-5-image" but OpenAI API expects "gpt-image-1"
+ * Benefits:
+ * 1. Authoritative model lists directly from providers (OpenAI, Anthropic, Gemini)
+ * 2. No external dependency on third-party aggregators
+ * 3. Server-side caching with Next.js data cache
+ * 4. Consistent model IDs that match actual provider APIs
  *
- * 2. OpenRouter adds variant models that don't exist in direct APIs
- *    Example: "o3-mini-high" is OpenRouter-specific, not in OpenAI API
- *
- * 3. AIML API provides more stable model names closer to actual provider APIs
- *    This reduces the need for complex mapping tables
- *
- * 4. We still use OpenRouter for the OpenRouter provider itself
- *
- * For more context, see the refactoring discussion in the commit history.
+ * OpenRouter is fetched separately since it's a provider in its own right.
  */
 
 import { EXCLUDED_MODEL_PATTERNS } from './validation/types';
@@ -49,54 +44,57 @@ interface ModelsResponse {
   error?: string;
 }
 
-// AIML API model interface (used for direct providers: OpenAI, Anthropic, Gemini)
-// The AIML API returns rich metadata including developer, context length, features, etc.
-// Response format: {object: "list", data: [AIMLModel, AIMLModel, ...]}
-export interface AIMLModel {
+// Provider model from our /api/provider-models endpoint
+export interface ProviderModel {
   id: string;
+  displayName: string;
+  provider: 'openai' | 'anthropic' | 'gemini' | 'openrouter';
   type: string;
-  info: {
-    name: string;
-    developer: string;  // Used to filter by provider (e.g., "Open AI", "Anthropic", "Google")
-    description: string;
-    contextLength: number;
-    maxTokens: number;
-    url: string;
-    docs_url: string;
+  created?: number;
+}
+
+// Response from /api/provider-models
+export interface ProviderModelsResponse {
+  success: boolean;
+  providers: {
+    openai: { available: boolean; models: ProviderModel[]; error?: string };
+    anthropic: { available: boolean; models: ProviderModel[]; error?: string };
+    gemini: { available: boolean; models: ProviderModel[]; error?: string };
+    openrouter: { available: boolean; models: ProviderModel[]; error?: string };
   };
-  features: string[];
-  endpoints: string[];
+  cachedAt: number;
 }
 
 /**
- * Fetch models from AIML API via our proxy endpoint
- * This is our primary source for OpenAI, Anthropic, and Gemini models
- * Uses server-side proxy to avoid CORS issues
+ * Fetch models from our /api/provider-models endpoint
+ * This fetches from all providers using server-side API keys
+ * Returns structured response with models organized by provider
  */
-export async function fetchAIMLModels(): Promise<AIMLModel[]> {
+export async function fetchProviderModels(): Promise<ProviderModelsResponse | null> {
   try {
-    console.log('[AIML] Fetching models from AIML API via proxy...');
-    const response = await fetch('/api/aiml-models');
+    console.log('[Provider Models] Fetching from /api/provider-models...');
+    const response = await fetch('/api/provider-models');
 
     if (!response.ok) {
-      console.error('[AIML] Failed to fetch:', response.status, response.statusText);
-      throw new Error(`Failed to fetch models from AIML API: ${response.status}`);
+      console.error('[Provider Models] Failed to fetch:', response.status, response.statusText);
+      throw new Error(`Failed to fetch provider models: ${response.status}`);
     }
 
-    const models: AIMLModel[] = await response.json();
-    console.log(`[AIML] Fetched ${models.length} models from AIML API`);
+    const data: ProviderModelsResponse = await response.json();
 
-    // Log developer counts for debugging
-    const developerCounts = models.reduce((acc, model) => {
-      acc[model.info.developer] = (acc[model.info.developer] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    console.log('[AIML] Models by developer:', developerCounts);
+    // Log model counts for debugging
+    const counts = {
+      openai: data.providers.openai.models.length,
+      anthropic: data.providers.anthropic.models.length,
+      gemini: data.providers.gemini.models.length,
+      openrouter: data.providers.openrouter.models.length,
+    };
+    console.log('[Provider Models] Fetched models:', counts);
 
-    return models;
+    return data;
   } catch (error) {
-    console.error('[AIML] Error fetching AIML models:', error);
-    return [];
+    console.error('[Provider Models] Error fetching:', error);
+    return null;
   }
 }
 
@@ -142,87 +140,57 @@ export function filterModelsByProvider(models: OpenRouterModel[], prefix: string
 }
 
 /**
- * Get OpenAI models from AIML API
+ * Get OpenAI models from provider models response
  * Filters and formats models for OpenAI provider
  *
- * Supported types:
+ * Supported types from discovery:
  * - 'chat-completion': Standard chat models (GPT-4o, GPT-5, etc.) via Chat Completions API
- * - 'responses': Reasoning/deep research models via Responses API
- * - 'language-completion': Legacy completion models
- * - 'image': Image generation models (added separately with hardcoded list)
+ * - 'responses': Reasoning/deep research models (o1, o3) via Responses API
+ * - 'image': Image generation models (DALL-E, GPT Image)
  *
- * Excluded:
- * - 'video', 'audio', 'stt', 'tts', 'embedding', 'document': Need specialized endpoints we don't support
- * - Models starting with 'fallback-': Proxy/fallback variants we don't need to test
- * - Models with '-oss-' or 'gpt-oss-': Open-source models not in OpenAI API
- * - Models ending with '-high': OpenRouter-exclusive reasoning variants
+ * Excluded via EXCLUDED_MODEL_PATTERNS:
+ * - realtime, tts, audio, embedding, moderation models
  *
  * Sorted in descending order (newer versions first)
- * Returns models with type information from AIML API
  */
-export function getOpenAIModels(models: AIMLModel[]) {
+export function getOpenAIModels(models: ProviderModel[]) {
   console.log(`[getOpenAIModels] Input: ${models.length} models`);
 
-  const textModels = models
-    // Filter for OpenAI models only (note: "Open AI" with space in AIML API)
-    .filter(model => model.info.developer === 'Open AI')
+  const filteredModels = models
     // Filter out excluded models (realtime, tts, etc.) - same as backroom validation
     .filter(model => !isModelExcluded(model.id))
-    // Filter out OSS models - these are open-source models, not actual OpenAI API models
-    .filter(model => !model.id.includes('gpt-oss-') && !model.id.includes('-oss-'))
-    // Filter out OpenRouter-exclusive reasoning effort variants ending in -high
-    .filter(model => !model.id.includes('-high'))
-    // Filter out fallback variants (proxy models we don't need to test)
-    .filter(model => !model.id.startsWith('fallback-'))
-    // Filter out image generation models (they'll be added separately)
-    .filter(model => model.type !== 'image')
-    // Filter out unsupported types: video, audio, stt, tts, embedding, document
-    // These need specialized endpoints we don't support yet
-    // Only include: 'chat-completion', 'responses', 'language-completion'
-    .filter(model => model.type === 'chat-completion' ||
-                     model.type === 'responses' ||
-                     model.type === 'language-completion')
+    // Only include chat, responses, and image models
+    .filter(model =>
+      model.type === 'chat-completion' ||
+      model.type === 'chat' ||
+      model.type === 'responses' ||
+      model.type === 'image'
+    )
     .map(model => ({
-      // Use the AIML ID as-is (it already has the correct format with prefix)
       value: model.id,
-      label: model.info.name,
-      type: model.type, // Pass through AIML type: 'chat-completion', 'responses', etc.
+      label: model.displayName,
+      type: model.type,
     }))
     .sort((a, b) => b.label.localeCompare(a.label));
 
-  console.log(`[getOpenAIModels] Filtered to ${textModels.length} text models`);
+  console.log(`[getOpenAIModels] Filtered to ${filteredModels.length} models`);
 
-  // Add DALL-E and GPT Image models (always available for image generation)
-  const imageModels = [
-    { value: 'openai/gpt-image-1', label: 'GPT Image 1 (Image Generation)', type: 'image' },
-    { value: 'openai/gpt-image-1-mini', label: 'GPT Image 1 Mini (Image Generation)', type: 'image' },
-    { value: 'openai/gpt-image-1-5', label: 'GPT Image 1.5 (Image Generation)', type: 'image' },
-    { value: 'dall-e-3', label: 'DALL-E 3 (Image Generation)', type: 'image' },
-    { value: 'dall-e-2', label: 'DALL-E 2 (Image Generation)', type: 'image' },
-  ];
-
-  return [...imageModels, ...textModels];
+  return filteredModels;
 }
 
 /**
- * Get Anthropic models from AIML API
+ * Get Anthropic models from provider models response
  * Filters out RETIRED Claude models (as of Dec 2025)
  * Shows active AND deprecated models (deprecated still work until retirement date)
  *
- * Only includes models that work with Anthropic's Messages API (/v1/messages)
- * Excludes: image, video, audio, responses types (not supported by Messages API)
- *
  * Sorted in descending order (newer versions first)
- * Returns models with type information from AIML API
  */
-export function getAnthropicModels(models: AIMLModel[]) {
+export function getAnthropicModels(models: ProviderModel[]) {
   return models
-    // Filter for Anthropic models only
-    .filter(model => model.info.developer === 'Anthropic')
     // Filter out excluded models - same as backroom validation
     .filter(model => !isModelExcluded(model.id))
-    // Filter to only chat-capable models
-    .filter(model => model.type === 'chat-completion' || model.type === 'language-completion')
+    // Only include chat models (Anthropic discovery returns 'chat' type)
+    .filter(model => model.type === 'chat' || model.type === 'chat-completion')
     .filter(model => {
       const modelId = model.id.toLowerCase();
 
@@ -230,7 +198,6 @@ export function getAnthropicModels(models: AIMLModel[]) {
       // - Claude 2.x (retired July 21, 2025)
       // - Claude 3 Sonnet (retired July 21, 2025)
       // - Claude 3.5 Sonnet (retired Oct 28, 2025)
-      // Note: Check both dot (3.5) and dash (3-5) versions since AIML uses dashes
       if (modelId.includes('claude-2.0') ||
           modelId.includes('claude-2.1') ||
           modelId.includes('claude-3-sonnet-') ||
@@ -239,22 +206,12 @@ export function getAnthropicModels(models: AIMLModel[]) {
         return false;
       }
 
-      // Allow everything else (active + deprecated):
-      // Active:
-      // - Claude 3 Haiku
-      // - Claude 4.x series
-      // - Claude 4.5.x series
-      // Deprecated (still work until retirement date):
-      // - Claude 3 Opus (retires Jan 5, 2026)
-      // - Claude 3.5 Haiku (retires Feb 19, 2026)
-      // - Claude 3.7 Sonnet (retires Feb 19, 2026)
       return true;
     })
     .map(model => ({
-      // Anthropic IDs in AIML are already correct (no prefix needed)
       value: model.id,
-      label: model.info.name,
-      type: model.type, // Pass through AIML type
+      label: model.displayName,
+      type: model.type,
     }))
     .sort((a, b) => b.label.localeCompare(a.label));
 }
@@ -324,34 +281,25 @@ export async function fetchLMStudioModels(): Promise<{ value: string; label: str
 }
 
 /**
- * Get Google Gemini models from AIML API
+ * Get Google Gemini models from provider models response
  * Includes both text and image generation models (Gemini, Imagen)
- * Excludes Gemma models (open-source models, not available through Gemini API)
- *
- * Only includes models that work with Gemini's text/image generation endpoints
- * Excludes: video, audio, responses types (not supported by current implementation)
  *
  * Sorted in descending order (newer versions first)
- * Returns models with type information from AIML API
  */
-export function getGeminiModels(models: AIMLModel[]) {
+export function getGeminiModels(models: ProviderModel[]) {
   return models
-    // Filter for Google models only
-    .filter(model => model.info.developer === 'Google')
-    // Filter out excluded models (computer-use, native-audio, tts, etc.) - same as backroom validation
+    // Filter out excluded models - same as backroom validation
     .filter(model => !isModelExcluded(model.id))
-    // Filter out Gemma models - these are open-source models,
-    // not actual Gemini API models
-    .filter(model => !model.id.toLowerCase().includes('gemma'))
-    // Filter to only supported types
-    .filter(model => model.type === 'chat-completion' ||
-                     model.type === 'language-completion' ||
-                     model.type === 'image')
+    // Only include chat and image models
+    .filter(model =>
+      model.type === 'chat' ||
+      model.type === 'chat-completion' ||
+      model.type === 'image'
+    )
     .map(model => ({
-      // Google IDs in AIML already have the google/ prefix
       value: model.id,
-      label: model.info.name,
-      type: model.type, // Pass through AIML type
+      label: model.displayName,
+      type: model.type,
     }))
     .sort((a, b) => b.label.localeCompare(a.label));
 }

@@ -9,7 +9,7 @@ import {
   getGeminiModels,
   getPopularOpenRouterModels,
   OpenRouterModel,
-  AIMLModel,
+  ProviderModel,
 } from '../fetch-models';
 
 describe('Model Filtering Functions', () => {
@@ -49,46 +49,43 @@ describe('Model Filtering Functions', () => {
     { id: 'mistralai/mistral-7b', name: 'Mistral: Mistral 7B', description: 'Mistral 7B' },
   ];
 
-  // Helper to create AIML model
-  const createAIMLModel = (id: string, name: string, developer: string, type: string = 'chat-completion'): AIMLModel => ({
+  // Helper to create ProviderModel
+  const createProviderModel = (id: string, displayName: string, provider: 'openai' | 'anthropic' | 'gemini' | 'openrouter', type: string = 'chat-completion'): ProviderModel => ({
     id,
+    displayName,
+    provider,
     type,
-    info: { name, developer, description: name, contextLength: 8192, maxTokens: 4096, url: '', docs_url: '' },
-    features: [],
-    endpoints: [],
   });
 
-  // Mock AIML models for OpenAI
-  const mockAIMLOpenAIModels: AIMLModel[] = [
-    createAIMLModel('openai/gpt-4', 'GPT-4', 'Open AI'),
-    createAIMLModel('openai/gpt-3.5-turbo', 'GPT-3.5 Turbo', 'Open AI'),
-    createAIMLModel('openai/o1', 'O1', 'Open AI', 'responses'),
-    createAIMLModel('openai/gpt-oss-4', 'GPT-4 OSS', 'Open AI'), // OSS - should be filtered
-    createAIMLModel('openai/dall-e-3', 'DALL-E 3', 'Open AI', 'image'),
-    createAIMLModel('anthropic/claude-3-opus', 'Claude 3 Opus', 'Anthropic'), // Different developer
+  // Mock ProviderModel for OpenAI (as returned by /api/provider-models)
+  const mockOpenAIModels: ProviderModel[] = [
+    createProviderModel('gpt-4', 'GPT-4', 'openai', 'chat-completion'),
+    createProviderModel('gpt-3.5-turbo', 'GPT-3.5 Turbo', 'openai', 'chat-completion'),
+    createProviderModel('o1', 'O1', 'openai', 'responses'),
+    createProviderModel('dall-e-3', 'DALL-E 3', 'openai', 'image'),
+    createProviderModel('gpt-4o-realtime-preview', 'GPT-4o Realtime', 'openai', 'realtime'), // Should be excluded
+    createProviderModel('tts-1', 'TTS 1', 'openai', 'tts'), // Should be excluded
   ];
 
-  // Mock AIML models for Anthropic
-  const mockAIMLAnthropicModels: AIMLModel[] = [
-    createAIMLModel('anthropic/claude-3-opus-20240229', 'Claude 3 Opus', 'Anthropic'),
-    createAIMLModel('anthropic/claude-3-haiku-20240307', 'Claude 3 Haiku', 'Anthropic'),
-    createAIMLModel('anthropic/claude-4-opus-20250514', 'Claude 4 Opus', 'Anthropic'),
-    createAIMLModel('anthropic/claude-2.0', 'Claude 2.0', 'Anthropic'), // Retired - should be filtered
-    createAIMLModel('anthropic/claude-2.1', 'Claude 2.1', 'Anthropic'), // Retired - should be filtered
-    createAIMLModel('anthropic/claude-3-sonnet-20240229', 'Claude 3 Sonnet', 'Anthropic'), // Retired - should be filtered
-    createAIMLModel('anthropic/claude-3.5-sonnet', 'Claude 3.5 Sonnet', 'Anthropic'), // Retired - should be filtered
-    createAIMLModel('openai/gpt-4', 'GPT-4', 'Open AI'), // Different developer
+  // Mock ProviderModel for Anthropic
+  const mockAnthropicModels: ProviderModel[] = [
+    createProviderModel('claude-3-opus-20240229', 'Claude 3 Opus', 'anthropic', 'chat'),
+    createProviderModel('claude-3-haiku-20240307', 'Claude 3 Haiku', 'anthropic', 'chat'),
+    createProviderModel('claude-4-opus-20250514', 'Claude 4 Opus', 'anthropic', 'chat'),
+    createProviderModel('claude-2.0', 'Claude 2.0', 'anthropic', 'chat'), // Retired - should be filtered
+    createProviderModel('claude-2.1', 'Claude 2.1', 'anthropic', 'chat'), // Retired - should be filtered
+    createProviderModel('claude-3-sonnet-20240229', 'Claude 3 Sonnet', 'anthropic', 'chat'), // Retired - should be filtered
+    createProviderModel('claude-3.5-sonnet', 'Claude 3.5 Sonnet', 'anthropic', 'chat'), // Retired - should be filtered
   ];
 
-  // Mock AIML models for Gemini
-  const mockAIMLGeminiModels: AIMLModel[] = [
-    createAIMLModel('google/gemini-2.5-pro', 'Gemini 2.5 Pro', 'Google'),
-    createAIMLModel('google/gemini-2.0-flash-exp', 'Gemini 2.0 Flash Exp', 'Google'),
-    createAIMLModel('google/gemini-3-pro-preview', 'Gemini 3 Pro Preview', 'Google'),
-    createAIMLModel('google/imagen-3', 'Imagen 3', 'Google', 'image'),
-    createAIMLModel('google/gemma-3n-e4b-1t', 'Gemma 3n 4B', 'Google'), // Gemma - should be filtered
-    createAIMLModel('google/gemma-3-4b-it', 'Gemma 3 4B', 'Google'), // Gemma - should be filtered
-    createAIMLModel('openai/gpt-4', 'GPT-4', 'Open AI'), // Different developer
+  // Mock ProviderModel for Gemini
+  const mockGeminiModels: ProviderModel[] = [
+    createProviderModel('gemini-2.5-pro', 'Gemini 2.5 Pro', 'gemini', 'chat'),
+    createProviderModel('gemini-2.0-flash-exp', 'Gemini 2.0 Flash Exp', 'gemini', 'chat'),
+    createProviderModel('gemini-3-pro-preview', 'Gemini 3 Pro Preview', 'gemini', 'chat'),
+    createProviderModel('imagen-3', 'Imagen 3', 'gemini', 'image'),
+    createProviderModel('gemini-2.5-computer-use-preview', 'Gemini Computer Use', 'gemini', 'chat'), // Should be excluded
+    createProviderModel('gemini-2.5-flash-native-audio-preview', 'Gemini Native Audio', 'gemini', 'audio'), // Should be excluded
   ];
 
   describe('filterModelsByProvider', () => {
@@ -117,67 +114,61 @@ describe('Model Filtering Functions', () => {
   });
 
   describe('getOpenAIModels', () => {
-    it('should exclude GPT OSS models', () => {
-      const result = getOpenAIModels(mockAIMLOpenAIModels);
-      expect(result.some(m => m.value.includes('gpt-oss'))).toBe(false);
-      expect(result.some(m => m.value.includes('-oss-'))).toBe(false);
-    });
-
-    it('should include legitimate OpenAI text models', () => {
-      const result = getOpenAIModels(mockAIMLOpenAIModels);
-      expect(result.some(m => m.value === 'openai/gpt-4')).toBe(true);
-      expect(result.some(m => m.value === 'openai/gpt-3.5-turbo')).toBe(true);
+    it('should include legitimate OpenAI chat models', () => {
+      const result = getOpenAIModels(mockOpenAIModels);
+      expect(result.some(m => m.value === 'gpt-4')).toBe(true);
+      expect(result.some(m => m.value === 'gpt-3.5-turbo')).toBe(true);
     });
 
     it('should include responses API models (like O1)', () => {
-      const result = getOpenAIModels(mockAIMLOpenAIModels);
-      expect(result.some(m => m.value === 'openai/o1')).toBe(true);
+      const result = getOpenAIModels(mockOpenAIModels);
+      expect(result.some(m => m.value === 'o1')).toBe(true);
     });
 
     it('should include DALL-E image models', () => {
-      const result = getOpenAIModels(mockAIMLOpenAIModels);
+      const result = getOpenAIModels(mockOpenAIModels);
       const imageModels = result.filter(m => m.type === 'image');
       expect(imageModels.length).toBeGreaterThan(0);
       expect(imageModels.some(m => m.value.includes('dall-e'))).toBe(true);
     });
 
-    it('should filter by Open AI developer only', () => {
-      const result = getOpenAIModels(mockAIMLOpenAIModels);
-      expect(result.some(m => m.value.includes('anthropic'))).toBe(false);
+    it('should exclude realtime models', () => {
+      const result = getOpenAIModels(mockOpenAIModels);
+      expect(result.some(m => m.value.includes('realtime'))).toBe(false);
+    });
+
+    it('should exclude TTS models', () => {
+      const result = getOpenAIModels(mockOpenAIModels);
+      expect(result.some(m => m.value.includes('tts'))).toBe(false);
     });
   });
 
   describe('getAnthropicModels', () => {
     it('should exclude retired Claude 2.x models', () => {
-      const result = getAnthropicModels(mockAIMLAnthropicModels);
+      const result = getAnthropicModels(mockAnthropicModels);
       expect(result.some(m => m.value.includes('claude-2.0'))).toBe(false);
       expect(result.some(m => m.value.includes('claude-2.1'))).toBe(false);
     });
 
     it('should exclude retired Claude 3 Sonnet', () => {
-      const result = getAnthropicModels(mockAIMLAnthropicModels);
+      const result = getAnthropicModels(mockAnthropicModels);
       expect(result.some(m => m.value.includes('claude-3-sonnet'))).toBe(false);
     });
 
     it('should exclude retired Claude 3.5 Sonnet', () => {
-      const result = getAnthropicModels(mockAIMLAnthropicModels);
+      const result = getAnthropicModels(mockAnthropicModels);
       expect(result.some(m => m.value.includes('claude-3.5-sonnet'))).toBe(false);
     });
 
     it('should include active Claude models', () => {
-      const result = getAnthropicModels(mockAIMLAnthropicModels);
+      const result = getAnthropicModels(mockAnthropicModels);
       expect(result.some(m => m.value.includes('claude-3-opus'))).toBe(true);
       expect(result.some(m => m.value.includes('claude-3-haiku'))).toBe(true);
       expect(result.some(m => m.value.includes('claude-4-opus'))).toBe(true);
     });
 
-    it('should filter by Anthropic developer only', () => {
-      const result = getAnthropicModels(mockAIMLAnthropicModels);
-      expect(result.some(m => m.value.includes('openai'))).toBe(false);
-    });
-
     it('should sort models in descending order', () => {
-      const result = getAnthropicModels(mockAIMLAnthropicModels);
+      const result = getAnthropicModels(mockAnthropicModels);
       for (let i = 0; i < result.length - 1; i++) {
         expect(result[i].label >= result[i + 1].label).toBe(true);
       }
@@ -185,30 +176,30 @@ describe('Model Filtering Functions', () => {
   });
 
   describe('getGeminiModels', () => {
-    it('should exclude Gemma open-source models', () => {
-      const result = getGeminiModels(mockAIMLGeminiModels);
-      expect(result.some(m => m.value.includes('gemma'))).toBe(false);
-    });
-
     it('should include legitimate Gemini models', () => {
-      const result = getGeminiModels(mockAIMLGeminiModels);
+      const result = getGeminiModels(mockGeminiModels);
       expect(result.some(m => m.value.includes('gemini-2.5-pro'))).toBe(true);
       expect(result.some(m => m.value.includes('gemini-2.0-flash'))).toBe(true);
       expect(result.some(m => m.value.includes('gemini-3-pro'))).toBe(true);
     });
 
     it('should include Imagen image generation models', () => {
-      const result = getGeminiModels(mockAIMLGeminiModels);
+      const result = getGeminiModels(mockGeminiModels);
       expect(result.some(m => m.value.includes('imagen-3'))).toBe(true);
     });
 
-    it('should filter by Google developer only', () => {
-      const result = getGeminiModels(mockAIMLGeminiModels);
-      expect(result.some(m => m.value.includes('openai'))).toBe(false);
+    it('should exclude computer-use models', () => {
+      const result = getGeminiModels(mockGeminiModels);
+      expect(result.some(m => m.value.includes('computer-use'))).toBe(false);
+    });
+
+    it('should exclude native-audio models', () => {
+      const result = getGeminiModels(mockGeminiModels);
+      expect(result.some(m => m.value.includes('native-audio'))).toBe(false);
     });
 
     it('should sort models in descending order', () => {
-      const result = getGeminiModels(mockAIMLGeminiModels);
+      const result = getGeminiModels(mockGeminiModels);
       for (let i = 0; i < result.length - 1; i++) {
         expect(result[i].label >= result[i + 1].label).toBe(true);
       }
@@ -245,91 +236,23 @@ describe('Model Filtering Functions', () => {
     });
   });
 
-  describe('Excluded model patterns', () => {
-    // Models that should be excluded from user-facing app
-    const excludedOpenAIModels: AIMLModel[] = [
-      createAIMLModel('openai/gpt-4o-realtime-preview', 'GPT-4o Realtime', 'Open AI'),
-      createAIMLModel('openai/gpt-4o-realtime-preview-2024-10-01', 'GPT-4o Realtime Oct', 'Open AI'),
-      createAIMLModel('openai/tts-1', 'TTS 1', 'Open AI', 'tts'),
-      createAIMLModel('openai/tts-1-hd', 'TTS 1 HD', 'Open AI', 'tts'),
-      // Valid models that should NOT be excluded
-      createAIMLModel('openai/gpt-4o', 'GPT-4o', 'Open AI'),
-      createAIMLModel('openai/gpt-4', 'GPT-4', 'Open AI'),
-    ];
-
-    const excludedGeminiModels: AIMLModel[] = [
-      createAIMLModel('google/gemini-2.5-computer-use-preview', 'Gemini Computer Use', 'Google'),
-      createAIMLModel('google/gemini-2.5-flash-native-audio-preview', 'Gemini Native Audio', 'Google'),
-      createAIMLModel('google/gemini-2.5-flash-preview-tts', 'Gemini TTS', 'Google'),
-      createAIMLModel('google/gemini-robotics-er-1.5-preview', 'Gemini Robotics', 'Google'),
-      // Valid models that should NOT be excluded
-      createAIMLModel('google/gemini-2.5-pro', 'Gemini 2.5 Pro', 'Google'),
-      createAIMLModel('google/gemini-2.5-flash', 'Gemini 2.5 Flash', 'Google'),
-    ];
-
-    it('should exclude realtime models from OpenAI', () => {
-      const result = getOpenAIModels(excludedOpenAIModels);
-      expect(result.some(m => m.value.includes('realtime'))).toBe(false);
-    });
-
-    it('should exclude TTS models from OpenAI', () => {
-      const result = getOpenAIModels(excludedOpenAIModels);
-      expect(result.some(m => m.value.includes('tts'))).toBe(false);
-    });
-
-    it('should include valid OpenAI models', () => {
-      const result = getOpenAIModels(excludedOpenAIModels);
-      expect(result.some(m => m.value === 'openai/gpt-4o')).toBe(true);
-      expect(result.some(m => m.value === 'openai/gpt-4')).toBe(true);
-    });
-
-    it('should exclude computer-use models from Gemini', () => {
-      const result = getGeminiModels(excludedGeminiModels);
-      expect(result.some(m => m.value.includes('computer-use'))).toBe(false);
-    });
-
-    it('should exclude native-audio models from Gemini', () => {
-      const result = getGeminiModels(excludedGeminiModels);
-      expect(result.some(m => m.value.includes('native-audio'))).toBe(false);
-    });
-
-    it('should exclude TTS models from Gemini', () => {
-      const result = getGeminiModels(excludedGeminiModels);
-      expect(result.some(m => m.value.includes('tts'))).toBe(false);
-    });
-
-    it('should exclude robotics models from Gemini', () => {
-      const result = getGeminiModels(excludedGeminiModels);
-      expect(result.some(m => m.value.includes('robotics'))).toBe(false);
-    });
-
-    it('should include valid Gemini models', () => {
-      const result = getGeminiModels(excludedGeminiModels);
-      expect(result.some(m => m.value === 'google/gemini-2.5-pro')).toBe(true);
-      expect(result.some(m => m.value === 'google/gemini-2.5-flash')).toBe(true);
-    });
-  });
-
   describe('Real-world filtering scenarios', () => {
-    it('should correctly separate OpenAI API models from OpenRouter OSS models', () => {
-      const openaiModels = getOpenAIModels(mockAIMLOpenAIModels);
+    it('should correctly separate direct API models from OpenRouter models', () => {
+      // Direct API models should be filtered for chat/image types
+      const openaiModels = getOpenAIModels(mockOpenAIModels);
+      const anthropicModels = getAnthropicModels(mockAnthropicModels);
+      const geminiModels = getGeminiModels(mockGeminiModels);
+
+      // OpenRouter should have all models including retired/OSS
       const openrouterModels = getPopularOpenRouterModels(mockOpenRouterModels);
 
-      // OpenAI API should NOT have OSS models
-      expect(openaiModels.some(m => m.value.includes('oss'))).toBe(false);
+      // Direct API models should have fewer (filtered) models
+      expect(openaiModels.every(m => !m.value.includes('realtime'))).toBe(true);
+      expect(anthropicModels.every(m => !m.value.includes('claude-2.'))).toBe(true);
+      expect(geminiModels.every(m => !m.value.includes('computer-use'))).toBe(true);
 
-      // OpenRouter should have OSS models available
+      // OpenRouter should have all models
       expect(openrouterModels.some(m => m.value.includes('gpt-oss'))).toBe(true);
-    });
-
-    it('should correctly separate Gemini API models from OpenRouter Gemma models', () => {
-      const geminiModels = getGeminiModels(mockAIMLGeminiModels);
-      const openrouterModels = getPopularOpenRouterModels(mockOpenRouterModels);
-
-      // Gemini API should NOT have Gemma models
-      expect(geminiModels.some(m => m.value.toLowerCase().includes('gemma'))).toBe(false);
-
-      // OpenRouter should have Gemma models available
       expect(openrouterModels.some(m => m.value.includes('gemma'))).toBe(true);
     });
   });

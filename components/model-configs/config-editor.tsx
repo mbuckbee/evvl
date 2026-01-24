@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { ProjectModelConfig, AIParameters, Provider } from '@/lib/types';
 import { saveModelConfig } from '@/lib/storage';
 import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
-import { fetchOpenRouterModels, fetchAIMLModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels, fetchOllamaModels, fetchLMStudioModels } from '@/lib/fetch-models';
+import { fetchOpenRouterModels, fetchProviderModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels, fetchOllamaModels, fetchLMStudioModels } from '@/lib/fetch-models';
 import { getAvailableProviders } from '@/lib/providers/provider-filter';
 import { isLocalProvider } from '@/lib/config';
 
@@ -59,14 +59,14 @@ export default function ConfigEditor({ projectId, config, defaultProvider, onSav
   const [presencePenalty, setPresencePenalty] = useState<number | undefined>(config?.parameters?.presencePenalty);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Load dynamic models from AIML API (for direct providers), OpenRouter, and local providers
+  // Load dynamic models from /api/provider-models (for direct providers), OpenRouter, and local providers
   useEffect(() => {
     async function loadModels() {
       const availableProviders = getAvailableProviders();
 
       // Fetch from all APIs in parallel
-      const [aimlModels, openRouterModels, ollamaModels, lmstudioModels] = await Promise.all([
-        fetchAIMLModels(),
+      const [providerModelsData, openRouterModels, ollamaModels, lmstudioModels] = await Promise.all([
+        fetchProviderModels(),
         fetchOpenRouterModels(),
         // Only fetch local models if those providers are available
         availableProviders.some(p => p.key === 'ollama') ? fetchOllamaModels() : Promise.resolve([]),
@@ -79,11 +79,17 @@ export default function ConfigEditor({ projectId, config, defaultProvider, onSav
         lmstudio: { running: lmstudioModels.length > 0, loading: false },
       });
 
-      // Use AIML models for direct providers (OpenAI, Anthropic, Gemini)
+      // Use provider-models for direct providers (OpenAI, Anthropic, Gemini)
       // Use OpenRouter models only for the OpenRouter provider
-      const openaiModels = aimlModels.length > 0 ? getOpenAIModels(aimlModels) : [];
-      const anthropicModels = aimlModels.length > 0 ? getAnthropicModels(aimlModels) : [];
-      const geminiModels = aimlModels.length > 0 ? getGeminiModels(aimlModels) : [];
+      const openaiModels = providerModelsData?.providers.openai.available
+        ? getOpenAIModels(providerModelsData.providers.openai.models)
+        : [];
+      const anthropicModels = providerModelsData?.providers.anthropic.available
+        ? getAnthropicModels(providerModelsData.providers.anthropic.models)
+        : [];
+      const geminiModels = providerModelsData?.providers.gemini.available
+        ? getGeminiModels(providerModelsData.providers.gemini.models)
+        : [];
       const openrouterModels = openRouterModels.length > 0 ? getPopularOpenRouterModels(openRouterModels) : [];
 
       const updatedProviders = availableProviders.map(p => {

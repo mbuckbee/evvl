@@ -97,7 +97,7 @@ describe('Sidebar', () => {
       expect(storage.saveProject).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'Example Project',
-          description: 'A sample project demonstrating prompt evaluation with text summarization',
+          description: 'A sample project demonstrating prompt evaluation with review classification',
         })
       );
       // Should also create sample prompt, dataset, and model configs

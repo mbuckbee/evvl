@@ -39,7 +39,7 @@ jest.mock('@/lib/storage');
 // Mock fetch-models module
 jest.mock('@/lib/fetch-models', () => ({
   fetchOpenRouterModels: jest.fn(),
-  fetchAIMLModels: jest.fn(),
+  fetchProviderModels: jest.fn(),
   getOpenAIModels: jest.fn(),
   getAnthropicModels: jest.fn(),
   getPopularOpenRouterModels: jest.fn(),
@@ -91,6 +91,7 @@ describe('Home (Project-based Workflow)', () => {
     (storage.saveColumns as jest.Mock).mockImplementation(() => {});
 
     (fetchModels.fetchOpenRouterModels as jest.Mock).mockResolvedValue([]);
+    (fetchModels.fetchProviderModels as jest.Mock).mockResolvedValue(null);
     (fetchModels.getOpenAIModels as jest.Mock).mockReturnValue([]);
     (fetchModels.getAnthropicModels as jest.Mock).mockReturnValue([]);
     (fetchModels.getPopularOpenRouterModels as jest.Mock).mockReturnValue([]);
