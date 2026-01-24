@@ -26,12 +26,24 @@ if [ ! -f "$CONFIG_FILE" ]; then
 fi
 
 # Read JSON and export as environment variables
-export APPLE_SIGNING_IDENTITY=$(node -p "require('$CONFIG_FILE').APPLE_SIGNING_IDENTITY")
-export APPLE_ID=$(node -p "require('$CONFIG_FILE').APPLE_ID")
-export APPLE_PASSWORD=$(node -p "require('$CONFIG_FILE').APPLE_PASSWORD")
-export APPLE_TEAM_ID=$(node -p "require('$CONFIG_FILE').APPLE_TEAM_ID")
-export TAURI_SIGNING_PRIVATE_KEY=$(node -p "require('$CONFIG_FILE').TAURI_SIGNING_PRIVATE_KEY")
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$(node -p "require('$CONFIG_FILE').TAURI_SIGNING_PRIVATE_KEY_PASSWORD")
+# Use node to write a temp file with properly escaped values
+TEMP_ENV=$(mktemp)
+node -e "
+const config = require('$CONFIG_FILE');
+const fs = require('fs');
+const escape = (s) => \"'\" + s.replace(/'/g, \"'\\\"'\\\"'\") + \"'\";
+const lines = [
+  'export APPLE_SIGNING_IDENTITY=' + escape(config.APPLE_SIGNING_IDENTITY),
+  'export APPLE_ID=' + escape(config.APPLE_ID),
+  'export APPLE_PASSWORD=' + escape(config.APPLE_PASSWORD),
+  'export APPLE_TEAM_ID=' + escape(config.APPLE_TEAM_ID),
+  'export TAURI_SIGNING_PRIVATE_KEY=' + escape(config.TAURI_SIGNING_PRIVATE_KEY),
+  'export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=' + escape(config.TAURI_SIGNING_PRIVATE_KEY_PASSWORD)
+];
+fs.writeFileSync('$TEMP_ENV', lines.join('\n'));
+"
+source "$TEMP_ENV"
+rm "$TEMP_ENV"
 
 echo "Building signed Tauri app..."
 echo "  APPLE_ID: $APPLE_ID"

@@ -8,11 +8,11 @@ set -e
 BACKUP_DIR=".tauri-build-backup"
 
 # Directories to exclude (server-only features)
+# All API routes are excluded since they're server-side and won't work in static export
+# Backroom is admin-only and requires server features
 EXCLUDE_DIRS=(
-  "app/api/share"
-  "app/api/analytics"
-  "app/api/cron"
-  "app/api/updates"
+  "app/api"
+  "app/backroom"
   "app/s"
 )
 

@@ -526,29 +526,42 @@ base64 -i ~/Desktop/certificate.p12 | pbcopy
 
 This section documents ALL secrets, credentials, and sensitive data used by Evvl. **Keep this information secure!**
 
-### Critical Files to Backup
+### Single Source of Truth: tauri-build-info.json
+
+All build credentials are stored in ONE file: `tauri-build-info.json` (gitignored).
+
+```json
+{
+  "APPLE_SIGNING_IDENTITY": "Developer ID Application: Your Name (TEAMID)",
+  "APPLE_ID": "your@email.com",
+  "APPLE_PASSWORD": "xxxx-xxxx-xxxx-xxxx",
+  "APPLE_TEAM_ID": "YOURTEAMID",
+  "TAURI_SIGNING_PRIVATE_KEY": "<base64 private key>",
+  "TAURI_SIGNING_PRIVATE_KEY_PASSWORD": "<key password>",
+  "TAURI_SIGNING_PUBLIC_KEY": "<base64 public key>"
+}
+```
+
+### Setup on New Machine
+
+1. Download `tauri-build-info.json` from 1Password ("Evvl Apple Signing" → Documents)
+2. Place in project root
+3. Run `npm run tauri:build:signed`
+
+### After Credential Changes
+
+1. Update `tauri-build-info.json` locally
+2. If public key changed, update `src-tauri/tauri.conf.json` pubkey field
+3. Manually re-upload JSON to 1Password
+
+### Critical Files
 
 | File | Location | Purpose | If Lost |
 |------|----------|---------|---------|
-| `evvl.key` | `~/.tauri/evvl.key` or project root | Tauri update signing private key | Existing users cannot auto-update; must regenerate and users manually download |
-| `evvl.key.pub` | `~/.tauri/evvl.key.pub` | Public key (also in `tauri.conf.json`) | Can regenerate from private key |
+| `tauri-build-info.json` | Project root (gitignored) | ALL build secrets | Restore from 1Password |
 | Apple `.p12` | Keychain / exported file | macOS code signing certificate | Request new from Apple Developer Portal |
 
-### Environment Variables (Local Development)
-
-Add these to `~/.zshrc` for local builds:
-
-```bash
-# Apple Code Signing & Notarization
-export APPLE_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
-export APPLE_ID="your@email.com"
-export APPLE_PASSWORD="xxxx-xxxx-xxxx-xxxx"  # App-specific password from appleid.apple.com
-export APPLE_TEAM_ID="YOUR_TEAM_ID"          # 10-character team ID
-
-# Tauri Update Signing (for local builds with signing)
-export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/evvl.key)"
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD='@#$apPPke.bk!'  # Password set during key generation
-```
+**Note:** No separate `.key` files needed. Private/public keys are stored in the JSON.
 
 ### GitHub Repository Secrets
 
@@ -557,8 +570,8 @@ Configure these in Settings → Secrets and variables → Actions:
 | Secret | Description | How to Obtain |
 |--------|-------------|---------------|
 | `PUBLIC_RELEASE_TOKEN` | GitHub PAT with write access to `evvl-releases` repo | GitHub → Settings → Developer settings → PATs |
-| `TAURI_SIGNING_PRIVATE_KEY` | Contents of `evvl.key` file | `cat ~/.tauri/evvl.key` |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for signing key: `@#$apPPke.bk!` | Set during key generation |
+| `TAURI_SIGNING_PRIVATE_KEY` | Value of `TAURI_SIGNING_PRIVATE_KEY` from JSON | Copy from `tauri-build-info.json` |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Value of `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` from JSON | Copy from `tauri-build-info.json` |
 | `APPLE_CERTIFICATE` | Base64-encoded `.p12` certificate | `base64 -i certificate.p12 \| pbcopy` |
 | `APPLE_CERTIFICATE_PASSWORD` | Password used when exporting .p12 | Set during certificate export |
 | `APPLE_SIGNING_IDENTITY` | e.g., `Developer ID Application: Name (TEAM_ID)` | Keychain Access → certificate name |
@@ -581,9 +594,9 @@ Configure in Vercel Dashboard → Settings → Environment Variables:
 
 | Credential | Used In | Purpose |
 |------------|---------|---------|
-| Tauri signing key | `npm run tauri:build`, GitHub Actions | Sign update packages so users can verify authenticity |
-| Apple certificates | `npm run tauri:build`, GitHub Actions | Code sign macOS apps to avoid Gatekeeper warnings |
-| Apple notarization | `npm run tauri:build`, GitHub Actions | Submit to Apple for malware scan and notarization |
+| `tauri-build-info.json` | `npm run tauri:build:signed` | All local build signing (reads JSON, never contacts 1Password) |
+| GitHub Secrets | GitHub Actions release workflow | CI/CD builds (same values as JSON, configured separately) |
+| Apple `.p12` | Keychain, GitHub Actions | macOS code signing certificate |
 | GitHub PAT | GitHub Actions release workflow | Push releases to public `evvl-releases` repo |
 | Vercel KV | Web app API routes | Store analytics, shares, daily snapshots |
 | Backroom password | `/backroom` routes | Protect analytics dashboard |
@@ -592,10 +605,19 @@ Configure in Vercel Dashboard → Settings → Environment Variables:
 
 **Tauri Signing Key** (if lost or compromised):
 ```bash
-npx tauri signer generate -w ~/.tauri/evvl-new.key -p "" --ci
-# Update tauri.conf.json with new public key
-# Update GitHub secret TAURI_SIGNING_PRIVATE_KEY
-# Users on old versions must manually download new version
+# Generate new key with known password
+npx tauri signer generate -w evvl-new.key -p "your-password-here"
+
+# Copy key contents to tauri-build-info.json:
+# - TAURI_SIGNING_PRIVATE_KEY: contents of evvl-new.key
+# - TAURI_SIGNING_PRIVATE_KEY_PASSWORD: the password you used
+# - TAURI_SIGNING_PUBLIC_KEY: contents of evvl-new.key.pub
+
+# Update tauri.conf.json pubkey field with new public key
+# Update GitHub secrets with new values
+# Delete the temporary key files
+# Re-upload tauri-build-info.json to 1Password
+# ⚠️ Users on old versions must manually download new version
 ```
 
 **Apple App-Specific Password**:

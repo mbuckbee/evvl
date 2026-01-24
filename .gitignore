@@ -41,9 +41,9 @@ next-env.d.ts
 /src-tauri/target
 /src-tauri/WixTools
 
-# signing keys (keep these secret!)
+# Tauri build credentials (single source of truth - backup to 1Password)
+tauri-build-info.json
+
+# Safety net for any stray key files
 *.key
 *.key.pub
-evvl.key
-evvl.key.pub
-tauri-build-info.json

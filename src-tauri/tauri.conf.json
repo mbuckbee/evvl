@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Evvl",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "identifier": "com.evvl.app",
   "build": {
     "frontendDist": "../out",
@@ -46,7 +46,7 @@
       "endpoints": [
         "https://app.evvl.ai/api/updates/check"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU4QjNFNDNCODg4RUMwNTkKUldSWndJNklPK1N6NkJNL1JnQjhURGhQVlVyOWNheERyRzZjZ0dIQzRaQ05NMlRYOGZWYjhMa0wK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI2REVENjI2QUMzOTA3QzAKUldUQUJ6bXNKdGJlSnJzcXlpejBCWmYrSXZPMHY3LzdnQ0JaSjFrYVZNSmw4ZnR0MG9qdlg0NHAK"
     }
   }
 }
