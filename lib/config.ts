@@ -11,12 +11,14 @@ export interface ModelOption {
 }
 
 export interface ProviderConfig {
-  key: 'openai' | 'anthropic' | 'openrouter' | 'gemini';
+  key: 'openai' | 'anthropic' | 'openrouter' | 'gemini' | 'ollama' | 'lmstudio';
   name: string;
   logo: string;
   models: ModelOption[];
   settingsUrl: string;
   testModel?: string; // Model to use for API key testing
+  isLocal?: boolean; // True for local providers (ollama, lmstudio)
+  defaultEndpoint?: string; // Default endpoint URL for local providers
 }
 
 export const PROVIDERS: ProviderConfig[] = [
@@ -52,26 +54,46 @@ export const PROVIDERS: ProviderConfig[] = [
     testModel: 'gemini-2.0-flash-exp', // Use direct API format, not OpenRouter format
     models: [], // Populated dynamically from OpenRouter API
   },
+  {
+    key: 'ollama',
+    name: 'Ollama',
+    logo: '/logos/ollama.svg',
+    settingsUrl: 'https://ollama.ai/download',
+    isLocal: true,
+    defaultEndpoint: 'http://localhost:11434',
+    models: [], // Populated dynamically from local service
+  },
+  {
+    key: 'lmstudio',
+    name: 'LM Studio',
+    logo: '/logos/lmstudio.svg',
+    settingsUrl: 'https://lmstudio.ai/',
+    isLocal: true,
+    defaultEndpoint: 'http://localhost:1234',
+    models: [], // Populated dynamically from local service
+  },
 ];
+
+export type ProviderKey = 'openai' | 'anthropic' | 'openrouter' | 'gemini' | 'ollama' | 'lmstudio';
 
 /**
  * Get provider configuration by key
  */
-export function getProvider(key: 'openai' | 'anthropic' | 'openrouter' | 'gemini'): ProviderConfig | undefined {
+export function getProvider(key: ProviderKey): ProviderConfig | undefined {
   return PROVIDERS.find(p => p.key === key);
 }
 
 /**
  * Get all provider keys
  */
-export function getProviderKeys(): ('openai' | 'anthropic' | 'openrouter' | 'gemini')[] {
+export function getProviderKeys(): ProviderKey[] {
   return PROVIDERS.map(p => p.key);
 }
 
 /**
  * Get models for a specific provider
  */
-export function getModelsForProvider(key: 'openai' | 'anthropic' | 'openrouter' | 'gemini'): ModelOption[] {
+export function getModelsForProvider(key: ProviderKey): ModelOption[] {
   const provider = getProvider(key);
   return provider?.models || [];
 }
@@ -80,7 +102,7 @@ export function getModelsForProvider(key: 'openai' | 'anthropic' | 'openrouter' 
  * Get default model for a provider (first in the list)
  * Returns empty string if models haven't loaded yet - handled by page logic
  */
-export function getDefaultModel(key: 'openai' | 'anthropic' | 'openrouter' | 'gemini'): string {
+export function getDefaultModel(key: ProviderKey): string {
   const models = getModelsForProvider(key);
   return models[0]?.value || '';
 }
@@ -88,7 +110,23 @@ export function getDefaultModel(key: 'openai' | 'anthropic' | 'openrouter' | 'ge
 /**
  * Get test model for a provider
  */
-export function getTestModel(key: 'openai' | 'anthropic' | 'openrouter' | 'gemini'): string {
+export function getTestModel(key: ProviderKey): string {
   const provider = getProvider(key);
   return provider?.testModel || getDefaultModel(key);
+}
+
+/**
+ * Check if a provider is a local provider (no API key required)
+ */
+export function isLocalProvider(key: ProviderKey): boolean {
+  const provider = getProvider(key);
+  return provider?.isLocal === true;
+}
+
+/**
+ * Get the default endpoint for a local provider
+ */
+export function getDefaultEndpoint(key: ProviderKey): string {
+  const provider = getProvider(key);
+  return provider?.defaultEndpoint || '';
 }

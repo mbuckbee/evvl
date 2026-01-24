@@ -84,11 +84,11 @@ const ANTHROPIC_MODEL_MAP: Record<string, string> = {
  * @returns Transformed model slug for direct API use
  */
 export function transformModelSlug(
-  provider: 'openai' | 'anthropic' | 'openrouter' | 'gemini',
+  provider: 'openai' | 'anthropic' | 'openrouter' | 'gemini' | 'ollama' | 'lmstudio',
   modelSlug: string
 ): string {
-  // OpenRouter: pass through as-is
-  if (provider === 'openrouter') {
+  // OpenRouter and local providers: pass through as-is
+  if (provider === 'openrouter' || provider === 'ollama' || provider === 'lmstudio') {
     return modelSlug;
   }
 

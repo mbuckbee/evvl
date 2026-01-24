@@ -10,6 +10,9 @@ import Link from 'next/link';
 import { ApiKeys, Provider } from '@/lib/validation/types';
 import { PROVIDERS } from '@/lib/config';
 
+// Filter to only cloud providers (those that need API keys)
+const CLOUD_PROVIDERS = PROVIDERS.filter(p => !p.isLocal);
+
 export interface ProviderLoadingState {
   loading: boolean;
   error?: string;
@@ -29,10 +32,10 @@ export default function ApiKeyStatus({
   providerStates,
   onProviderClick
 }: ApiKeyStatusProps) {
-  const providerStatus = PROVIDERS.map(provider => ({
+  const providerStatus = CLOUD_PROVIDERS.map(provider => ({
     ...provider,
-    hasKey: !!apiKeys[provider.key],
-    state: providerStates?.[provider.key],
+    hasKey: !!apiKeys[provider.key as keyof ApiKeys],
+    state: providerStates?.[provider.key as Provider],
   }));
 
   const configuredCount = providerStatus.filter(p => p.hasKey).length;
@@ -73,7 +76,7 @@ export default function ApiKeyStatus({
           return (
             <button
               key={provider.key}
-              onClick={() => provider.hasKey && !isLoading && onProviderClick?.(provider.key)}
+              onClick={() => provider.hasKey && !isLoading && onProviderClick?.(provider.key as Provider)}
               disabled={!provider.hasKey || isLoading}
               className={`p-4 rounded-lg border-2 text-left transition-all ${borderClass} ${
                 provider.hasKey && !isLoading ? 'cursor-pointer' : 'cursor-not-allowed opacity-75'

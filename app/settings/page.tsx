@@ -3,7 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { saveApiKeys, loadApiKeys, clearApiKeys, clearProjects, clearAllData } from '@/lib/storage';
-import { getRuntimeEnvironment, RuntimeEnvironment } from '@/lib/environment';
+import { getRuntimeEnvironment, RuntimeEnvironment, isTauriEnvironment } from '@/lib/environment';
+import { getLocalEndpoint, saveLocalEndpoint } from '@/lib/providers/local-endpoints';
+import { checkHealth as checkOllamaHealth } from '@/lib/providers/ollama-fetch';
+import { checkHealth as checkLMStudioHealth } from '@/lib/providers/lmstudio-fetch';
 import { ApiKeys } from '@/lib/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,11 +20,58 @@ export default function SettingsPage() {
   const [clearedAll, setClearedAll] = useState(false);
   const [environment, setEnvironment] = useState<RuntimeEnvironment>('web');
 
+  // Local provider state (Tauri only)
+  const [ollamaEndpoint, setOllamaEndpoint] = useState('http://localhost:11434');
+  const [lmstudioEndpoint, setLmstudioEndpoint] = useState('http://localhost:1234');
+  const [ollamaStatus, setOllamaStatus] = useState<{ running: boolean; loading: boolean }>({ running: false, loading: false });
+  const [lmstudioStatus, setLmstudioStatus] = useState<{ running: boolean; loading: boolean }>({ running: false, loading: false });
+
   useEffect(() => {
     const loaded = loadApiKeys();
     setKeys(loaded);
     setEnvironment(getRuntimeEnvironment());
+
+    // Load local provider endpoints if in Tauri
+    if (isTauriEnvironment()) {
+      const savedOllamaEndpoint = getLocalEndpoint('ollama');
+      const savedLmstudioEndpoint = getLocalEndpoint('lmstudio');
+      if (savedOllamaEndpoint) setOllamaEndpoint(savedOllamaEndpoint);
+      if (savedLmstudioEndpoint) setLmstudioEndpoint(savedLmstudioEndpoint);
+
+      // Check health of local providers
+      checkLocalProviderHealth();
+    }
   }, []);
+
+  const checkLocalProviderHealth = async () => {
+    // Check Ollama
+    setOllamaStatus(prev => ({ ...prev, loading: true }));
+    try {
+      const ollamaHealth = await checkOllamaHealth(ollamaEndpoint);
+      setOllamaStatus({ running: ollamaHealth.running, loading: false });
+    } catch {
+      setOllamaStatus({ running: false, loading: false });
+    }
+
+    // Check LM Studio
+    setLmstudioStatus(prev => ({ ...prev, loading: true }));
+    try {
+      const lmstudioHealth = await checkLMStudioHealth(lmstudioEndpoint);
+      setLmstudioStatus({ running: lmstudioHealth.running, loading: false });
+    } catch {
+      setLmstudioStatus({ running: false, loading: false });
+    }
+  };
+
+  const handleSaveOllamaEndpoint = () => {
+    saveLocalEndpoint('ollama', ollamaEndpoint);
+    checkLocalProviderHealth();
+  };
+
+  const handleSaveLmstudioEndpoint = () => {
+    saveLocalEndpoint('lmstudio', lmstudioEndpoint);
+    checkLocalProviderHealth();
+  };
 
   const handleSave = () => {
     saveApiKeys(keys);
@@ -323,6 +373,118 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+          {/* Local AI Providers (Tauri only) */}
+          {environment === 'tauri' && (
+            <div className="mt-8 card p-8 space-y-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Local AI Providers</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Connect to locally running AI services. These providers run on your machine and don&apos;t require API keys.
+                </p>
+              </div>
+
+              {/* Ollama */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label
+                    htmlFor="ollama-endpoint"
+                    className="block text-sm font-semibold text-gray-700 dark:text-gray-300"
+                  >
+                    Ollama Endpoint
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        ollamaStatus.loading
+                          ? 'bg-yellow-500 animate-pulse'
+                          : ollamaStatus.running
+                          ? 'bg-green-500'
+                          : 'bg-red-500'
+                      }`}
+                    />
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {ollamaStatus.loading ? 'Checking...' : ollamaStatus.running ? 'Connected' : 'Not running'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    id="ollama-endpoint"
+                    type="text"
+                    value={ollamaEndpoint}
+                    onChange={(e) => setOllamaEndpoint(e.target.value)}
+                    placeholder="http://localhost:11434"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={handleSaveOllamaEndpoint}
+                    className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                  Default: http://localhost:11434. Start Ollama with: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">ollama serve</code>
+                </p>
+              </div>
+
+              {/* LM Studio */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label
+                    htmlFor="lmstudio-endpoint"
+                    className="block text-sm font-semibold text-gray-700 dark:text-gray-300"
+                  >
+                    LM Studio Endpoint
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        lmstudioStatus.loading
+                          ? 'bg-yellow-500 animate-pulse'
+                          : lmstudioStatus.running
+                          ? 'bg-green-500'
+                          : 'bg-red-500'
+                      }`}
+                    />
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {lmstudioStatus.loading ? 'Checking...' : lmstudioStatus.running ? 'Connected' : 'Not running'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    id="lmstudio-endpoint"
+                    type="text"
+                    value={lmstudioEndpoint}
+                    onChange={(e) => setLmstudioEndpoint(e.target.value)}
+                    placeholder="http://localhost:1234"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={handleSaveLmstudioEndpoint}
+                    className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                  Default: http://localhost:1234. Open LM Studio and enable the local server in settings.
+                </p>
+              </div>
+
+              {/* Refresh All Button */}
+              <div className="pt-2">
+                <button
+                  onClick={checkLocalProviderHealth}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Check Connection Status
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Danger Zone */}
           <div className="mt-8 p-6 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 rounded-lg">

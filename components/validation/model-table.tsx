@@ -10,6 +10,9 @@ import React, { useState } from 'react';
 import { ModelConfig, TestResult, Provider, EXCLUDED_MODEL_PATTERNS } from '@/lib/validation/types';
 import { PROVIDERS } from '@/lib/config';
 
+// Filter to only cloud providers (those that need API keys and can be tested)
+const CLOUD_PROVIDERS = PROVIDERS.filter(p => !p.isLocal);
+
 /**
  * Check if a model is excluded from user-facing app
  */
@@ -160,11 +163,11 @@ export default function ModelTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {PROVIDERS.map(provider => {
+            {CLOUD_PROVIDERS.map(provider => {
               const providerModels = models.filter(m => m.provider === provider.key);
               if (providerModels.length === 0) return null;
 
-              const isExpanded = expandedProviders.has(provider.key);
+              const isExpanded = expandedProviders.has(provider.key as Provider);
               const providerKeys = providerModels.map(m => `${m.provider}:${m.model}`);
               const allProviderSelected = providerKeys.every(key => selectedModels.has(key));
 
@@ -176,14 +179,14 @@ export default function ModelTable({
                       <input
                         type="checkbox"
                         checked={allProviderSelected}
-                        onChange={() => onSelectAllProvider(provider.key)}
+                        onChange={() => onSelectAllProvider(provider.key as Provider)}
                         disabled={testing}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                     </td>
                     <td colSpan={3} className="px-4 py-3">
                       <button
-                        onClick={() => toggleProvider(provider.key)}
+                        onClick={() => toggleProvider(provider.key as Provider)}
                         className="flex items-center gap-2 font-medium text-gray-900 hover:text-blue-600 transition-colors"
                       >
                         <span className="text-sm">

@@ -8,7 +8,8 @@ import { loadApiKeys, loadModelConfigs, deleteModelConfig, getModelConfigById, g
 import { ProjectModelConfig, Prompt, ApiKeys, DataSet, Provider } from '@/lib/types';
 import ConfigEditor from '@/components/model-configs/config-editor';
 import ShareButton from '@/components/share/share-button';
-import { PROVIDERS } from '@/lib/config';
+import { PROVIDERS, isLocalProvider, ProviderKey } from '@/lib/config';
+import { getAvailableProviders } from '@/lib/providers/provider-filter';
 
 import { AIOutput } from '@/lib/types';
 
@@ -52,6 +53,8 @@ const providerIconMap: Record<string, string> = {
   anthropic: 'claude',
   gemini: 'gemini',
   openrouter: 'openrouter',
+  ollama: 'ollama',
+  lmstudio: 'lmstudio',
 };
 
 export default function ResponsePanel({ output, isGenerating = false, projectId, highlightedConfigId, showNewConfigEditor, onNewConfigClose, configResponses = {}, generatingConfigs = {}, currentPrompt, onVersionChange, onConfigSave, onDataSetChange, selectedDataSetId: propSelectedDataSetId, selectedDataSet, onNewDataSet, onNewModelConfig }: ResponsePanelProps) {
@@ -65,8 +68,21 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
   const [isDataSetDropdownOpen, setIsDataSetDropdownOpen] = useState(false);
   const [selectedDefaultProvider, setSelectedDefaultProvider] = useState<Provider | null>(null);
   const [showProviderConfigEditor, setShowProviderConfigEditor] = useState(false);
+  const [availableProviders, setAvailableProviders] = useState(() => getAvailableProviders());
 
   const selectedDataSetId = propSelectedDataSetId ?? null;
+
+  // Re-check available providers after client hydration (Tauri detection requires window)
+  useEffect(() => {
+    const providers = getAvailableProviders();
+    setAvailableProviders(providers);
+  }, []);
+
+  // Helper to check if provider is ready (has API key or is local)
+  const isProviderReady = (provider: ProviderKey): boolean => {
+    if (isLocalProvider(provider)) return true;
+    return !!(apiKeys as any)[provider];
+  };
 
   useEffect(() => {
     setApiKeys(loadApiKeys());
@@ -271,9 +287,9 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                 <p className="text-sm text-gray-500 dark:text-gray-400">Select an AI provider to create your first model configuration</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                {PROVIDERS.map((provider) => {
+                {availableProviders.map((provider) => {
                   const iconName = providerIconMap[provider.key] || 'openrouter';
-                  const hasKey = !!apiKeys[provider.key];
+                  const hasKey = isProviderReady(provider.key);
                   return (
                     <button
                       key={provider.key}
@@ -320,6 +336,8 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                         {provider.key === 'anthropic' && 'Claude 3.5 Sonnet, Claude 3 Opus, Haiku'}
                         {provider.key === 'openrouter' && '100+ models including Llama, Mixtral, DeepSeek'}
                         {provider.key === 'gemini' && 'Gemini Pro, Gemini Flash, image generation'}
+                        {provider.key === 'ollama' && 'Run local models like Llama, Mistral, Gemma'}
+                        {provider.key === 'lmstudio' && 'Local AI with easy model management'}
                       </p>
                     </button>
                   );
@@ -366,7 +384,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
                         const responseIndex = selectedDataSet ? itemIndex : 0;
                         const response = configResponses[config.id]?.[responseIndex];
                         const isGenerating = generatingConfigs[config.id];
-                        const hasKey = !!apiKeys[config.provider];
+                        const hasKey = isProviderReady(config.provider);
                         const iconName = providerIconMap[config.provider] || 'openrouter';
 
                         return (
@@ -505,7 +523,7 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
               )}
 
               {filteredConfigs.map((config) => {
-                const hasKey = !!apiKeys[config.provider];
+                const hasKey = isProviderReady(config.provider);
                 const isCompact = layout === 'columns';
                 const iconName = providerIconMap[config.provider] || 'openrouter';
                 const isHighlighted = highlightedConfigId === config.id;

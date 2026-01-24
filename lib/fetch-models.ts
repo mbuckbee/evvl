@@ -230,10 +230,12 @@ export function getAnthropicModels(models: AIMLModel[]) {
       // - Claude 2.x (retired July 21, 2025)
       // - Claude 3 Sonnet (retired July 21, 2025)
       // - Claude 3.5 Sonnet (retired Oct 28, 2025)
+      // Note: Check both dot (3.5) and dash (3-5) versions since AIML uses dashes
       if (modelId.includes('claude-2.0') ||
           modelId.includes('claude-2.1') ||
           modelId.includes('claude-3-sonnet-') ||
-          modelId.includes('claude-3.5-sonnet')) {
+          modelId.includes('claude-3.5-sonnet') ||
+          modelId.includes('claude-3-5-sonnet')) {
         return false;
       }
 
@@ -283,6 +285,42 @@ export function getPopularOpenRouterModels(models: OpenRouterModel[]) {
       label: model.name.split(': ')[1] || model.name,
     }))
     .sort((a, b) => b.label.localeCompare(a.label));
+}
+
+/**
+ * Fetch models from local Ollama instance
+ * Returns empty array if Ollama is not running
+ */
+export async function fetchOllamaModels(): Promise<{ value: string; label: string }[]> {
+  try {
+    const ollama = await import('@/lib/providers/ollama-fetch');
+    const models = await ollama.listModels();
+    return models.map(model => ({
+      value: model.name,
+      label: model.name,
+    }));
+  } catch (error) {
+    console.log('[Ollama] Not running or error fetching models:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch models from local LM Studio instance
+ * Returns empty array if LM Studio is not running
+ */
+export async function fetchLMStudioModels(): Promise<{ value: string; label: string }[]> {
+  try {
+    const lmstudio = await import('@/lib/providers/lmstudio-fetch');
+    const models = await lmstudio.listModels();
+    return models.map(model => ({
+      value: model.id,
+      label: model.id,
+    }));
+  } catch (error) {
+    console.log('[LM Studio] Not running or error fetching models:', error);
+    return [];
+  }
 }
 
 /**

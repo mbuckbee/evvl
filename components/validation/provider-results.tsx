@@ -11,6 +11,9 @@ import { TestResult, ModelConfig, Provider } from '@/lib/validation/types';
 import { PROVIDERS } from '@/lib/config';
 import ModelTestCard from './model-test-card';
 
+// Filter to only cloud providers (those that can be tested)
+const CLOUD_PROVIDERS = PROVIDERS.filter(p => !p.isLocal);
+
 interface ProviderResultsProps {
   results: Map<string, TestResult>;
   models: ModelConfig[];
@@ -46,7 +49,7 @@ export default function ProviderResults({
 
   return (
     <div className="space-y-4">
-      {PROVIDERS.map(provider => {
+      {CLOUD_PROVIDERS.map(provider => {
         // Get all results for this provider
         const providerResults = Array.from(results.values()).filter(
           r => r.provider === provider.key
@@ -60,13 +63,13 @@ export default function ProviderResults({
         const skipped = providerResults.filter(r => r.status === 'skipped').length;
         const running = providerResults.filter(r => r.status === 'running').length;
 
-        const isExpanded = expandedProviders.has(provider.key);
+        const isExpanded = expandedProviders.has(provider.key as Provider);
 
         return (
           <div key={provider.key} className="card">
             {/* Provider Header */}
             <button
-              onClick={() => toggleProvider(provider.key)}
+              onClick={() => toggleProvider(provider.key as Provider)}
               className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center gap-4">

@@ -5,7 +5,7 @@
  * working identically for both web (proxy) and desktop (direct) implementations.
  */
 
-export type Provider = 'openai' | 'anthropic' | 'openrouter' | 'gemini';
+export type Provider = 'openai' | 'anthropic' | 'openrouter' | 'gemini' | 'ollama' | 'lmstudio';
 
 /**
  * Base request parameters shared by all API calls
@@ -14,7 +14,7 @@ export interface BaseRequest {
   prompt: string;
   provider: Provider;
   model: string;
-  apiKey: string;
+  apiKey?: string; // Optional for local providers (ollama, lmstudio)
 }
 
 /**

@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { loadApiKeys, loadColumns, saveColumns, getPromptById, getModelConfigById, getProjectById, getActiveProjectId, setActiveProjectId, loadProjects, getPromptsByProjectId, getModelConfigsByProjectId, getDataSetById, getDataSetsByProjectId, saveProject } from '@/lib/storage';
-import { ApiKeys, AIOutput, Prompt, ProjectModelConfig, Project, DataSet } from '@/lib/types';
-import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
+import { ApiKeys, AIOutput, Prompt, ProjectModelConfig, Project, DataSet, Provider } from '@/lib/types';
+import { PROVIDERS, getDefaultModel, ProviderConfig, isLocalProvider } from '@/lib/config';
 import { fetchOpenRouterModels, fetchAIMLModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
 import { trackEvent } from '@/lib/analytics';
 import { apiClient, isApiError } from '@/lib/api';
@@ -18,10 +18,27 @@ import ConfigEditor from '@/components/model-configs/config-editor';
 import ProjectEditor from '@/components/projects/project-editor';
 import DataSetEditor from '@/components/data-sets/data-set-editor';
 
+// Helper to get API key for a provider (returns undefined for local providers)
+function getApiKey(apiKeys: ApiKeys, provider: Provider): string | undefined {
+  if (isLocalProvider(provider)) {
+    return undefined; // Local providers don't need API keys
+  }
+  // Cast provider to the cloud provider keys type
+  return apiKeys[provider as keyof ApiKeys];
+}
+
+// Helper to check if a provider is ready (has API key or is local)
+function isProviderReady(apiKeys: ApiKeys, provider: Provider): boolean {
+  if (isLocalProvider(provider)) {
+    return true; // Local providers are always "ready" (key-wise)
+  }
+  return !!apiKeys[provider as keyof ApiKeys];
+}
+
 export default function Home() {
   // State management
   const [prompt, setPrompt] = useState('');
-  const [provider, setProvider] = useState<'openai' | 'anthropic' | 'openrouter' | 'gemini'>('openai');
+  const [provider, setProvider] = useState<Provider>('openai');
   const [model, setModel] = useState<string>('');
   const [apiKeys, setApiKeys] = useState<ApiKeys>({});
   const [output, setOutput] = useState<AIOutput | undefined>();
@@ -144,9 +161,9 @@ export default function Home() {
 
   // Handle generation
   const handleSend = async () => {
-    if (!prompt.trim() || !model || !apiKeys[provider]) {
-      // Show error if no API key
-      if (!apiKeys[provider]) {
+    if (!prompt.trim() || !model || !isProviderReady(apiKeys, provider)) {
+      // Show error if no API key (for cloud providers)
+      if (!isProviderReady(apiKeys, provider)) {
         setOutput({
           id: uuidv4(),
           modelConfig: { provider, model, label: provider },
@@ -176,14 +193,14 @@ export default function Home() {
           prompt,
           provider,
           model,
-          apiKey: apiKeys[provider],
+          apiKey: getApiKey(apiKeys, provider),
         });
       } else {
         data = await apiClient.generateText({
           prompt,
           provider,
           model,
-          apiKey: apiKeys[provider],
+          apiKey: getApiKey(apiKeys, provider),
         });
       }
 
@@ -406,8 +423,8 @@ export default function Home() {
     const dataSet = selectedDataSetId ? getDataSetById(selectedDataSetId) : null;
     const dataSetItems = (dataSet?.items && dataSet.items.length > 0) ? dataSet.items : [{ id: '', variables: {} }]; // If no dataset or empty dataset, run once with no substitution
 
-    // Filter configs that have API keys
-    const configsWithKeys = modelConfigs.filter(config => apiKeys[config.provider]);
+    // Filter configs that have API keys (or are local providers)
+    const configsWithKeys = modelConfigs.filter(config => isProviderReady(apiKeys, config.provider));
 
     // Set ALL generating states at once BEFORE starting any async operations
     // This prevents race conditions where some configs show "save and refresh" during generation
@@ -422,8 +439,8 @@ export default function Home() {
 
     // Run inference for each model config in parallel
     const configPromises = configsWithKeys.map(async (config) => {
-      const apiKey = apiKeys[config.provider];
-      if (!apiKey) return; // TypeScript guard - configsWithKeys already filters this
+      const apiKey = getApiKey(apiKeys, config.provider);
+      // For cloud providers, apiKey is required; for local providers, it's undefined
 
       // Get the selected version for this config
       const selectedVersionId = selectedVersions[config.id];
@@ -563,8 +580,9 @@ export default function Home() {
     const config = getModelConfigById(configId);
     if (!config) return;
 
-    const apiKey = apiKeys[config.provider];
-    if (!apiKey) return;
+    // Check if provider is ready (has API key or is local)
+    if (!isProviderReady(apiKeys, config.provider)) return;
+    const apiKey = getApiKey(apiKeys, config.provider);
 
     // Get the selected version
     let selectedVersion;
@@ -721,8 +739,9 @@ export default function Home() {
     const config = getModelConfigById(configId);
     if (!config) return;
 
-    const apiKey = apiKeys[config.provider];
-    if (!apiKey) return; // Skip if no API key
+    // Skip if provider is not ready (no API key for cloud providers)
+    if (!isProviderReady(apiKeys, config.provider)) return;
+    const apiKey = getApiKey(apiKeys, config.provider);
 
     // Get the latest version
     const latestVersion = prompt.versions.reduce((latest, current) =>

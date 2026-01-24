@@ -9,6 +9,9 @@
 import { ModelConfig, Provider } from '@/lib/validation/types';
 import { PROVIDERS } from '@/lib/config';
 
+// Filter to only cloud providers (those that can be tested)
+const CLOUD_PROVIDERS = PROVIDERS.filter(p => !p.isLocal);
+
 interface TestControlsProps {
   selectedProviders: Set<Provider>;
   onProvidersChange: (providers: Set<Provider>) => void;
@@ -70,15 +73,15 @@ export default function TestControls({
           Filter by Provider
         </label>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {PROVIDERS.map(provider => (
+          {CLOUD_PROVIDERS.map(provider => (
             <label
               key={provider.key}
               className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer"
             >
               <input
                 type="checkbox"
-                checked={selectedProviders.has(provider.key)}
-                onChange={() => handleProviderToggle(provider.key)}
+                checked={selectedProviders.has(provider.key as Provider)}
+                onChange={() => handleProviderToggle(provider.key as Provider)}
                 disabled={testing}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />

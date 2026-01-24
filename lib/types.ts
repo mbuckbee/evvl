@@ -6,7 +6,7 @@ export interface ApiKeys {
 }
 
 export interface ModelConfig {
-  provider: 'openai' | 'anthropic' | 'openrouter' | 'gemini';
+  provider: 'openai' | 'anthropic' | 'openrouter' | 'gemini' | 'ollama' | 'lmstudio';
   model: string;
   label: string;
 }
@@ -51,7 +51,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
 // Phase 2: Project-Based Data Model
 // ============================================================================
 
-export type Provider = 'openai' | 'anthropic' | 'openrouter' | 'gemini';
+export type Provider = 'openai' | 'anthropic' | 'openrouter' | 'gemini' | 'ollama' | 'lmstudio';
 
 // Advanced AI parameters for model configs and prompts
 export interface AIParameters {

@@ -7,7 +7,9 @@ import Image from 'next/image';
 import { ProjectModelConfig, AIParameters, Provider } from '@/lib/types';
 import { saveModelConfig } from '@/lib/storage';
 import { PROVIDERS, getDefaultModel, ProviderConfig } from '@/lib/config';
-import { fetchOpenRouterModels, fetchAIMLModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels } from '@/lib/fetch-models';
+import { fetchOpenRouterModels, fetchAIMLModels, getOpenAIModels, getAnthropicModels, getPopularOpenRouterModels, getGeminiModels, fetchOllamaModels, fetchLMStudioModels } from '@/lib/fetch-models';
+import { getAvailableProviders } from '@/lib/providers/provider-filter';
+import { isLocalProvider } from '@/lib/config';
 
 // Map provider to icon name
 const providerIconMap: Record<string, string> = {
@@ -15,6 +17,8 @@ const providerIconMap: Record<string, string> = {
   anthropic: 'claude',
   gemini: 'gemini',
   openrouter: 'openrouter',
+  ollama: 'ollama',
+  lmstudio: 'lmstudio',
 };
 
 interface ConfigEditorProps {
@@ -29,9 +33,23 @@ export default function ConfigEditor({ projectId, config, defaultProvider, onSav
   const [name, setName] = useState(config?.name || '');
   const [provider, setProvider] = useState<Provider>(config?.provider || defaultProvider || 'openai');
   const [model, setModel] = useState(config?.model || '');
-  const [providers, setProviders] = useState<ProviderConfig[]>(PROVIDERS);
+  const [providers, setProviders] = useState<ProviderConfig[]>([]);
+  const [providersLoaded, setProvidersLoaded] = useState(false);
   const [providerDropdownOpen, setProviderDropdownOpen] = useState(false);
   const providerDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Re-check available providers after client hydration (Tauri detection requires window)
+  useEffect(() => {
+    const availableProviders = getAvailableProviders();
+    setProviders(availableProviders);
+    setProvidersLoaded(true);
+  }, []);
+
+  // Local provider health status
+  const [localProviderStatus, setLocalProviderStatus] = useState<Record<string, { running: boolean; loading: boolean }>>({
+    ollama: { running: false, loading: false },
+    lmstudio: { running: false, loading: false },
+  });
 
   // Parameters
   const [temperature, setTemperature] = useState<number | undefined>(config?.parameters?.temperature);
@@ -41,14 +59,25 @@ export default function ConfigEditor({ projectId, config, defaultProvider, onSav
   const [presencePenalty, setPresencePenalty] = useState<number | undefined>(config?.parameters?.presencePenalty);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Load dynamic models from AIML API (for direct providers) and OpenRouter
+  // Load dynamic models from AIML API (for direct providers), OpenRouter, and local providers
   useEffect(() => {
     async function loadModels() {
-      // Fetch from both APIs in parallel
-      const [aimlModels, openRouterModels] = await Promise.all([
+      const availableProviders = getAvailableProviders();
+
+      // Fetch from all APIs in parallel
+      const [aimlModels, openRouterModels, ollamaModels, lmstudioModels] = await Promise.all([
         fetchAIMLModels(),
         fetchOpenRouterModels(),
+        // Only fetch local models if those providers are available
+        availableProviders.some(p => p.key === 'ollama') ? fetchOllamaModels() : Promise.resolve([]),
+        availableProviders.some(p => p.key === 'lmstudio') ? fetchLMStudioModels() : Promise.resolve([]),
       ]);
+
+      // Update local provider status based on whether we got models
+      setLocalProviderStatus({
+        ollama: { running: ollamaModels.length > 0, loading: false },
+        lmstudio: { running: lmstudioModels.length > 0, loading: false },
+      });
 
       // Use AIML models for direct providers (OpenAI, Anthropic, Gemini)
       // Use OpenRouter models only for the OpenRouter provider
@@ -57,28 +86,30 @@ export default function ConfigEditor({ projectId, config, defaultProvider, onSav
       const geminiModels = aimlModels.length > 0 ? getGeminiModels(aimlModels) : [];
       const openrouterModels = openRouterModels.length > 0 ? getPopularOpenRouterModels(openRouterModels) : [];
 
-      if (openaiModels.length > 0 || anthropicModels.length > 0 || openrouterModels.length > 0 || geminiModels.length > 0) {
-        const updatedProviders = PROVIDERS.map(p => {
-          if (p.key === 'openai' && openaiModels.length > 0) {
-            return { ...p, models: openaiModels };
-          } else if (p.key === 'anthropic' && anthropicModels.length > 0) {
-            return { ...p, models: anthropicModels };
-          } else if (p.key === 'openrouter' && openrouterModels.length > 0) {
-            return { ...p, models: openrouterModels };
-          } else if (p.key === 'gemini' && geminiModels.length > 0) {
-            return { ...p, models: geminiModels };
-          }
-          return p;
-        });
+      const updatedProviders = availableProviders.map(p => {
+        if (p.key === 'openai' && openaiModels.length > 0) {
+          return { ...p, models: openaiModels };
+        } else if (p.key === 'anthropic' && anthropicModels.length > 0) {
+          return { ...p, models: anthropicModels };
+        } else if (p.key === 'openrouter' && openrouterModels.length > 0) {
+          return { ...p, models: openrouterModels };
+        } else if (p.key === 'gemini' && geminiModels.length > 0) {
+          return { ...p, models: geminiModels };
+        } else if (p.key === 'ollama' && ollamaModels.length > 0) {
+          return { ...p, models: ollamaModels };
+        } else if (p.key === 'lmstudio' && lmstudioModels.length > 0) {
+          return { ...p, models: lmstudioModels };
+        }
+        return p;
+      });
 
-        setProviders(updatedProviders);
+      setProviders(updatedProviders);
 
-        // Set default model if not editing
-        if (!config) {
-          const providerConfig = updatedProviders.find(p => p.key === provider);
-          if (providerConfig?.models && providerConfig.models.length > 0) {
-            setModel(providerConfig.models[0].value);
-          }
+      // Set default model if not editing
+      if (!config) {
+        const providerConfig = updatedProviders.find(p => p.key === provider);
+        if (providerConfig?.models && providerConfig.models.length > 0) {
+          setModel(providerConfig.models[0].value);
         }
       }
     }
@@ -110,6 +141,41 @@ export default function ConfigEditor({ projectId, config, defaultProvider, onSav
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Refresh models for a local provider
+  const refreshLocalProviderModels = async (providerKey: 'ollama' | 'lmstudio') => {
+    setLocalProviderStatus(prev => ({
+      ...prev,
+      [providerKey]: { ...prev[providerKey], loading: true },
+    }));
+
+    try {
+      const models = providerKey === 'ollama'
+        ? await fetchOllamaModels()
+        : await fetchLMStudioModels();
+
+      setLocalProviderStatus(prev => ({
+        ...prev,
+        [providerKey]: { running: models.length > 0, loading: false },
+      }));
+
+      if (models.length > 0) {
+        setProviders(prev => prev.map(p =>
+          p.key === providerKey ? { ...p, models } : p
+        ));
+
+        // If this is the currently selected provider, update the model
+        if (provider === providerKey) {
+          setModel(models[0].value);
+        }
+      }
+    } catch (error) {
+      setLocalProviderStatus(prev => ({
+        ...prev,
+        [providerKey]: { running: false, loading: false },
+      }));
+    }
+  };
 
   const handleSave = () => {
     if (!name.trim() || !model) {
@@ -222,6 +288,17 @@ export default function ConfigEditor({ projectId, config, defaultProvider, onSav
                   className="hidden dark:block"
                 />
                 <span>{currentProvider?.name || provider}</span>
+                {/* Connection status indicator for local providers */}
+                {currentProvider?.isLocal && (
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      localProviderStatus[provider]?.running
+                        ? 'bg-green-500'
+                        : 'bg-red-500'
+                    }`}
+                    title={localProviderStatus[provider]?.running ? 'Connected' : 'Not running'}
+                  />
+                )}
               </div>
               <ChevronDownIcon className={`h-4 w-4 transition-transform ${providerDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -252,7 +329,18 @@ export default function ConfigEditor({ projectId, config, defaultProvider, onSav
                       height={20}
                       className="hidden dark:block"
                     />
-                    <span className="text-gray-900 dark:text-white">{p.name}</span>
+                    <span className="text-gray-900 dark:text-white flex-1">{p.name}</span>
+                    {/* Connection status indicator for local providers */}
+                    {p.isLocal && (
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          localProviderStatus[p.key]?.running
+                            ? 'bg-green-500'
+                            : 'bg-red-500'
+                        }`}
+                        title={localProviderStatus[p.key]?.running ? 'Connected' : 'Not running'}
+                      />
+                    )}
                   </button>
                 ))}
               </div>
@@ -265,23 +353,57 @@ export default function ConfigEditor({ projectId, config, defaultProvider, onSav
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Model *
           </label>
-          <select
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            {currentProvider?.models && currentProvider.models.length > 0 ? (
-              currentProvider.models.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
+          <div className="flex gap-2">
+            <select
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              disabled={currentProvider?.isLocal && !localProviderStatus[provider]?.running}
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {currentProvider?.isLocal && !localProviderStatus[provider]?.running ? (
+                <option value="">Service not running</option>
+              ) : currentProvider?.models && currentProvider.models.length > 0 ? (
+                currentProvider.models.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))
+              ) : (
+                <option value={getDefaultModel(provider)}>
+                  {getDefaultModel(provider) || 'No models available'}
                 </option>
-              ))
-            ) : (
-              <option value={getDefaultModel(provider)}>
-                {getDefaultModel(provider)}
-              </option>
+              )}
+            </select>
+            {/* Refresh button for local providers */}
+            {currentProvider?.isLocal && (
+              <button
+                type="button"
+                onClick={() => refreshLocalProviderModels(provider as 'ollama' | 'lmstudio')}
+                disabled={localProviderStatus[provider]?.loading}
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                title="Refresh models"
+              >
+                {localProviderStatus[provider]?.loading ? (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
+              </button>
             )}
-          </select>
+          </div>
+          {/* Help text for local providers when service is not running */}
+          {currentProvider?.isLocal && !localProviderStatus[provider]?.running && (
+            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+              {provider === 'ollama'
+                ? 'Start Ollama with: ollama serve'
+                : 'Open LM Studio and enable the local server'}
+            </p>
+          )}
         </div>
 
         {/* Advanced Parameters Toggle */}

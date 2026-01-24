@@ -35,28 +35,40 @@ export async function generateText(
       result = await openai.generateText({
         model: transformedModel,
         prompt: request.prompt,
-        apiKey: request.apiKey,
+        apiKey: request.apiKey!,
       });
     } else if (request.provider === 'openrouter') {
       const openrouter = await import('@/lib/providers/openrouter-fetch');
       result = await openrouter.generateText({
         model: transformedModel,
         prompt: request.prompt,
-        apiKey: request.apiKey,
+        apiKey: request.apiKey!,
       });
     } else if (request.provider === 'anthropic') {
       const anthropic = await import('@/lib/providers/anthropic-fetch');
       result = await anthropic.generateText({
         model: transformedModel,
         prompt: request.prompt,
-        apiKey: request.apiKey,
+        apiKey: request.apiKey!,
       });
     } else if (request.provider === 'gemini') {
       const gemini = await import('@/lib/providers/gemini-fetch');
       result = await gemini.generateText({
         model: transformedModel,
         prompt: request.prompt,
-        apiKey: request.apiKey,
+        apiKey: request.apiKey!,
+      });
+    } else if (request.provider === 'ollama') {
+      const ollama = await import('@/lib/providers/ollama-fetch');
+      result = await ollama.generateText({
+        model: transformedModel,
+        prompt: request.prompt,
+      });
+    } else if (request.provider === 'lmstudio') {
+      const lmstudio = await import('@/lib/providers/lmstudio-fetch');
+      result = await lmstudio.generateText({
+        model: transformedModel,
+        prompt: request.prompt,
       });
     } else {
       return { error: `Unsupported provider: ${request.provider}` };
@@ -93,7 +105,7 @@ export async function generateImage(
       result = await openai.generateImage({
         model: request.model, // Don't transform for OpenAI image models
         prompt: request.prompt,
-        apiKey: request.apiKey,
+        apiKey: request.apiKey!,
         size: request.size,
         quality: request.quality,
         style: request.style,
@@ -103,7 +115,7 @@ export async function generateImage(
       result = await gemini.generateImage({
         model: transformedModel,
         prompt: request.prompt,
-        apiKey: request.apiKey,
+        apiKey: request.apiKey!,
       });
     } else {
       return { error: `Unsupported provider for image generation: ${request.provider}` };
