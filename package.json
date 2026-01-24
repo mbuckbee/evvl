@@ -1,6 +1,6 @@
 {
   "name": "evvl",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3333",
@@ -14,7 +14,8 @@
     "fetch-models": "node scripts/fetch-models.js",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:build:signed": "op run --env-file .env.op -- tauri build"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
