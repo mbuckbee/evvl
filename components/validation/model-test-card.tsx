@@ -23,20 +23,22 @@ export default function ModelTestCard({ result }: ModelTestCardProps) {
     : '';
 
   // Status styles
-  const statusStyles = {
+  const statusStyles: Record<string, string> = {
     pending: 'border-gray-200 bg-gray-50',
     running: 'border-blue-200 bg-blue-50',
     success: 'border-green-200 bg-green-50',
     failed: 'border-red-200 bg-red-50',
     skipped: 'border-yellow-200 bg-yellow-50',
+    untested: 'border-purple-200 bg-purple-50',
   };
 
-  const statusBadgeStyles = {
+  const statusBadgeStyles: Record<string, string> = {
     pending: 'bg-gray-100 text-gray-700',
     running: 'bg-blue-100 text-blue-700',
     success: 'bg-green-100 text-green-700',
     failed: 'bg-red-100 text-red-700',
     skipped: 'bg-yellow-100 text-yellow-700',
+    untested: 'bg-purple-100 text-purple-700',
   };
 
   return (
@@ -59,6 +61,7 @@ export default function ModelTestCard({ result }: ModelTestCardProps) {
             {result.status === 'success' && '✓ '}
             {result.status === 'failed' && '✗ '}
             {result.status === 'skipped' && '⊘ '}
+            {result.status === 'untested' && '⚠ '}
             {result.status.charAt(0).toUpperCase() + result.status.slice(1)}
           </span>
           <span

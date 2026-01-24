@@ -245,6 +245,71 @@ describe('Model Filtering Functions', () => {
     });
   });
 
+  describe('Excluded model patterns', () => {
+    // Models that should be excluded from user-facing app
+    const excludedOpenAIModels: AIMLModel[] = [
+      createAIMLModel('openai/gpt-4o-realtime-preview', 'GPT-4o Realtime', 'Open AI'),
+      createAIMLModel('openai/gpt-4o-realtime-preview-2024-10-01', 'GPT-4o Realtime Oct', 'Open AI'),
+      createAIMLModel('openai/tts-1', 'TTS 1', 'Open AI', 'tts'),
+      createAIMLModel('openai/tts-1-hd', 'TTS 1 HD', 'Open AI', 'tts'),
+      // Valid models that should NOT be excluded
+      createAIMLModel('openai/gpt-4o', 'GPT-4o', 'Open AI'),
+      createAIMLModel('openai/gpt-4', 'GPT-4', 'Open AI'),
+    ];
+
+    const excludedGeminiModels: AIMLModel[] = [
+      createAIMLModel('google/gemini-2.5-computer-use-preview', 'Gemini Computer Use', 'Google'),
+      createAIMLModel('google/gemini-2.5-flash-native-audio-preview', 'Gemini Native Audio', 'Google'),
+      createAIMLModel('google/gemini-2.5-flash-preview-tts', 'Gemini TTS', 'Google'),
+      createAIMLModel('google/gemini-robotics-er-1.5-preview', 'Gemini Robotics', 'Google'),
+      // Valid models that should NOT be excluded
+      createAIMLModel('google/gemini-2.5-pro', 'Gemini 2.5 Pro', 'Google'),
+      createAIMLModel('google/gemini-2.5-flash', 'Gemini 2.5 Flash', 'Google'),
+    ];
+
+    it('should exclude realtime models from OpenAI', () => {
+      const result = getOpenAIModels(excludedOpenAIModels);
+      expect(result.some(m => m.value.includes('realtime'))).toBe(false);
+    });
+
+    it('should exclude TTS models from OpenAI', () => {
+      const result = getOpenAIModels(excludedOpenAIModels);
+      expect(result.some(m => m.value.includes('tts'))).toBe(false);
+    });
+
+    it('should include valid OpenAI models', () => {
+      const result = getOpenAIModels(excludedOpenAIModels);
+      expect(result.some(m => m.value === 'openai/gpt-4o')).toBe(true);
+      expect(result.some(m => m.value === 'openai/gpt-4')).toBe(true);
+    });
+
+    it('should exclude computer-use models from Gemini', () => {
+      const result = getGeminiModels(excludedGeminiModels);
+      expect(result.some(m => m.value.includes('computer-use'))).toBe(false);
+    });
+
+    it('should exclude native-audio models from Gemini', () => {
+      const result = getGeminiModels(excludedGeminiModels);
+      expect(result.some(m => m.value.includes('native-audio'))).toBe(false);
+    });
+
+    it('should exclude TTS models from Gemini', () => {
+      const result = getGeminiModels(excludedGeminiModels);
+      expect(result.some(m => m.value.includes('tts'))).toBe(false);
+    });
+
+    it('should exclude robotics models from Gemini', () => {
+      const result = getGeminiModels(excludedGeminiModels);
+      expect(result.some(m => m.value.includes('robotics'))).toBe(false);
+    });
+
+    it('should include valid Gemini models', () => {
+      const result = getGeminiModels(excludedGeminiModels);
+      expect(result.some(m => m.value === 'google/gemini-2.5-pro')).toBe(true);
+      expect(result.some(m => m.value === 'google/gemini-2.5-flash')).toBe(true);
+    });
+  });
+
   describe('Real-world filtering scenarios', () => {
     it('should correctly separate OpenAI API models from OpenRouter OSS models', () => {
       const openaiModels = getOpenAIModels(mockAIMLOpenAIModels);

@@ -7,9 +7,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ModelConfig, TestResult, Provider } from '@/lib/validation/types';
+import { ModelConfig, TestResult, Provider, EXCLUDED_MODEL_PATTERNS } from '@/lib/validation/types';
 import { PROVIDERS } from '@/lib/config';
-import { transformModelSlug } from '@/lib/model-transformer';
+
+/**
+ * Check if a model is excluded from user-facing app
+ */
+function isModelExcluded(modelId: string): boolean {
+  return EXCLUDED_MODEL_PATTERNS.some(pattern => pattern.test(modelId));
+}
 
 /**
  * Format model type from AIML API for display
@@ -21,12 +27,17 @@ function formatModelType(type: string): string {
     'video': '🎬 Video',
     'audio': '🎵 Audio',
     'chat-completion': '💬 Chat',
+    'chat': '💬 Chat',
     'responses': '🤖 Response',
     'embedding': '🔢 Embedding',
     'stt': '🎤 Speech-to-Text',
     'tts': '🔊 Text-to-Speech',
     'language-completion': '✍️ Completion',
     'document': '📄 Document',
+    'realtime': '⚡ Realtime',
+    'unknown': '❓ Unknown',
+    'generateContent': '💬 Chat',
+    'embedContent': '🔢 Embedding',
   };
 
   return typeMap[type] || `📋 ${type}`;
@@ -68,16 +79,25 @@ export default function ModelTable({
   };
 
   // Status badge component
-  const StatusBadge = ({ result }: { result?: TestResult }) => {
+  const StatusBadge = ({ result, excluded }: { result?: TestResult; excluded?: boolean }) => {
+    if (excluded) {
+      return (
+        <span className="px-2 py-1 rounded text-xs font-medium bg-gray-200 text-gray-500">
+          ⊘ Excluded
+        </span>
+      );
+    }
+
     if (!result || result.status === 'pending') {
       return <span className="text-xs text-gray-500">Not tested</span>;
     }
 
-    const statusStyles = {
+    const statusStyles: Record<string, string> = {
       running: 'bg-blue-100 text-blue-700',
       success: 'bg-green-100 text-green-700',
       failed: 'bg-red-100 text-red-700',
       skipped: 'bg-yellow-100 text-yellow-700',
+      untested: 'bg-purple-100 text-purple-700',
       pending: 'bg-gray-100 text-gray-700',
     };
 
@@ -87,13 +107,14 @@ export default function ModelTable({
         {result.status === 'success' && '✓ Passed'}
         {result.status === 'failed' && '✗ Failed'}
         {result.status === 'skipped' && '⊘ Skipped'}
+        {result.status === 'untested' && '⚠ Exists'}
       </span>
     );
   };
 
   // Result details component
   const ResultDetails = ({ result }: { result?: TestResult }) => {
-    if (!result || result.status !== 'success') {
+    if (!result || (result.status !== 'success' && result.status !== 'untested')) {
       return null;
     }
 
@@ -125,15 +146,9 @@ export default function ModelTable({
                 Select
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Model Name
+                Model
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                OpenRouter ID
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Transformed ID
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-20">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-36">
                 Type
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-32">
@@ -166,7 +181,7 @@ export default function ModelTable({
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                     </td>
-                    <td colSpan={5} className="px-4 py-3">
+                    <td colSpan={3} className="px-4 py-3">
                       <button
                         onClick={() => toggleProvider(provider.key)}
                         className="flex items-center gap-2 font-medium text-gray-900 hover:text-blue-600 transition-colors"
@@ -185,11 +200,13 @@ export default function ModelTable({
                   {isExpanded && providerModels.map(model => {
                     const key = `${model.provider}:${model.model}`;
                     const result = results.get(key);
+                    const excluded = isModelExcluded(model.model);
 
                     return (
                       <tr
                         key={key}
                         className={`hover:bg-gray-50 ${
+                          excluded ? 'opacity-50 bg-gray-50' :
                           selectedModels.has(key) ? 'bg-blue-50' : ''
                         }`}
                       >
@@ -198,35 +215,27 @@ export default function ModelTable({
                             type="checkbox"
                             checked={selectedModels.has(key)}
                             onChange={() => onModelToggle(model.provider, model.model)}
-                            disabled={testing}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            disabled={testing || excluded}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-sm font-medium text-gray-900">
-                            {model.label}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <code className="text-xs text-gray-600">
+                          <code className={`text-sm ${excluded ? 'text-gray-400' : 'text-gray-900'}`}>
                             {model.model}
                           </code>
                         </td>
-                        <td className="px-4 py-3">
-                          <code className="text-xs text-blue-600">
-                            {transformModelSlug(model.provider, model.model)}
-                          </code>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-xs text-gray-600">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`text-xs ${excluded ? 'text-gray-400' : 'text-gray-600'}`}>
                             {formatModelType(model.type)}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <StatusBadge result={result} />
-                          <ResultDetails result={result} />
-                          {result?.error && (
-                            <div className="text-xs text-red-600 mt-1">
+                          <StatusBadge result={result} excluded={excluded} />
+                          {!excluded && <ResultDetails result={result} />}
+                          {!excluded && result?.error && (
+                            <div className={`text-xs mt-1 ${
+                              result.status === 'untested' ? 'text-purple-600' : 'text-red-600'
+                            }`}>
                               {result.error}
                             </div>
                           )}
@@ -234,8 +243,12 @@ export default function ModelTable({
                         <td className="px-4 py-3">
                           <button
                             onClick={() => onTestSingleModel(model.provider, model.model)}
-                            disabled={testingModels.has(key)}
-                            className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            disabled={testingModels.has(key) || excluded}
+                            className={`text-xs px-3 py-1 rounded transition-colors ${
+                              excluded
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                            }`}
                           >
                             {testingModels.has(key) ? 'Testing...' : 'Test'}
                           </button>

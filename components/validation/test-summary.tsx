@@ -89,7 +89,7 @@ export default function TestSummary({
       )}
 
       {/* Statistics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-3 gap-4 mb-4">
         <div className="p-4 rounded-lg bg-gray-50">
           <div className="text-sm font-medium text-gray-600 mb-1">Total</div>
           <div className="text-2xl font-bold text-gray-900">{summary.total}</div>
@@ -104,35 +104,7 @@ export default function TestSummary({
           <div className="text-sm font-medium text-red-700 mb-1">Failed</div>
           <div className="text-2xl font-bold text-red-900">{summary.failed}</div>
         </div>
-
-        <div className="p-4 rounded-lg bg-yellow-50">
-          <div className="text-sm font-medium text-yellow-700 mb-1">Skipped</div>
-          <div className="text-2xl font-bold text-yellow-900">{summary.skipped}</div>
-        </div>
       </div>
-
-      {/* Performance Metrics */}
-      {summary.tested > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg bg-blue-50">
-            <div className="text-sm font-medium text-blue-700 mb-1">
-              Average Latency
-            </div>
-            <div className="text-xl font-bold text-blue-900">
-              {summary.avgLatency}ms
-            </div>
-          </div>
-
-          <div className="p-4 rounded-lg bg-purple-50">
-            <div className="text-sm font-medium text-purple-700 mb-1">
-              Total Tokens
-            </div>
-            <div className="text-xl font-bold text-purple-900">
-              {summary.totalTokens.toLocaleString()}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Current Status */}
       {testing && summary.running > 0 && (

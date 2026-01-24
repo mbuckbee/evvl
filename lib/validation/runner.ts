@@ -4,7 +4,7 @@
  * Core logic for executing API validation tests
  */
 
-import { Provider, ModelConfig, TestResult, TestMode, ApiKeys } from './types';
+import { Provider, ModelConfig, TestResult, ApiKeys } from './types';
 import { getTestPrompt } from './prompts';
 
 const TEST_TIMEOUT = 30000; // 30 seconds
@@ -90,43 +90,6 @@ export async function testSingleModel(
   }
 
   return result;
-}
-
-/**
- * Get models to test based on mode and selection
- */
-export function getModelsForMode(
-  mode: TestMode,
-  allModels: ModelConfig[],
-  selectedModels: Set<string>,
-  testModels: Record<Provider, string>
-): ModelConfig[] {
-  if (mode === 'quick') {
-    // Test one model per provider (using testModel from config)
-    const quickModels: ModelConfig[] = [];
-
-    for (const [provider, modelId] of Object.entries(testModels)) {
-      const model = allModels.find(
-        m => m.provider === provider && m.model === modelId
-      );
-      if (model) {
-        quickModels.push(model);
-      }
-    }
-
-    return quickModels;
-  }
-
-  if (mode === 'full') {
-    // Test all available models
-    return allModels;
-  }
-
-  // Individual mode - test selected models
-  return allModels.filter(m => {
-    const key = `${m.provider}:${m.model}`;
-    return selectedModels.has(key);
-  });
 }
 
 /**

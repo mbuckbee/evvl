@@ -19,6 +19,16 @@
  * For more context, see the refactoring discussion in the commit history.
  */
 
+import { EXCLUDED_MODEL_PATTERNS } from './validation/types';
+
+/**
+ * Check if a model should be excluded from the user-facing app
+ * Uses the same patterns as the backroom validation dashboard
+ */
+function isModelExcluded(modelId: string): boolean {
+  return EXCLUDED_MODEL_PATTERNS.some(pattern => pattern.test(modelId));
+}
+
 // OpenRouter model interface (still used for OpenRouter provider)
 export interface OpenRouterModel {
   id: string;
@@ -156,6 +166,8 @@ export function getOpenAIModels(models: AIMLModel[]) {
   const textModels = models
     // Filter for OpenAI models only (note: "Open AI" with space in AIML API)
     .filter(model => model.info.developer === 'Open AI')
+    // Filter out excluded models (realtime, tts, etc.) - same as backroom validation
+    .filter(model => !isModelExcluded(model.id))
     // Filter out OSS models - these are open-source models, not actual OpenAI API models
     .filter(model => !model.id.includes('gpt-oss-') && !model.id.includes('-oss-'))
     // Filter out OpenRouter-exclusive reasoning effort variants ending in -high
@@ -207,6 +219,8 @@ export function getAnthropicModels(models: AIMLModel[]) {
   return models
     // Filter for Anthropic models only
     .filter(model => model.info.developer === 'Anthropic')
+    // Filter out excluded models - same as backroom validation
+    .filter(model => !isModelExcluded(model.id))
     // Filter to only chat-capable models
     .filter(model => model.type === 'chat-completion' || model.type === 'language-completion')
     .filter(model => {
@@ -262,6 +276,8 @@ export function getPopularOpenRouterModels(models: OpenRouterModel[]) {
     .filter(model =>
       popularPrefixes.some(prefix => model.id.startsWith(prefix))
     )
+    // Filter out excluded models - same as backroom validation
+    .filter(model => !isModelExcluded(model.id))
     .map(model => ({
       value: model.id,
       label: model.name.split(': ')[1] || model.name,
@@ -284,6 +300,8 @@ export function getGeminiModels(models: AIMLModel[]) {
   return models
     // Filter for Google models only
     .filter(model => model.info.developer === 'Google')
+    // Filter out excluded models (computer-use, native-audio, tts, etc.) - same as backroom validation
+    .filter(model => !isModelExcluded(model.id))
     // Filter out Gemma models - these are open-source models,
     // not actual Gemini API models
     .filter(model => !model.id.toLowerCase().includes('gemma'))

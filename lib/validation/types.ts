@@ -5,8 +5,21 @@
  */
 
 export type Provider = 'openai' | 'anthropic' | 'openrouter' | 'gemini';
-export type TestMode = 'quick' | 'full' | 'individual';
-export type TestStatus = 'pending' | 'running' | 'success' | 'failed' | 'skipped';
+export type TestMode = 'full' | 'individual';
+export type TestStatus = 'pending' | 'running' | 'success' | 'failed' | 'skipped' | 'untested' | 'excluded';
+
+/**
+ * Models excluded from user-facing app (but visible in backroom for reference)
+ * These models require special APIs/tools that the app doesn't support
+ */
+export const EXCLUDED_MODEL_PATTERNS = [
+  /computer-use/i,      // Requires Computer Use tool
+  /native-audio/i,      // Requires Live API (WebSocket)
+  /robotics/i,          // Robotics models
+  /realtime/i,          // Requires WebSocket connection
+  /moderation/i,        // Content moderation API
+  /tts/i,               // TTS models - not supported yet
+];
 
 // Model types from AIML API (not exhaustive, pass through any string)
 // Common types: 'image', 'video', 'audio', 'chat-completion', 'responses', 'embedding', 'stt', 'tts'
