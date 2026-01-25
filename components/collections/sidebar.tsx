@@ -43,6 +43,7 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
   useEffect(() => {
     // Check if running in Tauri
     const tauri = isTauriEnvironment();
+    console.log('[Sidebar] Environment check - isTauri:', tauri);
     setIsTauri(tauri);
 
     // Check CLI install status if in Tauri
@@ -51,20 +52,24 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
         try {
           const { invoke } = await import('@tauri-apps/api/core');
           const status = await invoke<{ installed: boolean }>('check_cli_installed');
+          console.log('[Sidebar] CLI status:', status);
           setCliInstalled(status.installed);
-        } catch {
-          // Ignore errors
+        } catch (error) {
+          console.log('[Sidebar] CLI check error (non-fatal):', error);
+          // Ignore errors - CLI check is optional
         }
       })();
     }
 
     // Run migration if not completed
     if (!isMigrationComplete()) {
+      console.log('[Sidebar] Running migration...');
       migrateEvalHistory();
     }
 
     // Load projects
     const loadedProjects = loadProjects();
+    console.log('[Sidebar] Loaded projects:', loadedProjects.length);
     setProjects(loadedProjects);
 
     // Load UI state
@@ -74,31 +79,37 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
 
     // If no projects exist, create an example project with sample data
     if (loadedProjects.length === 0) {
-      const { project, prompt, dataSet, modelConfigs } = createExampleProject();
+      console.log('[Sidebar] No projects found, creating example project...');
+      try {
+        const { project, prompt, dataSet, modelConfigs } = createExampleProject();
 
-      // Save all example data
-      saveProject(project);
-      savePrompt(prompt);
-      saveDataSet(dataSet);
-      modelConfigs.forEach(config => saveModelConfig(config));
+        // Save all example data
+        saveProject(project);
+        savePrompt(prompt);
+        saveDataSet(dataSet);
+        modelConfigs.forEach(config => saveModelConfig(config));
 
-      setProjects([project]);
-      setOpenProjects([project.id]);
-      // Open all sections for the example project
-      const exampleSections = [
-        `${project.id}-prompts`,
-        `${project.id}-configs`,
-        `${project.id}-datasets`,
-      ];
-      setOpenSections(exampleSections);
+        console.log('[Sidebar] Example project created:', project.id);
+        setProjects([project]);
+        setOpenProjects([project.id]);
+        // Open all sections for the example project
+        const exampleSections = [
+          `${project.id}-prompts`,
+          `${project.id}-configs`,
+          `${project.id}-datasets`,
+        ];
+        setOpenSections(exampleSections);
 
-      // Save UI state immediately for the example project
-      const uiState = loadUIState();
-      saveUIState({
-        ...uiState,
-        openProjects: [project.id],
-        openSections: exampleSections,
-      });
+        // Save UI state immediately for the example project
+        const uiState = loadUIState();
+        saveUIState({
+          ...uiState,
+          openProjects: [project.id],
+          openSections: exampleSections,
+        });
+      } catch (error) {
+        console.error('[Sidebar] Error creating example project:', error);
+      }
     }
   }, []);
 

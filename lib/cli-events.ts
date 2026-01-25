@@ -15,6 +15,7 @@ import { isTauriEnvironment } from './environment';
 export interface CliRunConfig {
   source: 'cli';
   prompt: string;
+  systemPrompt?: string;
   models: string[];
   dataset?: string;
   promptId?: string;

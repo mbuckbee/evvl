@@ -19,8 +19,12 @@ export function getRuntimeEnvironment(): RuntimeEnvironment {
     return 'web'; // SSR context, treat as web
   }
 
-  // Tauri injects a global __TAURI__ object
-  if (typeof (window as any).__TAURI__ !== 'undefined') {
+  // Tauri 2.0 injects a global __TAURI__ object when withGlobalTauri is true
+  // Also check for __TAURI_INTERNALS__ which is always present in Tauri
+  const hasTauriGlobal = typeof (window as any).__TAURI__ !== 'undefined';
+  const hasTauriInternals = typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
+
+  if (hasTauriGlobal || hasTauriInternals) {
     return 'tauri';
   }
 
@@ -31,7 +35,15 @@ export function getRuntimeEnvironment(): RuntimeEnvironment {
  * Check if currently running in Tauri desktop app
  */
 export function isTauriEnvironment(): boolean {
-  return getRuntimeEnvironment() === 'tauri';
+  const result = getRuntimeEnvironment() === 'tauri';
+  // Debug logging - can be removed later
+  if (typeof window !== 'undefined') {
+    console.log('[Environment] isTauriEnvironment:', result, {
+      __TAURI__: typeof (window as any).__TAURI__,
+      __TAURI_INTERNALS__: typeof (window as any).__TAURI_INTERNALS__,
+    });
+  }
+  return result;
 }
 
 /**
