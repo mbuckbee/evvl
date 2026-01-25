@@ -48,6 +48,133 @@
         "https://app.evvl.ai/api/updates/check"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI2REVENjI2QUMzOTA3QzAKUldUQUJ6bXNKdGJlSnJzcXlpejBCWmYrSXZPMHY3LzdnQ0JaSjFrYVZNSmw4ZnR0MG9qdlg0NHAK"
+    },
+    "cli": {
+      "description": "Evvl - AI Model Evaluation CLI",
+      "longDescription": "Evvl CLI enables programmatic use of AI model evaluations from the command line.",
+      "args": [
+        {
+          "name": "prompt",
+          "description": "Prompt text to evaluate",
+          "takesValue": true,
+          "index": 1,
+          "multiple": true
+        },
+        {
+          "name": "help",
+          "short": "h",
+          "description": "Print help information",
+          "takesValue": false
+        },
+        {
+          "name": "version",
+          "short": "v",
+          "description": "Print version information",
+          "takesValue": false
+        },
+        {
+          "name": "settings",
+          "description": "Open settings page",
+          "takesValue": false
+        },
+        {
+          "name": "open",
+          "short": "o",
+          "description": "Open GUI to show results",
+          "takesValue": false
+        },
+        {
+          "name": "json",
+          "description": "Output as JSON (default when piped)",
+          "takesValue": false
+        },
+        {
+          "name": "project",
+          "short": "p",
+          "description": "Project name or ID",
+          "takesValue": true
+        }
+      ],
+      "subcommands": {
+        "run": {
+          "description": "Run an evaluation",
+          "args": [
+            {
+              "name": "prompt",
+              "description": "Prompt text to evaluate (or new version content with --prompt-name)",
+              "takesValue": true
+            },
+            {
+              "name": "prompt-name",
+              "description": "Name of saved prompt to use (or create new version for)",
+              "takesValue": true
+            },
+            {
+              "name": "version-note",
+              "description": "Note for the new version (auto-saved if prompt differs)",
+              "takesValue": true
+            },
+            {
+              "name": "models",
+              "short": "m",
+              "description": "Comma-separated list of models (omit to use project's model configs)",
+              "takesValue": true
+            },
+            {
+              "name": "dataset",
+              "short": "d",
+              "description": "Dataset name for batch evaluation (omit to use project's first dataset)",
+              "takesValue": true
+            },
+            {
+              "name": "no-dataset",
+              "description": "Don't use any dataset even if project has one",
+              "takesValue": false
+            }
+          ]
+        },
+        "projects": {
+          "description": "List all projects",
+          "args": []
+        },
+        "prompts": {
+          "description": "List or test prompts",
+          "subcommands": {
+            "list": {
+              "description": "List all prompts in a project",
+              "args": []
+            },
+            "test": {
+              "description": "Test a specific prompt version",
+              "args": [
+                {
+                  "name": "name",
+                  "description": "Prompt name to test",
+                  "takesValue": true,
+                  "index": 1
+                }
+              ]
+            }
+          }
+        },
+        "export": {
+          "description": "Export evaluation results",
+          "args": [
+            {
+              "name": "run",
+              "short": "r",
+              "description": "Evaluation run ID to export",
+              "takesValue": true
+            },
+            {
+              "name": "format",
+              "short": "f",
+              "description": "Export format: json or csv",
+              "takesValue": true
+            }
+          ]
+        }
+      }
     }
   }
 }

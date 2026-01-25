@@ -8,8 +8,71 @@ import {
   EvaluationRun,
 } from './types';
 import { trackEvent } from './analytics';
+import { isTauriEnvironment } from './environment';
 
 const API_KEYS_KEY = 'evvl_api_keys';
+
+// Cache for environment API keys (loaded once from Tauri)
+let envApiKeysCache: ApiKeys | null = null;
+let envApiKeysLoading: Promise<ApiKeys> | null = null;
+
+/**
+ * Get API keys from environment variables (Tauri only)
+ * Returns cached result after first call
+ */
+export async function getEnvApiKeys(): Promise<ApiKeys> {
+  if (!isTauriEnvironment()) {
+    return {};
+  }
+
+  // Return cached result
+  if (envApiKeysCache !== null) {
+    return envApiKeysCache;
+  }
+
+  // If already loading, wait for it
+  if (envApiKeysLoading) {
+    return envApiKeysLoading;
+  }
+
+  // Load from Tauri
+  envApiKeysLoading = (async () => {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const keys = await invoke<ApiKeys>('get_env_api_keys');
+      envApiKeysCache = keys;
+      return keys;
+    } catch (error) {
+      console.error('Failed to load env API keys:', error);
+      envApiKeysCache = {};
+      return {};
+    }
+  })();
+
+  return envApiKeysLoading;
+}
+
+/**
+ * Load API keys with environment variable fallback (async version for Tauri)
+ * Settings take priority over environment variables
+ */
+export async function loadApiKeysWithEnvFallback(): Promise<ApiKeys> {
+  const settingsKeys = loadApiKeys();
+
+  if (!isTauriEnvironment()) {
+    return settingsKeys;
+  }
+
+  const envKeys = await getEnvApiKeys();
+
+  // Merge: settings take priority, env vars are fallback
+  return {
+    openai: settingsKeys.openai || envKeys.openai,
+    anthropic: settingsKeys.anthropic || envKeys.anthropic,
+    openrouter: settingsKeys.openrouter || envKeys.openrouter,
+    gemini: settingsKeys.gemini || envKeys.gemini,
+  };
+}
 const EVAL_HISTORY_KEY = 'evvl_eval_history';
 const COLUMNS_KEY = 'evvl_columns';
 

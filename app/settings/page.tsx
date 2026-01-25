@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Cog6ToothIcon } from '@heroicons/react/24/outline';
-import { saveApiKeys, loadApiKeys, clearApiKeys, clearProjects, clearAllData } from '@/lib/storage';
+import { saveApiKeys, loadApiKeys, clearApiKeys, clearProjects, clearAllData, getEnvApiKeys } from '@/lib/storage';
 import { getRuntimeEnvironment, RuntimeEnvironment, isTauriEnvironment } from '@/lib/environment';
 import { getLocalEndpoint, saveLocalEndpoint } from '@/lib/providers/local-endpoints';
 import { checkHealth as checkOllamaHealth } from '@/lib/providers/ollama-fetch';
@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 export default function SettingsPage() {
   const router = useRouter();
   const [keys, setKeys] = useState<ApiKeys>({});
+  const [envKeys, setEnvKeys] = useState<ApiKeys>({});
   const [saved, setSaved] = useState(false);
   const [clearedKeys, setClearedKeys] = useState(false);
   const [clearedProjects, setClearedProjects] = useState(false);
@@ -31,7 +32,7 @@ export default function SettingsPage() {
     setKeys(loaded);
     setEnvironment(getRuntimeEnvironment());
 
-    // Load local provider endpoints if in Tauri
+    // Load local provider endpoints and env keys if in Tauri
     if (isTauriEnvironment()) {
       const savedOllamaEndpoint = getLocalEndpoint('ollama');
       const savedLmstudioEndpoint = getLocalEndpoint('lmstudio');
@@ -40,6 +41,9 @@ export default function SettingsPage() {
 
       // Check health of local providers
       checkLocalProviderHealth();
+
+      // Load environment variable API keys
+      getEnvApiKeys().then(setEnvKeys);
     }
   }, []);
 
@@ -117,8 +121,8 @@ export default function SettingsPage() {
   const handleTest = (provider: 'openai' | 'anthropic' | 'openrouter' | 'gemini') => {
     // Save keys first
     saveApiKeys(keys);
-    // Navigate to test page
-    const apiKey = keys[provider];
+    // Navigate to test page - use settings key or fall back to env key
+    const apiKey = keys[provider] || envKeys[provider];
     if (apiKey) {
       router.push(`/test?provider=${provider}&key=${encodeURIComponent(apiKey)}`);
     }
@@ -192,24 +196,46 @@ export default function SettingsPage() {
             </p>
           </div>
 
+          {/* Environment Variables Info (Tauri only) */}
+          {environment === 'tauri' && (
+            <div className="mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-800 dark:text-blue-300">
+                <strong>Environment Variables:</strong> Evvl automatically detects API keys from standard environment variables
+                (<code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">OPENAI_API_KEY</code>,{' '}
+                <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">ANTHROPIC_API_KEY</code>,{' '}
+                <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">OPENROUTER_API_KEY</code>,{' '}
+                <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">GOOGLE_API_KEY</code>).
+                Keys entered below will override any environment variables.
+              </p>
+            </div>
+          )}
+
       <div className="card p-8 space-y-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <div>
-          <label
-            htmlFor="openai"
-            className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-          >
-            OpenAI API Key
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label
+              htmlFor="openai"
+              className="block text-sm font-semibold text-gray-700 dark:text-gray-300"
+            >
+              OpenAI API Key
+            </label>
+            {environment === 'tauri' && envKeys.openai && !keys.openai && (
+              <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full" />
+                Using OPENAI_API_KEY
+              </span>
+            )}
+          </div>
           <div className="flex gap-2">
             <input
               id="openai"
               type="text"
               value={keys.openai || ''}
               onChange={(e) => setKeys({ ...keys, openai: e.target.value })}
-              placeholder="sk-..."
+              placeholder={environment === 'tauri' && envKeys.openai ? 'Using environment variable...' : 'sk-...'}
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            {keys.openai && (
+            {(keys.openai || envKeys.openai) && (
               <button
                 onClick={() => handleTest('openai')}
                 className="px-4 py-2.5 bg-green-600 dark:bg-green-500 text-white rounded-lg font-medium shadow-sm hover:bg-green-700 dark:hover:bg-green-600 transition-all duration-200 whitespace-nowrap"
@@ -232,22 +258,30 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <label
-            htmlFor="anthropic"
-            className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Anthropic API Key
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label
+              htmlFor="anthropic"
+              className="block text-sm font-semibold text-gray-700 dark:text-gray-300"
+            >
+              Anthropic API Key
+            </label>
+            {environment === 'tauri' && envKeys.anthropic && !keys.anthropic && (
+              <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full" />
+                Using ANTHROPIC_API_KEY
+              </span>
+            )}
+          </div>
           <div className="flex gap-2">
             <input
               id="anthropic"
               type="text"
               value={keys.anthropic || ''}
               onChange={(e) => setKeys({ ...keys, anthropic: e.target.value })}
-              placeholder="sk-ant-..."
+              placeholder={environment === 'tauri' && envKeys.anthropic ? 'Using environment variable...' : 'sk-ant-...'}
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            {keys.anthropic && (
+            {(keys.anthropic || envKeys.anthropic) && (
               <button
                 onClick={() => handleTest('anthropic')}
                 className="px-4 py-2.5 bg-green-600 dark:bg-green-500 text-white rounded-lg font-medium shadow-sm hover:bg-green-700 dark:hover:bg-green-600 transition-all duration-200 whitespace-nowrap"
@@ -270,22 +304,30 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <label
-            htmlFor="openrouter"
-            className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-          >
-            OpenRouter API Key
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label
+              htmlFor="openrouter"
+              className="block text-sm font-semibold text-gray-700 dark:text-gray-300"
+            >
+              OpenRouter API Key
+            </label>
+            {environment === 'tauri' && envKeys.openrouter && !keys.openrouter && (
+              <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full" />
+                Using OPENROUTER_API_KEY
+              </span>
+            )}
+          </div>
           <div className="flex gap-2">
             <input
               id="openrouter"
               type="text"
               value={keys.openrouter || ''}
               onChange={(e) => setKeys({ ...keys, openrouter: e.target.value })}
-              placeholder="sk-or-..."
+              placeholder={environment === 'tauri' && envKeys.openrouter ? 'Using environment variable...' : 'sk-or-...'}
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            {keys.openrouter && (
+            {(keys.openrouter || envKeys.openrouter) && (
               <button
                 onClick={() => handleTest('openrouter')}
                 className="px-4 py-2.5 bg-green-600 dark:bg-green-500 text-white rounded-lg font-medium shadow-sm hover:bg-green-700 dark:hover:bg-green-600 transition-all duration-200 whitespace-nowrap"
@@ -308,22 +350,30 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <label
-            htmlFor="gemini"
-            className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Google Gemini API Key
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label
+              htmlFor="gemini"
+              className="block text-sm font-semibold text-gray-700 dark:text-gray-300"
+            >
+              Google Gemini API Key
+            </label>
+            {environment === 'tauri' && envKeys.gemini && !keys.gemini && (
+              <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full" />
+                Using GOOGLE_API_KEY
+              </span>
+            )}
+          </div>
           <div className="flex gap-2">
             <input
               id="gemini"
               type="text"
               value={keys.gemini || ''}
               onChange={(e) => setKeys({ ...keys, gemini: e.target.value })}
-              placeholder="AIza..."
+              placeholder={environment === 'tauri' && envKeys.gemini ? 'Using environment variable...' : 'AIza...'}
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            {keys.gemini && (
+            {(keys.gemini || envKeys.gemini) && (
               <button
                 onClick={() => handleTest('gemini')}
                 className="px-4 py-2.5 bg-green-600 dark:bg-green-500 text-white rounded-lg font-medium shadow-sm hover:bg-green-700 dark:hover:bg-green-600 transition-all duration-200 whitespace-nowrap"

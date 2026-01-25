@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { PlusIcon, FolderIcon, DocumentTextIcon, ChevronRightIcon, ChevronDownIcon, SparklesIcon, CogIcon, TableCellsIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, FolderIcon, DocumentTextIcon, ChevronRightIcon, ChevronDownIcon, SparklesIcon, CogIcon, TableCellsIcon, Cog6ToothIcon, CommandLineIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { Project, Prompt, ProjectModelConfig, DataSet } from '@/lib/types';
 import {
@@ -19,6 +19,7 @@ import {
 } from '@/lib/storage';
 import { createExampleProject } from '@/lib/example-project';
 import { migrateEvalHistory, isMigrationComplete } from '@/lib/migration';
+import { isTauriEnvironment } from '@/lib/environment';
 
 interface SidebarProps {
   onNewProject?: () => void;
@@ -35,9 +36,28 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
   const [projects, setProjects] = useState<Project[]>([]);
   const [openProjects, setOpenProjects] = useState<string[]>([]);
   const [openSections, setOpenSections] = useState<string[]>([]); // Track which sections are open (e.g., "projectId-prompts")
+  const [isTauri, setIsTauri] = useState(false);
+  const [cliInstalled, setCliInstalled] = useState(false);
 
   // Load projects and run migration on mount
   useEffect(() => {
+    // Check if running in Tauri
+    const tauri = isTauriEnvironment();
+    setIsTauri(tauri);
+
+    // Check CLI install status if in Tauri
+    if (tauri) {
+      (async () => {
+        try {
+          const { invoke } = await import('@tauri-apps/api/core');
+          const status = await invoke<{ installed: boolean }>('check_cli_installed');
+          setCliInstalled(status.installed);
+        } catch {
+          // Ignore errors
+        }
+      })();
+    }
+
     // Run migration if not completed
     if (!isMigrationComplete()) {
       migrateEvalHistory();
@@ -476,6 +496,23 @@ export default function Sidebar({ onNewProject, onProjectSelect, onNewPrompt, on
 
       {/* Footer */}
       <div className="border-t border-gray-200 dark:border-gray-700">
+        {/* CLI Link (Tauri only) */}
+        {isTauri && (
+          <Link
+            href="/cli"
+            className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors ${
+              cliInstalled
+                ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+            }`}
+          >
+            <CommandLineIcon className="h-5 w-5" />
+            <span>{cliInstalled ? 'CLI Guide' : 'Install CLI'}</span>
+            {cliInstalled && (
+              <span className="ml-auto w-2 h-2 bg-green-500 rounded-full" />
+            )}
+          </Link>
+        )}
         <Link
           href="/settings"
           className="flex items-center gap-2 px-4 py-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"

@@ -9,6 +9,8 @@
     "core:default",
     "dialog:default",
     "global-shortcut:default",
-    "notification:default"
+    "notification:default",
+    "cli:default",
+    "store:default"
   ]
 }
