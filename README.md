@@ -104,6 +104,122 @@ Output location: `src-tauri/target/release/bundle/`
 - **Windows**: `.exe` and `.msi` in `msi/`
 - **Linux**: `.deb` and `.AppImage` in `deb/` and `appimage/`
 
+## Command Line Interface (CLI)
+
+The desktop app includes a CLI for programmatic use from tools like Claude Code, scripts, or CI pipelines. The CLI shares storage with the GUI, so projects and prompts created in the app are available from the command line.
+
+### Installation
+
+After installing the desktop app, add the CLI to your PATH:
+
+**macOS:**
+```bash
+# The app can install the CLI for you:
+evvl --settings  # Opens settings, click "Install CLI"
+
+# Or manually create a symlink:
+sudo ln -sf /Applications/Evvl.app/Contents/MacOS/Evvl /usr/local/bin/evvl
+```
+
+### Quick Start
+
+```bash
+# Run a quick evaluation
+evvl "Explain quantum computing"
+
+# Run and open GUI to see results
+evvl "Review this code" --open
+
+# Pipe prompt from another command
+echo "Summarize this" | evvl
+
+# Output as JSON (default when piped)
+evvl "Hello world" --json
+```
+
+### Commands
+
+```bash
+evvl [OPTIONS] [PROMPT]       # Quick evaluation
+evvl run [OPTIONS]            # Run with full options
+evvl projects                 # List all projects
+evvl prompts list             # List prompts in a project
+evvl prompts test <name>      # Test a specific prompt
+evvl export [OPTIONS]         # Export results
+```
+
+### Options
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--open` | `-o` | Open GUI to show results |
+| `--json` | | Output as JSON (default when piped) |
+| `--project <name>` | `-p` | Project name or ID |
+| `--settings` | | Open settings page |
+| `--help` | `-h` | Print help information |
+| `--version` | `-v` | Print version |
+
+### Run Command
+
+```bash
+evvl run --prompt "Your prompt" --models gpt-4,claude-3-5-sonnet
+evvl run -p "My Project" --prompt-name "Summary Prompt"
+evvl run -p "My Project" --dataset "Test Cases"  # Batch evaluation
+evvl run -p "My Project" --no-dataset            # Skip dataset
+```
+
+| Option | Description |
+|--------|-------------|
+| `--prompt <text>` | Prompt text to evaluate |
+| `--prompt-name <name>` | Use a saved prompt from the project |
+| `--models <list>` | Comma-separated model list (e.g., `gpt-4,claude-3-5-sonnet`) |
+| `--dataset <name>` | Dataset name for batch evaluation |
+| `--no-dataset` | Don't use dataset even if project has one |
+| `--version-note <note>` | Note for new prompt version |
+
+### Export Command
+
+```bash
+evvl export --run <run-id> --format json
+evvl export --run <run-id> --format csv
+```
+
+### Environment Variables
+
+API keys can be set via environment variables (useful for CI/scripts):
+
+```bash
+export OPENAI_API_KEY="sk-..."
+export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENROUTER_API_KEY="sk-or-..."
+export GOOGLE_API_KEY="..."
+```
+
+Environment variables take precedence over keys stored in the app.
+
+### JSON Output
+
+When using `--json` or piping output, results are formatted as:
+
+```json
+{
+  "id": "run_abc123",
+  "timestamp": 1706140800000,
+  "prompt": "Explain quantum computing",
+  "results": [
+    {
+      "model": "claude-3-5-sonnet-20241022",
+      "provider": "anthropic",
+      "content": "Quantum computing is...",
+      "tokens": 245,
+      "latency": 1234,
+      "error": null
+    }
+  ],
+  "status": "completed"
+}
+```
+
 ## Architecture
 
 ### Web App vs Desktop App
