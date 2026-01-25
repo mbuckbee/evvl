@@ -806,45 +806,6 @@ fn truncate_string(s: &str, max_len: usize) -> String {
     }
 }
 
-fn print_help() {
-    let version = env!("CARGO_PKG_VERSION");
-    println!("evvl {} - AI Model Evaluation CLI", version);
-    println!();
-    println!("USAGE:");
-    println!("    evvl [OPTIONS] [PROMPT]");
-    println!("    evvl <COMMAND> [OPTIONS]");
-    println!();
-    println!("ARGS:");
-    println!("    [PROMPT]    Prompt text to evaluate (auto-detects git repo as project)");
-    println!();
-    println!("OPTIONS:");
-    println!("    -h, --help       Print help information");
-    println!("    -v, --version    Print version information");
-    println!("    --settings       Open settings page");
-    println!("    -o, --open       Open GUI to show results");
-    println!("    --json           Output as JSON (default when piped)");
-    println!("    -p, --project    Project name or ID");
-    println!();
-    println!("COMMANDS:");
-    println!("    run        Run an evaluation with options");
-    println!("    projects   List all projects");
-    println!("    prompts    List or test prompts");
-    println!("    export     Export evaluation results");
-    println!();
-    println!("EXAMPLES:");
-    println!("    evvl \"Explain quantum computing\"");
-    println!("    evvl \"Review this code\" --open");
-    println!("    evvl run --prompt \"Hello\" --models gpt-4,claude-3-5-sonnet");
-    println!("    evvl projects");
-    println!("    evvl export --format json");
-    println!();
-    println!("ENVIRONMENT VARIABLES:");
-    println!("    OPENAI_API_KEY       OpenAI API key");
-    println!("    ANTHROPIC_API_KEY    Anthropic API key");
-    println!("    OPENROUTER_API_KEY   OpenRouter API key");
-    println!("    GOOGLE_API_KEY       Google/Gemini API key");
-}
-
 // ============================================================================
 // Menu Building (unchanged)
 // ============================================================================
@@ -1316,28 +1277,8 @@ pub fn run() {
             }
 
             // Handle CLI arguments
+            // Note: --help and --version are auto-handled by clap
             let cli_matches = app.cli().matches()?;
-
-            // Check for --help flag first
-            let show_help = cli_matches.args.get("help")
-                .map(|a| a.occurrences > 0)
-                .unwrap_or(false);
-
-            if show_help {
-                print_help();
-                std::process::exit(0);
-            }
-
-            // Check for --version flag
-            let show_version = cli_matches.args.get("version")
-                .map(|a| a.occurrences > 0)
-                .unwrap_or(false);
-
-            if show_version {
-                let version = env!("CARGO_PKG_VERSION");
-                println!("evvl {}", version);
-                std::process::exit(0);
-            }
 
             // Check for --settings flag
             let open_settings = cli_matches.args.get("settings")

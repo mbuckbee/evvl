@@ -61,18 +61,6 @@
           "multiple": true
         },
         {
-          "name": "help",
-          "short": "h",
-          "description": "Print help information",
-          "takesValue": false
-        },
-        {
-          "name": "version",
-          "short": "v",
-          "description": "Print version information",
-          "takesValue": false
-        },
-        {
           "name": "settings",
           "description": "Open settings page",
           "takesValue": false
