@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CommandLineIcon, CheckCircleIcon, ExclamationCircleIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { CommandLineIcon, CheckCircleIcon, ExclamationCircleIcon, ArrowPathIcon, ClipboardDocumentIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { isTauriEnvironment } from '@/lib/environment';
 
@@ -11,18 +11,12 @@ interface CliStatus {
   current_exe: string;
 }
 
-interface InstallResult {
-  success: boolean;
-  message: string;
-  path: string | null;
-}
-
 export default function CliPage() {
   const [isTauri, setIsTauri] = useState(false);
   const [cliStatus, setCliStatus] = useState<CliStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [installing, setInstalling] = useState(false);
-  const [installResult, setInstallResult] = useState<InstallResult | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [platform, setPlatform] = useState<'macos' | 'windows' | 'linux' | 'unknown'>('unknown');
 
   useEffect(() => {
@@ -60,28 +54,10 @@ export default function CliPage() {
     }
   };
 
-  const handleInstall = async () => {
-    setInstalling(true);
-    setInstallResult(null);
-
-    try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      const result = await invoke<InstallResult>('install_cli');
-      setInstallResult(result);
-
-      if (result.success) {
-        // Refresh status
-        await checkStatus();
-      }
-    } catch (error) {
-      setInstallResult({
-        success: false,
-        message: error instanceof Error ? error.message : 'Failed to install CLI',
-        path: null,
-      });
-    }
-
-    setInstalling(false);
+  const handleVerify = async () => {
+    setVerifying(true);
+    await checkStatus();
+    setVerifying(false);
   };
 
   const getPlatformInstructions = () => {
@@ -89,31 +65,41 @@ export default function CliPage() {
       case 'macos':
         return {
           location: '/usr/local/bin/evvl',
-          manual: `sudo ln -sf "${cliStatus?.current_exe || '/Applications/Evvl.app/Contents/MacOS/Evvl'}" /usr/local/bin/evvl`,
+          command: `sudo ln -sf "${cliStatus?.current_exe || '/Applications/Evvl.app/Contents/MacOS/Evvl'}" /usr/local/bin/evvl`,
           note: 'Creates a symlink in /usr/local/bin which is in the default PATH.',
         };
       case 'linux':
         return {
           location: '~/.local/bin/evvl',
-          manual: `ln -sf "${cliStatus?.current_exe || '/path/to/Evvl'}" ~/.local/bin/evvl`,
+          command: `ln -sf "${cliStatus?.current_exe || '/path/to/Evvl'}" ~/.local/bin/evvl`,
           note: 'Creates a symlink in ~/.local/bin. Make sure this directory is in your PATH.',
         };
       case 'windows':
         return {
           location: 'Added to user PATH',
-          manual: 'Add the Evvl installation directory to your PATH environment variable.',
-          note: 'Modifies your user PATH to include the Evvl directory.',
+          command: `setx PATH "%PATH%;${cliStatus?.current_exe ? cliStatus.current_exe.replace(/\\[^\\]+$/, '') : 'C:\\Program Files\\Evvl'}"`,
+          note: 'Adds the Evvl directory to your user PATH.',
         };
       default:
         return {
           location: 'Unknown',
-          manual: '',
+          command: '',
           note: '',
         };
     }
   };
 
   const instructions = getPlatformInstructions();
+
+  const copyCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(instructions.command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
 
   if (!isTauri) {
     return (
@@ -186,53 +172,65 @@ export default function CliPage() {
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   {cliStatus?.installed
                     ? `Available at: ${cliStatus.path}`
-                    : 'Install the CLI to use Evvl from your terminal.'}
+                    : 'Follow the steps below to install the CLI.'}
                 </p>
               </div>
-              {!cliStatus?.installed && !loading && (
+              {!loading && (
                 <button
-                  onClick={handleInstall}
-                  disabled={installing}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                  onClick={handleVerify}
+                  disabled={verifying}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${
+                    cliStatus?.installed
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
                 >
-                  {installing ? 'Installing...' : 'Install CLI'}
+                  {verifying ? (
+                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                  ) : cliStatus?.installed ? (
+                    'Verified ✓'
+                  ) : (
+                    'Verify Installation'
+                  )}
                 </button>
               )}
             </div>
-
-            {installResult && (
-              <div className={`mt-4 p-3 rounded ${
-                installResult.success
-                  ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200'
-                  : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200'
-              }`}>
-                <p className="text-sm whitespace-pre-wrap">{installResult.message}</p>
-              </div>
-            )}
           </div>
 
-          {/* What it does */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">What This Does</h2>
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-              <p className="text-gray-700 dark:text-gray-300 mb-2">
-                <strong>Location:</strong> {instructions.location}
-              </p>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                {instructions.note}
-              </p>
-            </div>
-          </div>
-
-          {/* Manual Installation */}
-          {!cliStatus?.installed && instructions.manual && (
+          {/* Installation Steps */}
+          {!cliStatus?.installed && instructions.command && (
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Manual Installation</h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-3">
-                If the automatic installation doesn&apos;t work, run this in your terminal:
-              </p>
-              <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-                <code className="text-green-400 text-sm font-mono">{instructions.manual}</code>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Installation</h2>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">1</div>
+                  <div className="flex-1">
+                    <p className="text-gray-700 dark:text-gray-300 mb-2">Copy this command and run it in your terminal:</p>
+                    <div className="bg-gray-900 rounded-lg p-4 flex items-start gap-3">
+                      <code className="text-green-400 text-sm font-mono flex-1 break-all">{instructions.command}</code>
+                      <button
+                        onClick={copyCommand}
+                        className="flex-shrink-0 p-2 hover:bg-gray-700 rounded transition-colors"
+                        title="Copy to clipboard"
+                      >
+                        {copied ? (
+                          <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-400" />
+                        ) : (
+                          <ClipboardDocumentIcon className="h-5 w-5 text-gray-400" />
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                      {instructions.note}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">2</div>
+                  <div className="flex-1">
+                    <p className="text-gray-700 dark:text-gray-300">Click &quot;Verify Installation&quot; above to confirm it worked.</p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
