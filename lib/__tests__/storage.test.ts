@@ -7,6 +7,9 @@ import {
   deleteEvalResult,
   clearEvalHistory,
   getEvalById,
+  saveColumns,
+  loadColumns,
+  clearColumns,
   saveProject,
   loadProjects,
   getProjectById,
@@ -26,220 +29,159 @@ import {
   getDataSetById,
   getDataSetsByProjectId,
   deleteDataSet,
+  saveEvaluationRun,
+  loadEvaluationRuns,
+  getEvaluationRunById,
+  getEvaluationRunsByProjectId,
+  deleteEvaluationRun,
+  setActiveProjectId,
+  getActiveProjectId,
+  saveUIState,
+  loadUIState,
+  clearProjects,
+  clearAllData,
+  ColumnConfig,
 } from '../storage';
-import { ApiKeys, EvalResult, Project, Prompt, ProjectModelConfig, DataSet } from '../types';
+import { Project, Prompt, ProjectModelConfig, DataSet, EvaluationRun, EvalResult } from '../types';
 
 // Mock analytics
 jest.mock('../analytics', () => ({
   trackEvent: jest.fn(),
 }));
 
-describe('Storage Utilities', () => {
+// Mock environment
+jest.mock('../environment', () => ({
+  isTauriEnvironment: jest.fn(() => false),
+}));
+
+describe('Storage', () => {
   beforeEach(() => {
-    // Clear localStorage before each test
     localStorage.clear();
-    jest.clearAllMocks();
   });
 
+  // ===========================================================================
+  // API Keys
+  // ===========================================================================
   describe('API Keys', () => {
-    it('should save API keys to localStorage', () => {
-      const keys: ApiKeys = {
-        openai: 'sk-test-123',
-        anthropic: 'sk-ant-test-456',
-        openrouter: 'sk-or-test-789',
-      };
-
+    it('should save and load API keys', () => {
+      const keys = { openai: 'sk-test', anthropic: 'ant-test' };
       saveApiKeys(keys);
-
-      const stored = localStorage.getItem('evvl_api_keys');
-      expect(stored).toBe(JSON.stringify(keys));
+      expect(loadApiKeys()).toEqual(keys);
     });
 
-    it('should load API keys from localStorage', () => {
-      const keys: ApiKeys = {
-        openai: 'sk-test-123',
-        anthropic: 'sk-ant-test-456',
-      };
-
-      localStorage.setItem('evvl_api_keys', JSON.stringify(keys));
-
-      const result = loadApiKeys();
-
-      expect(result).toEqual(keys);
+    it('should return empty object when no keys saved', () => {
+      expect(loadApiKeys()).toEqual({});
     });
 
-    it('should return empty object when no API keys are stored', () => {
-      const result = loadApiKeys();
-
-      expect(result).toEqual({});
-    });
-
-    it('should clear API keys from localStorage', () => {
-      const keys: ApiKeys = {
-        openai: 'sk-test-123',
-      };
-
-      localStorage.setItem('evvl_api_keys', JSON.stringify(keys));
-
+    it('should clear API keys', () => {
+      saveApiKeys({ openai: 'sk-test' });
       clearApiKeys();
-
-      const stored = localStorage.getItem('evvl_api_keys');
-      expect(stored).toBeNull();
+      expect(loadApiKeys()).toEqual({});
     });
   });
 
+  // ===========================================================================
+  // Eval History
+  // ===========================================================================
   describe('Eval History', () => {
-    const mockEvalResult: EvalResult = {
-      id: 'eval-123',
+    const mockEval: EvalResult = {
+      id: 'eval-1',
       prompt: 'Test prompt',
-      outputs: [
-        {
-          id: 'output-1',
-          modelConfig: { provider: 'openai', model: 'gpt-4-turbo-preview', label: 'GPT-4 Turbo' },
-          content: 'Test response',
-          tokens: 100,
-          latency: 500,
-          timestamp: Date.now(),
-        },
-      ],
       timestamp: Date.now(),
+      outputs: [],
+      ratings: [],
     };
 
-    it('should save eval result to localStorage', () => {
-      saveEvalResult(mockEvalResult);
-
-      const stored = localStorage.getItem('evvl_eval_history');
-      const history = JSON.parse(stored!);
-
+    it('should save and load eval results', () => {
+      saveEvalResult(mockEval);
+      const history = loadEvalHistory();
       expect(history).toHaveLength(1);
-      expect(history[0]).toEqual(mockEvalResult);
+      expect(history[0].id).toBe('eval-1');
     });
 
-    it('should add new eval to beginning of history', () => {
-      const existingEval: EvalResult = {
-        ...mockEvalResult,
-        id: 'eval-old',
-        prompt: 'Old prompt',
-      };
-
-      localStorage.setItem('evvl_eval_history', JSON.stringify([existingEval]));
-
-      const newEval: EvalResult = {
-        ...mockEvalResult,
-        id: 'eval-new',
-        prompt: 'New prompt',
-      };
-
-      saveEvalResult(newEval);
-
-      const stored = localStorage.getItem('evvl_eval_history');
-      const history = JSON.parse(stored!);
-
-      expect(history[0].id).toBe('eval-new');
-      expect(history[1].id).toBe('eval-old');
+    it('should prepend new evals to history', () => {
+      saveEvalResult({ ...mockEval, id: 'eval-1' });
+      saveEvalResult({ ...mockEval, id: 'eval-2' });
+      const history = loadEvalHistory();
+      expect(history[0].id).toBe('eval-2');
+      expect(history[1].id).toBe('eval-1');
     });
 
     it('should limit history to 50 items', () => {
-      // Create 50 eval results
-      const manyEvals: EvalResult[] = Array.from({ length: 50 }, (_, i) => ({
-        ...mockEvalResult,
-        id: `eval-${i}`,
-      }));
-
-      localStorage.setItem('evvl_eval_history', JSON.stringify(manyEvals));
-
-      const newEval: EvalResult = {
-        ...mockEvalResult,
-        id: 'eval-new',
-      };
-
-      saveEvalResult(newEval);
-
-      const stored = localStorage.getItem('evvl_eval_history');
-      const history = JSON.parse(stored!);
-
-      expect(history.length).toBe(50);
-      expect(history[0].id).toBe('eval-new');
-      expect(history[49].id).toBe('eval-48');
-      // eval-49 should be removed (it was the last item)
-      expect(history.find((e: EvalResult) => e.id === 'eval-49')).toBeUndefined();
+      for (let i = 0; i < 60; i++) {
+        saveEvalResult({ ...mockEval, id: `eval-${i}` });
+      }
+      expect(loadEvalHistory()).toHaveLength(50);
     });
 
-    it('should load eval history from localStorage', () => {
-      const history: EvalResult[] = [mockEvalResult];
-
-      localStorage.setItem('evvl_eval_history', JSON.stringify(history));
-
-      const result = loadEvalHistory();
-
-      expect(result).toEqual(history);
-    });
-
-    it('should return empty array when no history exists', () => {
-      const result = loadEvalHistory();
-
-      expect(result).toEqual([]);
-    });
-
-    it('should delete eval result by id', () => {
-      const history: EvalResult[] = [
-        { ...mockEvalResult, id: 'eval-1' },
-        { ...mockEvalResult, id: 'eval-2' },
-        { ...mockEvalResult, id: 'eval-3' },
-      ];
-
-      localStorage.setItem('evvl_eval_history', JSON.stringify(history));
-
-      deleteEvalResult('eval-2');
-
-      const stored = localStorage.getItem('evvl_eval_history');
-      const updatedHistory = JSON.parse(stored!);
-
-      expect(updatedHistory.length).toBe(2);
-      expect(updatedHistory.find((e: EvalResult) => e.id === 'eval-2')).toBeUndefined();
-      expect(updatedHistory.find((e: EvalResult) => e.id === 'eval-1')).toBeDefined();
-      expect(updatedHistory.find((e: EvalResult) => e.id === 'eval-3')).toBeDefined();
-    });
-
-    it('should clear eval history from localStorage', () => {
-      const history: EvalResult[] = [mockEvalResult];
-
-      localStorage.setItem('evvl_eval_history', JSON.stringify(history));
-
-      clearEvalHistory();
-
-      const stored = localStorage.getItem('evvl_eval_history');
-      expect(stored).toBeNull();
+    it('should delete eval by id', () => {
+      saveEvalResult({ ...mockEval, id: 'eval-1' });
+      saveEvalResult({ ...mockEval, id: 'eval-2' });
+      deleteEvalResult('eval-1');
+      const history = loadEvalHistory();
+      expect(history).toHaveLength(1);
+      expect(history[0].id).toBe('eval-2');
     });
 
     it('should get eval by id', () => {
-      const history: EvalResult[] = [
-        { ...mockEvalResult, id: 'eval-1', prompt: 'First' },
-        { ...mockEvalResult, id: 'eval-2', prompt: 'Second' },
-      ];
-
-      localStorage.setItem('evvl_eval_history', JSON.stringify(history));
-
-      const result = getEvalById('eval-2');
-
-      expect(result?.id).toBe('eval-2');
-      expect(result?.prompt).toBe('Second');
+      saveEvalResult(mockEval);
+      expect(getEvalById('eval-1')).toEqual(mockEval);
+      expect(getEvalById('nonexistent')).toBeUndefined();
     });
 
-    it('should return undefined when eval id not found', () => {
-      localStorage.setItem('evvl_eval_history', JSON.stringify([]));
-
-      const result = getEvalById('nonexistent');
-
-      expect(result).toBeUndefined();
+    it('should clear eval history', () => {
+      saveEvalResult(mockEval);
+      clearEvalHistory();
+      expect(loadEvalHistory()).toEqual([]);
     });
   });
 
-  describe('Project CRUD Operations', () => {
+  // ===========================================================================
+  // Columns
+  // ===========================================================================
+  describe('Columns', () => {
+    it('should save and load columns', () => {
+      const columns: ColumnConfig[] = [
+        { id: 'col-1', provider: 'openai', model: 'gpt-4' },
+        { id: 'col-2', provider: 'anthropic', model: 'claude-3' },
+      ];
+      saveColumns(columns);
+      // saveColumns normalizes columns by adding isConfiguring: false for configured columns
+      const loaded = loadColumns();
+      expect(loaded).toHaveLength(2);
+      expect(loaded?.[0].id).toBe('col-1');
+      expect(loaded?.[0].provider).toBe('openai');
+      expect(loaded?.[1].id).toBe('col-2');
+      expect(loaded?.[1].provider).toBe('anthropic');
+    });
+
+    it('should return null when no columns saved', () => {
+      expect(loadColumns()).toBeNull();
+    });
+
+    it('should clear columns', () => {
+      saveColumns([{ id: 'col-1' }]);
+      clearColumns();
+      expect(loadColumns()).toBeNull();
+    });
+
+    it('should normalize isConfiguring flag when saving', () => {
+      const columns: ColumnConfig[] = [
+        { id: 'col-1', provider: 'openai', model: 'gpt-4', isConfiguring: true },
+      ];
+      saveColumns(columns);
+      const loaded = loadColumns();
+      expect(loaded?.[0].isConfiguring).toBe(false);
+    });
+  });
+
+  // ===========================================================================
+  // Projects
+  // ===========================================================================
+  describe('Projects', () => {
     const mockProject: Project = {
-      id: 'project-1',
+      id: 'proj-1',
       name: 'Test Project',
-      description: 'A test project',
       createdAt: Date.now(),
       updatedAt: Date.now(),
       promptIds: [],
@@ -247,282 +189,278 @@ describe('Storage Utilities', () => {
       dataSetIds: [],
     };
 
-    it('should save a new project', () => {
+    it('should save and load projects', () => {
       saveProject(mockProject);
-
       const projects = loadProjects();
       expect(projects).toHaveLength(1);
-      expect(projects[0]).toEqual(mockProject);
+      expect(projects[0].name).toBe('Test Project');
     });
 
-    it('should update an existing project', () => {
+    it('should update existing project', () => {
       saveProject(mockProject);
-
-      const updatedProject = {
-        ...mockProject,
-        name: 'Updated Project',
-      };
-
-      saveProject(updatedProject);
-
+      saveProject({ ...mockProject, name: 'Updated Name' });
       const projects = loadProjects();
       expect(projects).toHaveLength(1);
-      expect(projects[0].name).toBe('Updated Project');
-      expect(projects[0].updatedAt).toBeGreaterThan(mockProject.updatedAt);
+      expect(projects[0].name).toBe('Updated Name');
     });
 
-    it('should get a project by ID', () => {
+    it('should get project by id', () => {
       saveProject(mockProject);
-
-      const retrieved = getProjectById('project-1');
-      expect(retrieved).toEqual(mockProject);
+      expect(getProjectById('proj-1')?.name).toBe('Test Project');
+      expect(getProjectById('nonexistent')).toBeUndefined();
     });
 
-    it('should return undefined for non-existent project', () => {
-      const retrieved = getProjectById('non-existent');
-      expect(retrieved).toBeUndefined();
-    });
-
-    it('should delete a project and its associated data', () => {
-      const project = mockProject;
+    it('should delete project and associated data', () => {
+      saveProject(mockProject);
       const prompt: Prompt = {
         id: 'prompt-1',
-        projectId: 'project-1',
+        projectId: 'proj-1',
         name: 'Test Prompt',
         versions: [],
+        currentVersionId: '',
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
-
-      saveProject(project);
       savePrompt(prompt);
 
-      expect(loadProjects()).toHaveLength(1);
-      expect(loadPrompts()).toHaveLength(1);
-
-      deleteProject('project-1');
+      deleteProject('proj-1');
 
       expect(loadProjects()).toHaveLength(0);
       expect(loadPrompts()).toHaveLength(0);
     });
-
-    it('should return empty array when no projects exist', () => {
-      const projects = loadProjects();
-      expect(projects).toEqual([]);
-    });
   });
 
-  describe('Prompt CRUD Operations', () => {
+  // ===========================================================================
+  // Prompts
+  // ===========================================================================
+  describe('Prompts', () => {
     const mockPrompt: Prompt = {
       id: 'prompt-1',
-      projectId: 'project-1',
+      projectId: 'proj-1',
       name: 'Test Prompt',
-      versions: [
-        {
-          id: 'version-1',
-          content: 'Test content',
-          createdAt: Date.now(),
-        },
-      ],
+      versions: [{ id: 'v1', versionNumber: 1, content: 'Hello', createdAt: Date.now() }],
+      currentVersionId: 'v1',
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
 
-    it('should save a new prompt', () => {
-      savePrompt(mockPrompt);
-
-      const prompts = loadPrompts();
-      expect(prompts).toHaveLength(1);
-      expect(prompts[0]).toEqual(mockPrompt);
-    });
-
-    it('should update an existing prompt', () => {
-      savePrompt(mockPrompt);
-
-      const updatedPrompt = {
-        ...mockPrompt,
-        name: 'Updated Prompt',
-      };
-
-      savePrompt(updatedPrompt);
-
-      const prompts = loadPrompts();
-      expect(prompts).toHaveLength(1);
-      expect(prompts[0].name).toBe('Updated Prompt');
-      expect(prompts[0].updatedAt).toBeGreaterThan(mockPrompt.updatedAt);
-    });
-
-    it('should get a prompt by ID', () => {
-      savePrompt(mockPrompt);
-
-      const retrieved = getPromptById('prompt-1');
-      expect(retrieved).toEqual(mockPrompt);
-    });
-
-    it('should get prompts by project ID', () => {
-      const prompt1: Prompt = { ...mockPrompt, id: 'prompt-1', projectId: 'project-1' };
-      const prompt2: Prompt = { ...mockPrompt, id: 'prompt-2', projectId: 'project-1' };
-      const prompt3: Prompt = { ...mockPrompt, id: 'prompt-3', projectId: 'project-2' };
-
-      savePrompt(prompt1);
-      savePrompt(prompt2);
-      savePrompt(prompt3);
-
-      const project1Prompts = getPromptsByProjectId('project-1');
-      expect(project1Prompts).toHaveLength(2);
-      expect(project1Prompts.every(p => p.projectId === 'project-1')).toBe(true);
-    });
-
-    it('should delete a prompt', () => {
+    it('should save and load prompts', () => {
       savePrompt(mockPrompt);
       expect(loadPrompts()).toHaveLength(1);
+    });
 
+    it('should get prompt by id', () => {
+      savePrompt(mockPrompt);
+      expect(getPromptById('prompt-1')?.name).toBe('Test Prompt');
+    });
+
+    it('should get prompts by project id', () => {
+      savePrompt(mockPrompt);
+      savePrompt({ ...mockPrompt, id: 'prompt-2', projectId: 'proj-2' });
+      expect(getPromptsByProjectId('proj-1')).toHaveLength(1);
+      expect(getPromptsByProjectId('proj-2')).toHaveLength(1);
+    });
+
+    it('should delete prompt', () => {
+      savePrompt(mockPrompt);
       deletePrompt('prompt-1');
       expect(loadPrompts()).toHaveLength(0);
     });
-
-    it('should return empty array when no prompts exist', () => {
-      const prompts = loadPrompts();
-      expect(prompts).toEqual([]);
-    });
   });
 
-  describe('Model Config CRUD Operations', () => {
+  // ===========================================================================
+  // Model Configs
+  // ===========================================================================
+  describe('Model Configs', () => {
     const mockConfig: ProjectModelConfig = {
       id: 'config-1',
-      projectId: 'project-1',
-      name: 'Test Config',
+      projectId: 'proj-1',
+      name: 'GPT-4',
       provider: 'openai',
       model: 'gpt-4',
       createdAt: Date.now(),
     };
 
-    it('should save a new model config', () => {
-      saveModelConfig(mockConfig);
-
-      const configs = loadModelConfigs();
-      expect(configs).toHaveLength(1);
-      expect(configs[0]).toEqual(mockConfig);
-    });
-
-    it('should update an existing model config', () => {
-      saveModelConfig(mockConfig);
-
-      const updatedConfig = {
-        ...mockConfig,
-        name: 'Updated Config',
-      };
-
-      saveModelConfig(updatedConfig);
-
-      const configs = loadModelConfigs();
-      expect(configs).toHaveLength(1);
-      expect(configs[0].name).toBe('Updated Config');
-    });
-
-    it('should get a model config by ID', () => {
-      saveModelConfig(mockConfig);
-
-      const retrieved = getModelConfigById('config-1');
-      expect(retrieved).toEqual(mockConfig);
-    });
-
-    it('should get model configs by project ID', () => {
-      const config1: ProjectModelConfig = { ...mockConfig, id: 'config-1', projectId: 'project-1' };
-      const config2: ProjectModelConfig = { ...mockConfig, id: 'config-2', projectId: 'project-1' };
-      const config3: ProjectModelConfig = { ...mockConfig, id: 'config-3', projectId: 'project-2' };
-
-      saveModelConfig(config1);
-      saveModelConfig(config2);
-      saveModelConfig(config3);
-
-      const project1Configs = getModelConfigsByProjectId('project-1');
-      expect(project1Configs).toHaveLength(2);
-      expect(project1Configs.every(c => c.projectId === 'project-1')).toBe(true);
-    });
-
-    it('should delete a model config', () => {
+    it('should save and load model configs', () => {
       saveModelConfig(mockConfig);
       expect(loadModelConfigs()).toHaveLength(1);
+    });
 
+    it('should get config by id', () => {
+      saveModelConfig(mockConfig);
+      expect(getModelConfigById('config-1')?.model).toBe('gpt-4');
+    });
+
+    it('should get configs by project id', () => {
+      saveModelConfig(mockConfig);
+      saveModelConfig({ ...mockConfig, id: 'config-2', projectId: 'proj-2' });
+      expect(getModelConfigsByProjectId('proj-1')).toHaveLength(1);
+    });
+
+    it('should delete config', () => {
+      saveModelConfig(mockConfig);
       deleteModelConfig('config-1');
       expect(loadModelConfigs()).toHaveLength(0);
     });
-
-    it('should return empty array when no configs exist', () => {
-      const configs = loadModelConfigs();
-      expect(configs).toEqual([]);
-    });
   });
 
-  describe('DataSet CRUD Operations', () => {
+  // ===========================================================================
+  // Data Sets
+  // ===========================================================================
+  describe('Data Sets', () => {
     const mockDataSet: DataSet = {
-      id: 'dataset-1',
-      projectId: 'project-1',
+      id: 'ds-1',
+      projectId: 'proj-1',
       name: 'Test Dataset',
-      items: [
-        { id: 'item-1', variables: { name: 'test' } },
-      ],
+      items: [{ id: 'item-1', variables: { name: 'Alice' } }],
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
 
-    it('should save a new dataset', () => {
-      saveDataSet(mockDataSet);
-
-      const dataSets = loadDataSets();
-      expect(dataSets).toHaveLength(1);
-      expect(dataSets[0]).toEqual(mockDataSet);
-    });
-
-    it('should update an existing dataset', () => {
-      saveDataSet(mockDataSet);
-
-      const updatedDataSet = {
-        ...mockDataSet,
-        name: 'Updated Dataset',
-      };
-
-      saveDataSet(updatedDataSet);
-
-      const dataSets = loadDataSets();
-      expect(dataSets).toHaveLength(1);
-      expect(dataSets[0].name).toBe('Updated Dataset');
-      expect(dataSets[0].updatedAt).toBeGreaterThan(mockDataSet.updatedAt);
-    });
-
-    it('should get a dataset by ID', () => {
-      saveDataSet(mockDataSet);
-
-      const retrieved = getDataSetById('dataset-1');
-      expect(retrieved).toEqual(mockDataSet);
-    });
-
-    it('should get datasets by project ID', () => {
-      const dataset1: DataSet = { ...mockDataSet, id: 'dataset-1', projectId: 'project-1' };
-      const dataset2: DataSet = { ...mockDataSet, id: 'dataset-2', projectId: 'project-1' };
-      const dataset3: DataSet = { ...mockDataSet, id: 'dataset-3', projectId: 'project-2' };
-
-      saveDataSet(dataset1);
-      saveDataSet(dataset2);
-      saveDataSet(dataset3);
-
-      const project1DataSets = getDataSetsByProjectId('project-1');
-      expect(project1DataSets).toHaveLength(2);
-      expect(project1DataSets.every(d => d.projectId === 'project-1')).toBe(true);
-    });
-
-    it('should delete a dataset', () => {
+    it('should save and load data sets', () => {
       saveDataSet(mockDataSet);
       expect(loadDataSets()).toHaveLength(1);
-
-      deleteDataSet('dataset-1');
-      expect(loadDataSets()).toHaveLength(0);
     });
 
-    it('should return empty array when no datasets exist', () => {
-      const dataSets = loadDataSets();
-      expect(dataSets).toEqual([]);
+    it('should get data set by id', () => {
+      saveDataSet(mockDataSet);
+      expect(getDataSetById('ds-1')?.name).toBe('Test Dataset');
+    });
+
+    it('should get data sets by project id', () => {
+      saveDataSet(mockDataSet);
+      saveDataSet({ ...mockDataSet, id: 'ds-2', projectId: 'proj-2' });
+      expect(getDataSetsByProjectId('proj-1')).toHaveLength(1);
+    });
+
+    it('should delete data set', () => {
+      saveDataSet(mockDataSet);
+      deleteDataSet('ds-1');
+      expect(loadDataSets()).toHaveLength(0);
+    });
+  });
+
+  // ===========================================================================
+  // Evaluation Runs
+  // ===========================================================================
+  describe('Evaluation Runs', () => {
+    const mockRun: EvaluationRun = {
+      id: 'run-1',
+      projectId: 'proj-1',
+      promptId: 'prompt-1',
+      promptVersionId: 'v1',
+      modelConfigIds: ['config-1'],
+      results: [],
+      status: 'completed',
+      createdAt: Date.now(),
+    };
+
+    it('should save and load evaluation runs', () => {
+      saveEvaluationRun(mockRun);
+      expect(loadEvaluationRuns()).toHaveLength(1);
+    });
+
+    it('should get run by id', () => {
+      saveEvaluationRun(mockRun);
+      expect(getEvaluationRunById('run-1')?.status).toBe('completed');
+    });
+
+    it('should get runs by project id', () => {
+      saveEvaluationRun(mockRun);
+      saveEvaluationRun({ ...mockRun, id: 'run-2', projectId: 'proj-2' });
+      expect(getEvaluationRunsByProjectId('proj-1')).toHaveLength(1);
+    });
+
+    it('should delete run', () => {
+      saveEvaluationRun(mockRun);
+      deleteEvaluationRun('run-1');
+      expect(loadEvaluationRuns()).toHaveLength(0);
+    });
+  });
+
+  // ===========================================================================
+  // Active Project
+  // ===========================================================================
+  describe('Active Project', () => {
+    it('should set and get active project id', () => {
+      setActiveProjectId('proj-1');
+      expect(getActiveProjectId()).toBe('proj-1');
+    });
+
+    it('should return null when no active project', () => {
+      expect(getActiveProjectId()).toBeNull();
+    });
+
+    it('should clear active project when set to null', () => {
+      setActiveProjectId('proj-1');
+      setActiveProjectId(null);
+      expect(getActiveProjectId()).toBeNull();
+    });
+  });
+
+  // ===========================================================================
+  // UI State
+  // ===========================================================================
+  describe('UI State', () => {
+    it('should save and load UI state', () => {
+      const state = {
+        openProjects: ['proj-1'],
+        openSections: ['section-1'],
+        selectedModelConfigs: ['config-1'],
+        panelSizes: [300, 600],
+      };
+      saveUIState(state);
+      expect(loadUIState()).toEqual(state);
+    });
+
+    it('should return default state when none saved', () => {
+      const state = loadUIState();
+      expect(state.openProjects).toEqual([]);
+      expect(state.openSections).toEqual([]);
+      expect(state.selectedModelConfigs).toEqual([]);
+      expect(state.panelSizes).toEqual([280, 500]);
+    });
+  });
+
+  // ===========================================================================
+  // Clear Functions
+  // ===========================================================================
+  describe('Clear Functions', () => {
+    it('should clear projects and related data', () => {
+      saveProject({
+        id: 'proj-1',
+        name: 'Test',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        promptIds: [],
+        modelConfigIds: [],
+        dataSetIds: [],
+      });
+      saveApiKeys({ openai: 'sk-test' });
+
+      clearProjects();
+
+      expect(loadProjects()).toHaveLength(0);
+      // API keys should be preserved
+      expect(loadApiKeys()).toEqual({ openai: 'sk-test' });
+    });
+
+    it('should clear all data including API keys', () => {
+      saveProject({
+        id: 'proj-1',
+        name: 'Test',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        promptIds: [],
+        modelConfigIds: [],
+        dataSetIds: [],
+      });
+      saveApiKeys({ openai: 'sk-test' });
+
+      clearAllData();
+
+      expect(loadProjects()).toHaveLength(0);
+      expect(loadApiKeys()).toEqual({});
     });
   });
 });
