@@ -12,6 +12,7 @@ interface CliStatus {
 }
 
 export default function CliPage() {
+  const [mounted, setMounted] = useState(false);
   const [isTauri, setIsTauri] = useState(false);
   const [cliStatus, setCliStatus] = useState<CliStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,6 +21,8 @@ export default function CliPage() {
   const [platform, setPlatform] = useState<'macos' | 'windows' | 'linux' | 'unknown'>('unknown');
 
   useEffect(() => {
+    setMounted(true);
+
     const init = async () => {
       const tauri = isTauriEnvironment();
       setIsTauri(tauri);
@@ -100,6 +103,28 @@ export default function CliPage() {
       console.error('Failed to copy:', error);
     }
   };
+
+  // Show loading state until client-side hydration is complete
+  if (!mounted) {
+    return (
+      <div className="h-screen flex flex-col bg-white dark:bg-gray-900">
+        <nav className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-3">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="text-xl font-bold text-gray-900 dark:text-white hover:opacity-80 transition-opacity">
+              Evvl
+            </Link>
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <CommandLineIcon className="h-5 w-5" />
+              <span>CLI Setup</span>
+            </div>
+          </div>
+        </nav>
+        <div className="flex-1 flex items-center justify-center">
+          <ArrowPathIcon className="h-8 w-8 text-gray-400 animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   if (!isTauri) {
     return (
