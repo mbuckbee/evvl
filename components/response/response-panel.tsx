@@ -8,7 +8,7 @@ import { loadApiKeys, loadModelConfigs, deleteModelConfig, getModelConfigById, g
 import { ProjectModelConfig, Prompt, ApiKeys, DataSet, Provider } from '@/lib/types';
 import ConfigEditor from '@/components/model-configs/config-editor';
 import ShareButton from '@/components/share/share-button';
-import { PROVIDERS, isLocalProvider, ProviderKey } from '@/lib/config';
+import { PROVIDERS, isLocalProvider, ProviderKey, ProviderConfig } from '@/lib/config';
 import { getAvailableProviders } from '@/lib/providers/provider-filter';
 
 import { AIOutput } from '@/lib/types';
@@ -68,11 +68,12 @@ export default function ResponsePanel({ output, isGenerating = false, projectId,
   const [isDataSetDropdownOpen, setIsDataSetDropdownOpen] = useState(false);
   const [selectedDefaultProvider, setSelectedDefaultProvider] = useState<Provider | null>(null);
   const [showProviderConfigEditor, setShowProviderConfigEditor] = useState(false);
-  const [availableProviders, setAvailableProviders] = useState(() => getAvailableProviders());
+  // Initialize with empty array to avoid hydration mismatch - will be populated in useEffect
+  const [availableProviders, setAvailableProviders] = useState<ProviderConfig[]>([]);
 
   const selectedDataSetId = propSelectedDataSetId ?? null;
 
-  // Re-check available providers after client hydration (Tauri detection requires window)
+  // Load available providers after client hydration (Tauri detection requires window)
   useEffect(() => {
     const providers = getAvailableProviders();
     setAvailableProviders(providers);
