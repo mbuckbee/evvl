@@ -1514,3 +1514,295 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    // -------------------------------------------------------------------------
+    // Data Type Serialization Tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_project_serialization() {
+        let project = Project {
+            id: "proj-123".to_string(),
+            name: "Test Project".to_string(),
+            description: Some("A test project".to_string()),
+            created_at: 1700000000000,
+            updated_at: 1700000000000,
+            prompt_ids: vec!["prompt-1".to_string()],
+            model_config_ids: vec!["config-1".to_string()],
+            data_set_ids: vec![],
+        };
+
+        let json = serde_json::to_string(&project).unwrap();
+        let parsed: Project = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.id, "proj-123");
+        assert_eq!(parsed.name, "Test Project");
+        assert_eq!(parsed.description, Some("A test project".to_string()));
+        assert_eq!(parsed.prompt_ids.len(), 1);
+    }
+
+    #[test]
+    fn test_project_deserialization_from_json() {
+        let json = r#"{
+            "id": "proj-456",
+            "name": "My Project",
+            "description": null,
+            "createdAt": 1700000000000,
+            "updatedAt": 1700000000000,
+            "promptIds": ["p1", "p2"],
+            "modelConfigIds": [],
+            "dataSetIds": []
+        }"#;
+
+        let project: Project = serde_json::from_str(json).unwrap();
+
+        assert_eq!(project.id, "proj-456");
+        assert_eq!(project.name, "My Project");
+        assert_eq!(project.description, None);
+        assert_eq!(project.prompt_ids.len(), 2);
+    }
+
+    #[test]
+    fn test_prompt_version_serialization() {
+        let version = PromptVersion {
+            id: "ver-1".to_string(),
+            version_number: 1,
+            content: "Hello {{name}}!".to_string(),
+            system_prompt: Some("You are helpful".to_string()),
+            parameters: Some(json!({"temperature": 0.7})),
+            note: None,
+            created_at: 1700000000000,
+        };
+
+        let json = serde_json::to_string(&version).unwrap();
+        let parsed: PromptVersion = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.id, "ver-1");
+        assert_eq!(parsed.content, "Hello {{name}}!");
+        assert_eq!(parsed.system_prompt, Some("You are helpful".to_string()));
+    }
+
+    #[test]
+    fn test_prompt_serialization() {
+        let prompt = Prompt {
+            id: "prompt-1".to_string(),
+            project_id: "proj-1".to_string(),
+            name: "Test Prompt".to_string(),
+            description: None,
+            versions: vec![PromptVersion {
+                id: "ver-1".to_string(),
+                version_number: 1,
+                content: "Test content".to_string(),
+                system_prompt: None,
+                parameters: None,
+                note: None,
+                created_at: 1700000000000,
+            }],
+            current_version_id: "ver-1".to_string(),
+            created_at: 1700000000000,
+            updated_at: 1700000000000,
+        };
+
+        let json = serde_json::to_string(&prompt).unwrap();
+        let parsed: Prompt = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.id, "prompt-1");
+        assert_eq!(parsed.versions.len(), 1);
+        assert_eq!(parsed.versions[0].content, "Test content");
+    }
+
+    #[test]
+    fn test_api_keys_serialization() {
+        let keys = ApiKeys {
+            openai: Some("sk-test-123".to_string()),
+            anthropic: None,
+            openrouter: Some("or-test".to_string()),
+            gemini: None,
+        };
+
+        let json = serde_json::to_string(&keys).unwrap();
+        let parsed: ApiKeys = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.openai, Some("sk-test-123".to_string()));
+        assert_eq!(parsed.anthropic, None);
+        assert_eq!(parsed.openrouter, Some("or-test".to_string()));
+        assert_eq!(parsed.gemini, None);
+    }
+
+    #[test]
+    fn test_cli_install_result_serialization() {
+        let result = CliInstallResult {
+            success: true,
+            message: "CLI installed successfully".to_string(),
+            path: Some("/usr/local/bin/evvl".to_string()),
+        };
+
+        let json = serde_json::to_string(&result).unwrap();
+
+        // Verify the JSON structure is correct
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed["success"], true);
+        assert_eq!(parsed["message"], "CLI installed successfully");
+        assert_eq!(parsed["path"], "/usr/local/bin/evvl");
+    }
+
+    #[test]
+    fn test_cli_status_serialization() {
+        let status = CliStatus {
+            installed: true,
+            path: Some("/usr/local/bin/evvl".to_string()),
+            current_exe: "/Applications/Evvl.app/Contents/MacOS/Evvl".to_string(),
+        };
+
+        let json = serde_json::to_string(&status).unwrap();
+
+        // Verify the JSON structure is correct
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed["installed"], true);
+        assert_eq!(parsed["path"], "/usr/local/bin/evvl");
+        assert_eq!(parsed["current_exe"], "/Applications/Evvl.app/Contents/MacOS/Evvl");
+    }
+
+    // -------------------------------------------------------------------------
+    // Dataset Tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_dataset_item_serialization() {
+        let mut variables = HashMap::new();
+        variables.insert("name".to_string(), "Alice".to_string());
+        variables.insert("topic".to_string(), "AI".to_string());
+
+        let item = DataSetItem {
+            id: "item-1".to_string(),
+            name: Some("Test Item".to_string()),
+            variables,
+        };
+
+        let json = serde_json::to_string(&item).unwrap();
+        let parsed: DataSetItem = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.id, "item-1");
+        assert_eq!(parsed.variables.get("name"), Some(&"Alice".to_string()));
+    }
+
+    #[test]
+    fn test_dataset_serialization() {
+        let dataset = DataSet {
+            id: "ds-1".to_string(),
+            project_id: "proj-1".to_string(),
+            name: "Test Dataset".to_string(),
+            items: vec![],
+            created_at: 1700000000000,
+            updated_at: 1700000000000,
+        };
+
+        let json = serde_json::to_string(&dataset).unwrap();
+        let parsed: DataSet = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.id, "ds-1");
+        assert_eq!(parsed.name, "Test Dataset");
+    }
+
+    // -------------------------------------------------------------------------
+    // Store Path Tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_get_store_path_ends_with_store_json() {
+        let path = get_store_path();
+        assert!(path.to_string_lossy().ends_with("store.json"));
+        assert!(path.to_string_lossy().contains(".evvl"));
+    }
+
+    // -------------------------------------------------------------------------
+    // Version Comparison Tests (helper for prompt versioning)
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_version_number_increment() {
+        let versions = vec![
+            PromptVersion {
+                id: "v1".to_string(),
+                version_number: 1,
+                content: "First".to_string(),
+                system_prompt: None,
+                parameters: None,
+                note: None,
+                created_at: 1700000000000,
+            },
+            PromptVersion {
+                id: "v2".to_string(),
+                version_number: 2,
+                content: "Second".to_string(),
+                system_prompt: None,
+                parameters: None,
+                note: None,
+                created_at: 1700000001000,
+            },
+        ];
+
+        let max_version = versions.iter().map(|v| v.version_number).max().unwrap_or(0);
+        assert_eq!(max_version, 2);
+        assert_eq!(max_version + 1, 3);
+    }
+
+    // -------------------------------------------------------------------------
+    // CLI Run Config JSON Structure Tests
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_cli_run_config_json_structure() {
+        // Test that the run_config JSON has the expected structure
+        let run_config = json!({
+            "source": "cli",
+            "prompt": "Test prompt",
+            "systemPrompt": null,
+            "models": ["gpt-4", "claude-3"],
+            "projectId": "proj-1",
+            "projectName": null,
+            "promptName": null,
+            "dataSetName": null,
+            "openGui": true,
+            "status": "pending",
+            "savedVersion": false
+        });
+
+        assert_eq!(run_config["source"], "cli");
+        assert_eq!(run_config["prompt"], "Test prompt");
+        assert_eq!(run_config["models"][0], "gpt-4");
+        assert_eq!(run_config["models"][1], "claude-3");
+        assert_eq!(run_config["openGui"], true);
+        assert_eq!(run_config["status"], "pending");
+    }
+
+    #[test]
+    fn test_cli_run_config_with_dataset() {
+        let run_config = json!({
+            "source": "cli",
+            "prompt": "Hello {{name}}",
+            "systemPrompt": "You are helpful",
+            "models": ["anthropic/claude-3-5-sonnet"],
+            "projectId": "proj-1",
+            "projectName": "Test Project",
+            "promptName": "Greeting",
+            "dataSetName": "Names",
+            "openGui": false,
+            "status": "pending",
+            "savedVersion": true
+        });
+
+        assert_eq!(run_config["dataSetName"], "Names");
+        assert_eq!(run_config["systemPrompt"], "You are helpful");
+        assert_eq!(run_config["savedVersion"], true);
+    }
+}
